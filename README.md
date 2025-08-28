@@ -11,3 +11,5 @@ The system is containerized with Docker and uses PostgreSQL as the database, wit
 - PostgreSQL database integration
 - Dockerized environment for easy deployment
 
+## Run Docker
+docker-compose -f docker-compose.yml up -d --build 
