@@ -15,7 +15,6 @@ class Roles(RolesBase, table=True):
     id: uuid.UUID = Field(default_factory=uuid.uuid4, primary_key=True, index=True)
     users: List["Users"] = Relationship(back_populates="roles", link_model=UserRoles)
 
-
 class RolesCreate(SQLModel):
     name: str = Field(max_length=50, unique=True)
     description: str = Field(default=None, max_length=255, nullable=True)
