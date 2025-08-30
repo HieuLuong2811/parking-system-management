@@ -20,7 +20,7 @@ async def get_all_users(db: AsyncSession = Depends(get_db)):
         raise HTTPException(status_code=404, detail="No users found")
     return users
 
-@router.put("/{id}", response_model=UsersRead)
+@router.patch("/{id}", response_model=UsersRead)
 async def update_user(id: uuid.UUID, user_in: UsersCreate, db: AsyncSession = Depends(get_db)):
     return await UserController.update_user_ctrl(id, user_in, db)
 

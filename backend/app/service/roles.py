@@ -19,3 +19,16 @@ class roleService:
         await db.refresh(role)
         return role
     
+    @staticmethod 
+    async def update_role(role_in: RolesCreate, db: AsyncSession, id: uuid.UUID) -> Roles:
+        result = await db.execute(select(Roles).where(Roles.id == id))
+        role = result.scalar_one_or_none()
+        if not role:
+            raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Role not found")
+        
+        role.name = role_in.name
+        role.description = role_in.description
+
+        await db.commit()
+        await db.refresh(role)
+        return role

@@ -3,8 +3,6 @@ import warnings
 import os
 from typing import Annotated, Any, Literal
 from typing_extensions import Self
-from app.core.config import settings
-
 from dotenv import load_dotenv
 from pydantic import (
     AnyUrl,
@@ -56,6 +54,9 @@ class Settings(BaseSettings):
     POSTGRES_PASSWORD: str = ""
     POSTGRES_DB: str = ""
 
+    # Frontend Host
+    FRONTEND_HOST: str = "http://localhost:3000"
+
     @computed_field  # type: ignore
     @property
     def SQLALCHEMY_DATABASE_URI(self) -> PostgresDsn:
@@ -69,7 +70,7 @@ class Settings(BaseSettings):
         )
 
     # CORS
-    FRONTEND_HOST: str = settings.FRONTEND_HOST
+    FRONTEND_HOST: str = FRONTEND_HOST
     BACKEND_CORS_ORIGINS: Annotated[
         list[AnyUrl] | str, BeforeValidator(parse_cors)
     ] = []

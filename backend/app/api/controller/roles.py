@@ -12,3 +12,7 @@ class RoleController:
     @staticmethod 
     async def get_all_roles_ctrl(db: AsyncSession):
         return await roleService.get_all_roles(db)
+    
+    @staticmethod 
+    async def update_role_ctrl(db: AsyncSession, id: uuid.UUID, role_in: RolesCreate):
+        return await roleService.update_role(role_in, db, id)
