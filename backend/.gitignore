@@ -1,0 +1,42 @@
+# Python cache / compiled files
+__pycache__/
+*.py[cod]
+*.pyo
+*.pyd
+*.so
+
+# Virtual environment
+venv/
+.env
+.env.*
+
+# VS Code settings
+.vscode/
+
+# Byte-compiled / logs
+*.log
+
+# Alembic migration cache
+alembic/__pycache__/
+alembic/versions/__pycache__/
+
+# Database files (nếu có sqlite dev/test)
+*.db
+*.sqlite3
+
+# Docker stuff
+*.pid
+*.seed
+*.bak
+*.swp
+*~
+
+# Node / frontend (nếu có React/Vue phía client)
+node_modules/
+dist/
+build/
+alembic
+alembic.ini
+# System files
+.DS_Store
+Thumbs.db

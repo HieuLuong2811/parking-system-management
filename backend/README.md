@@ -24,7 +24,7 @@ $ python -m venv .venv
 Activate the virtual environment with:
 
 ```console
-$ .venv/Scripts/activate
+$ venv\Scripts\activate 
 ```
 
 Install poetry:
