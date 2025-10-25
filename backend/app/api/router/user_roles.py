@@ -4,7 +4,7 @@ from app.db.session import get_db
 from app.models.user_roles import UserRolesCreate, UserRolesRead
 from app.api.controller.use_roles import UserRolesController
 import uuid
-router = APIRouter(prefix="/userRoles", tags=["user_roles"])
+router = APIRouter(prefix="/user_roles", tags=["user_roles"])
 
 @router.post("/", response_model=UserRolesRead)
 async def create_user(
