@@ -40,3 +40,5 @@ alembic.ini
 # System files
 .DS_Store
 Thumbs.db
+
+TongHop/
