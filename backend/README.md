@@ -15,37 +15,30 @@ Start the local development environment with Docker Compose following the guide 
 
 ## General Workflow
 
-From `./backend/` you have to create a virtual environment with:
+1. From `./backend/`, create and activate a virtual environment:
 
-```console
-$ python -m venv .venv
-```
+   ```console
+   $ python -m venv .venv
+   $ source .venv/bin/activate     # On Windows use `.venv\\Scripts\\activate`
+   ```
 
-Activate the virtual environment with:
+2. Install the pinned dependencies from the repository root:
 
-```console
-$ venv\Scripts\activate 
-```
+   ```console
+   $ pip install -r ../requirements.txt
+   ```
 
-Install poetry:
+3. Run the application:
 
-```console
-$ pip install poetry
-```
+   ```console
+   $ uvicorn app.main:app --reload
+   ```
 
-Then install all the dependencies with poetry:
+Be sure your editor is using `backend/.venv/bin/python` (or the Windows equivalent interpreter).
 
-```console
-$ poetry install
-```
+### Computer vision dependencies
 
-Run the application:
-
-```console
-$ uvicorn app.main:app --reload
-```
-
-Make sure your editor is using the correct Python virtual environment, with the interpreter at `backend/.venv/Scripts/python`.
+The detection service depends on `ultralytics`, `opencv-python`, `numpy`, and `pytesseract`, all provided via `requirements.txt`. In addition, the Tesseract runtime must be installed on your host (e.g., `sudo apt install tesseract-ocr` on Debian/Ubuntu) for OCR to work.
 
 Modify or add SQLModel models for data and SQL tables in `./backend/app/models.py`, API endpoints in `./backend/app/api/`, CRUD (Create, Read, Update, Delete) utils in `./backend/app/crud.py`.
 
@@ -74,6 +67,9 @@ $ alembic revision --autogenerate -m "Add column last_name to User model"
 - After creating the revision, run the migration in the database (this is what will actually change the database):
 
 ```console
+$ docker compose exec web bash
+$ cd backend
+$ alembic -c alembic/env.py upgrade head
 $ alembic upgrade head
 ```
 

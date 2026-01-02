@@ -93,7 +93,7 @@ class Settings(BaseSettings):
     EMAILS_FROM_NAME: str | None = None
     EMAIL_RESET_TOKEN_EXPIRE_HOURS: int = 48
     EMAIL_TEST_USER: EmailStr = "test@example.com"
-
+    DATABASE_URL: str = "http://localhost:8000/api/v1/"
     @computed_field  
     @property
     def emails_enabled(self) -> bool:

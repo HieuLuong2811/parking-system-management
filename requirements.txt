@@ -116,3 +116,7 @@ virtualenv==20.31.2
 watchfiles==1.1.0
 websockets==15.0.1
 zstandard==0.23.0
+numpy==1.26.4
+opencv-python==4.8.1.78
+pytesseract==0.3.13
+ultralytics==8.3.246

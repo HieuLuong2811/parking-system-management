@@ -7,14 +7,14 @@ import pytesseract
 # connected_clients = set()
 # model = YOLO("yolov8n.pt")
 
-model_path = r"F:\Parking-System\runs\detect\plate_detector_V2\weights\best.pt"
-model = YOLO(model_path)
+# model_path = r"F:\Parking-System\runs\detect\plate_detector_V2\weights\best.pt"
+# model = YOLO(model_path)
 class DetectService():
 
     def segment_image(plate):
         # # Chuyen anh bien so ve gray
         # plate = cv2.cvtColor(plate, cv2.COLOR_RGB2GRAY)
-        
+
         # # # Ap dung threshold de phan tach so va nen
         # ret, threshold = cv2.threshold(plate, 255, 255, cv2.THRESH_BINARY + cv2.THRESH_OTSU)
 
@@ -26,14 +26,15 @@ class DetectService():
     def detect_plate_from_bytes(image_bytes: bytes) -> np.ndarray:
         image = np.array(bytearray(image_bytes), dtype=np.uint8)
         image = cv2.imdecode(image, -1)
-        
-        results = model(image)
+
+        # results = model(image)
+        results = ""
         annotated_image = results[0].plot()
 
         text = DetectService.segment_image(annotated_image)
 
         return text
-    
+
 
 
     @staticmethod
@@ -50,7 +51,9 @@ class DetectService():
             if not ret:
                 break
 
-            results = model(frame)
+            # results = model(frame)
+            results = ""
+
             annotated_frame = results[0].plot()
 
             out.write(annotated_frame)
@@ -59,20 +62,22 @@ class DetectService():
         out.release()
         print("Video saved to", output_path)
         return output_path
-    
+
     @staticmethod
     async def detect_from_camera(camera_index=1):
         cap = cv2.VideoCapture(camera_index)
         if not cap.isOpened:
             raise Exception("Failed to open camera")
-        
+
         while True:
             ret, frame = cap.read()
             if not ret:
                 await asyncio.sleep(0.1)
                 continue
 
-            results = model(frame)
+            # results = model(frame)
+            results = ""
+
             annotated_frame = results[0].plot()
 
             cv2.imshow('Object Detection', annotated_frame)
@@ -93,7 +98,9 @@ class DetectService():
             if not success:
                 break
 
-            results = model(frame)
+            # results = model(frame)
+            results = ""
+
             labels = {results[0].names[int(c)] for c in results[0].boxes.cls}
             new_objects = labels - prev_objects
 
