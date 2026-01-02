@@ -12,6 +12,8 @@ class DetectController:
         image_data = await file.read()
         annotated_image = DetectService.detect_plate_from_bytes(image_data)
 
+        print(type(annotated_image))
+
         _, buffer = cv2.imencode('.jpg', annotated_image)
         return StreamingResponse(BytesIO(buffer.tobytes()), media_type="image/jpeg")
     
