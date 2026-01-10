@@ -4,11 +4,11 @@ import numpy as np
 import json
 import asyncio
 import pytesseract
-# connected_clients = set()
+connected_clients = set()
 # model = YOLO("yolov8n.pt")
 
-# model_path = r"F:\Parking-System\runs\detect\plate_detector_V2\weights\best.pt"
-# model = YOLO(model_path)
+model_path = r"F:\Parking-System\runs\detect\plate_detector_V2\weights\best.pt"
+model = YOLO(model_path)
 class DetectService():
 
     def segment_image(plate):
@@ -27,8 +27,8 @@ class DetectService():
         image = np.array(bytearray(image_bytes), dtype=np.uint8)
         image = cv2.imdecode(image, -1)
 
-        # results = model(image)
-        results = ""
+        results = model(image)
+        # results = ""
         annotated_image = results[0].plot()
 
         text = DetectService.segment_image(annotated_image)
@@ -51,8 +51,8 @@ class DetectService():
             if not ret:
                 break
 
-            # results = model(frame)
-            results = ""
+            results = model(frame)
+            # results = ""
 
             annotated_frame = results[0].plot()
 
@@ -75,8 +75,8 @@ class DetectService():
                 await asyncio.sleep(0.1)
                 continue
 
-            # results = model(frame)
-            results = ""
+            results = model(frame)
+            # results = ""
 
             annotated_frame = results[0].plot()
 
@@ -98,8 +98,8 @@ class DetectService():
             if not success:
                 break
 
-            # results = model(frame)
-            results = ""
+            results = model(frame)
+            # results = ""
 
             labels = {results[0].names[int(c)] for c in results[0].boxes.cls}
             new_objects = labels - prev_objects

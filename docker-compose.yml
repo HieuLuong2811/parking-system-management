@@ -23,7 +23,7 @@ services:
     depends_on:
       - db
     volumes:
-      - .:/code
+      - ./backend:/code/backend
     command: >
       bash -c "uvicorn app.main:app --host 0.0.0.0 --port 8000 --reload"
 

@@ -42,3 +42,5 @@ alembic.ini
 Thumbs.db
 
 TongHop/
+YOLOv8/
+/models/runs/
