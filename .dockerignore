@@ -1,5 +1,6 @@
 # Python
 venv/
+backend/venv/
 __pycache__/
 *.pyc
 *.pyo
@@ -8,12 +9,14 @@ TongHop/
 # ML / YOLO
 YOLOv8/
 *.pt
+backend/YOLOv8/
+backend/TongHop/
 
 # YOLO training output
 backend/app/models/runs
 YOLOv8/
 
-# Frontend (không liên quan backend)
+# Frontend
 client-web/
 dashboard/node_modules
 login/node_modules

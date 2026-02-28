@@ -1,29 +1,31 @@
-from sqlmodel import SQLModel, Field, Relationship, Column
+from __future__ import annotations
+
 from datetime import datetime
-from typing import List
-from sqlalchemy import Enum as SQLAEnum
-import uuid
-from .user_roles import UserRoles
-from ..enums.role_type import RoleType
+from typing import Optional
+
+from sqlalchemy import Column as SAColumn, Integer, String
+from sqlmodel import Field, SQLModel
+
 
 class RolesBase(SQLModel):
-    name: str = Field(max_length=50, unique=True)
-    description: str = Field(default=None, max_length=255, nullable=True)
-    created_at: datetime = Field(default_factory=datetime.now, nullable=True)
-    updated_at: datetime = Field(default_factory=datetime.now, nullable=True)
-    type_role: RoleType = Field(sa_column=Column(SQLAEnum(RoleType, name="role_type_enum")))
+    role_code: str = Field(max_length=50, sa_column=SAColumn(String(50), nullable=False))
+    role_name: str = Field(max_length=255, sa_column=SAColumn(String(255), nullable=False))
+    created_at: datetime = Field(default_factory=datetime.utcnow, nullable=False)
+
 
 class Roles(RolesBase, table=True):
     __tablename__ = "roles"
-    id: uuid.UUID = Field(default_factory=uuid.uuid4, primary_key=True, index=True)
-    users: List["Users"] = Relationship(back_populates="roles", link_model=UserRoles)
+    id: Optional[int] = Field(default=None, primary_key=True)
 
-class RolesCreate(SQLModel):
-    name: str = Field(max_length=50, unique=True)
-    description: str = Field(default=None, max_length=255, nullable=True)
-    type_role: RoleType
+
+class RolesCreate(RolesBase):
+    pass
+
 
 class RolesRead(RolesBase):
-    id: uuid.UUID
+    id: int
 
 
+class RolesUpdate(SQLModel):
+    role_code: Optional[str] = Field(default=None, max_length=50)
+    role_name: Optional[str] = Field(default=None, max_length=255)

@@ -31,7 +31,7 @@ Start the local development environment with Docker Compose following the guide 
 3. Run the application:
 
    ```console
-   $ uvicorn app.main:app --reload
+   $ python -m uvicorn app.main:app --reload
    ```
 
 Be sure your editor is using `backend/.venv/bin/python` (or the Windows equivalent interpreter).

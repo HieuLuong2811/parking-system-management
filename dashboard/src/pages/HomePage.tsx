@@ -10,9 +10,10 @@ import {
   TableHead,
   TableRow,
   Paper,
-  CircularProgress,
 } from '@mui/material';
-import { PaginationBar } from '../components/pages';
+import { PaginationBar } from '../components/pagination';
+import { LoadingPage } from '../components/loading';
+import { useTranslation } from 'react-i18next';
 
 const mockRows = Array.from({ length: 56 }, (_, index) => ({
   id: index + 1,
@@ -22,6 +23,7 @@ const mockRows = Array.from({ length: 56 }, (_, index) => ({
 }));
 
 export const HomePage = () => {
+  const { t } = useTranslation();
   const [page, setPage] = React.useState(0);
   const [rowsPerPage, setRowsPerPage] = React.useState(10);
   const [loading, setLoading] = React.useState(false);
@@ -49,7 +51,7 @@ export const HomePage = () => {
   return (
     <Box display="flex" flexDirection="column" gap={2}>
       <Typography variant="h5" color="primary">
-        Chào mừng đến với ứng dụng React TSX!
+        {t('title')}
       </Typography>
       <Typography paragraph sx={{ mt: 0 }}>
         Ứng dụng này sử dụng React Router để điều hướng, MUI cho giao diện và React Query
@@ -85,19 +87,7 @@ export const HomePage = () => {
         </TableContainer>
 
           {loading && (
-            <Box
-              sx={{
-                position: 'absolute',
-                inset: 0,
-                bgcolor: 'rgba(255,255,255,0.75)',
-                backdropFilter: 'blur(1px)',
-                display: 'flex',
-                justifyContent: 'center',
-                alignItems: 'center',
-              }}
-            >
-              <CircularProgress color="primary" />
-            </Box>
+            <LoadingPage />
           )}
         </Box>
         <Box mt={2}>

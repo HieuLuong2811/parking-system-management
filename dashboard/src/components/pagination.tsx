@@ -24,6 +24,7 @@ export interface PaginationBarProps {
   ) => string;
   onPageChange: (page: number) => void;
   onRowsPerPageChange: (rowsPerPage: number) => void;
+  disabled?: boolean;
 }
 
 const defaultLabelDisplayedRows = (
@@ -47,6 +48,7 @@ export const PaginationBar: React.FC<PaginationBarProps> = ({
   labelDisplayedRows = defaultLabelDisplayedRows,
   onPageChange,
   onRowsPerPageChange,
+  disabled,
 }) => {
   const from = page * rowsPerPage + 1;
   const to = Math.min(
@@ -101,6 +103,7 @@ export const PaginationBar: React.FC<PaginationBarProps> = ({
         value={rowsPerPage}
         onChange={handleRowsPerPageChange}
         sx={{ minWidth: 80 }}
+        disabled={loading || disabled}
       >
         {rowsPerPageOptions.map((option) => (
           <MenuItem key={option} value={option}>

@@ -61,7 +61,7 @@ class Settings(BaseSettings):
     @property
     def SQLALCHEMY_DATABASE_URI(self) -> PostgresDsn:
         return MultiHostUrl.build(
-            scheme="postgresql+psycopg",
+            scheme="postgresql+asyncpg",
             username=self.POSTGRES_USER,
             password=self.POSTGRES_PASSWORD,
             host=self.POSTGRES_SERVER,
@@ -104,9 +104,6 @@ class Settings(BaseSettings):
         if not self.EMAILS_FROM_NAME:
             self.EMAILS_FROM_NAME = self.PROJECT_NAME
         return self
-
-    # Sentry (optional monitoring)
-    SENTRY_DSN: HttpUrl | None = None
 
     # Secret validation for production
     def _check_default_secret(self, var_name: str, value: str | None) -> None:

@@ -1,14 +1,36 @@
+import os
+from pathlib import Path
+from typing import Set
+
 from ultralytics import YOLO
 import cv2
 import numpy as np
 import json
 import asyncio
 import pytesseract
-connected_clients = set()
-# model = YOLO("yolov8n.pt")
 
-model_path = r"F:\Parking-System\runs\detect\plate_detector_V2\weights\best.pt"
-model = YOLO(model_path)
+connected_clients: Set = set()
+
+MODEL_ENV = "DETECT_MODEL_PATH"
+DEFAULT_MODEL = (
+    Path(__file__).resolve().parents[1]
+    / "models"
+    / "runs"
+    / "detect"
+    / "plate_detector_V2"
+    / "weights"
+    / "best.pt"
+)
+
+model_path = Path(os.getenv(MODEL_ENV, str(DEFAULT_MODEL)))
+
+if not model_path.exists():
+    raise FileNotFoundError(
+        f"YOLO weight file not found at {model_path}. "
+        f"Set {MODEL_ENV} to a valid path if you stored it elsewhere."
+    )
+
+model = YOLO(str(model_path))
 class DetectService():
 
     def segment_image(plate):

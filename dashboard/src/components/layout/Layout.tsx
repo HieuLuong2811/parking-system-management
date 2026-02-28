@@ -6,10 +6,10 @@ import { Sidebar } from './Sidebar';
 
 export const Layout: React.FC = () => {
   return (
-    <Box sx={{ display: 'flex' }}>
+    <Box sx={{ display: 'flex', height: '100vh' }}>
       <Navbar />
       <Sidebar />
-      <Box component="main" sx={{ flexGrow: 1, p: 3 }}>
+      <Box component="main" sx={{ flexGrow: 1, p: 3, backgroundColor: '#f5f5f5' }}>
         <Toolbar /> 
         <Outlet />
       </Box>
