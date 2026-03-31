@@ -4,20 +4,21 @@ from datetime import date, datetime
 from typing import Optional
 import uuid
 
-from sqlalchemy import Column as SAColumn, Enum
+from sqlalchemy import Column as SAColumn, Enum, Integer
 from sqlmodel import Field, SQLModel
 
-from app.enums.parking import PaymentType, SubscriptionStatus
+from app.enums.parking import SubscriptionStatus
 from .mixins import TimestampMixin
 
 
 class UserSubscriptionBase(SQLModel):
     user_code: str = Field(foreign_key="users.user_code", max_length=50)
-    plan_id: uuid.UUID = Field(foreign_key="subscription_plans.id")
+    sub_plan_id: uuid.UUID = Field(foreign_key="subscription_plans.id")
     term_id: uuid.UUID = Field(foreign_key="academic_terms.id")
-    payment_type: PaymentType = Field(
-        sa_column=SAColumn(Enum(PaymentType, name="payment_type_enum", create_type=False), nullable=False)
-    )
+    vehicle_id: uuid.UUID = Field(foreign_key="vehicles.id")
+    payment_plan_id: uuid.UUID = Field(foreign_key="payment_plans.id")
+    total_amount: int = Field(sa_column=SAColumn(Integer, nullable=False))
+    paid_amount: int = Field(default=0, sa_column=SAColumn(Integer, nullable=False))
     status: SubscriptionStatus = Field(
         sa_column=SAColumn(Enum(SubscriptionStatus, name="subscription_status_enum", create_type=False), nullable=False)
     )
@@ -41,7 +42,11 @@ class UserSubscriptionRead(UserSubscriptionBase):
 
 
 class UserSubscriptionUpdate(SQLModel):
-    payment_type: Optional[PaymentType] = None
+    vehicle_id: Optional[uuid.UUID] = None
+    sub_plan_id: Optional[uuid.UUID] = None
+    payment_plan_id: Optional[uuid.UUID] = None
     status: Optional[SubscriptionStatus] = None
     start_date: Optional[date] = None
     end_date: Optional[date] = None
+    total_amount: Optional[int] = None
+    paid_amount: Optional[int] = None

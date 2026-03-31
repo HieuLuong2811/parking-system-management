@@ -9,3 +9,5 @@ from .terms import AcademicTerm
 from .user_roles import UserRoles
 from .users import Users
 from .vehicles import Vehicle
+from .payment_plans import PaymentPlan
+from .notifications import Notification

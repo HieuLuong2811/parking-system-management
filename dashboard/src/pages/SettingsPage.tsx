@@ -1,10 +1,15 @@
 import { Typography, Box } from '@mui/material';
+import { useTranslation } from 'react-i18next';
 
-export const SettingsPage = () => (
-  <Box>
-    <Typography variant="h5">⚙️ Trang Cài Đặt</Typography>
-    <Typography paragraph sx={{ mt: 2 }}>
-      Đây là nơi bạn có thể thiết lập các tùy chọn cho ứng dụng.
-    </Typography>
-  </Box>
-);
+export const SettingsPage = () => {
+  const { t } = useTranslation();
+
+  return (
+    <Box>
+      <Typography variant="h5">{t('settingsPage.title')}</Typography>
+      <Typography paragraph sx={{ mt: 2 }}>
+        {t('settingsPage.description')}
+      </Typography>
+    </Box>
+  );
+};

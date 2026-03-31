@@ -20,7 +20,7 @@ class PaymentTransactionBase(SQLModel):
             nullable=False,
         )
     )
-    response_message: str = Field(sa_column=SAColumn(Text, nullable=True))
+    response_message: str = Field(sa_column=SAColumn(Text, nullable=False))
 
 
 class PaymentTransaction(PaymentTransactionBase, table=True):

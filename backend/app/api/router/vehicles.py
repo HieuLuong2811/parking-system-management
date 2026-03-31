@@ -3,7 +3,7 @@ from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.api.controller.vehicles import VehicleController
 from app.db.session import get_db
-from app.models.responses import DeleteResponse
+from app.models.responses import DeleteResponse, VehicleLookupResponse
 from app.models.vehicles import VehicleCreate, VehicleRead, VehicleUpdate
 
 router = APIRouter(prefix="/vehicles", tags=["vehicles"])
@@ -37,3 +37,7 @@ async def update_vehicle(
 @router.delete("/{vehicle_id}", response_model=DeleteResponse)
 async def delete_vehicle(vehicle_id: str, db: AsyncSession = Depends(get_db)):
     return await VehicleController.delete_vehicle_ctrl(vehicle_id, db)
+
+@router.get("/lookup", response_model=VehicleLookupResponse)
+async def lookup_vehicle_by_plate(license_plate: str, db: AsyncSession = Depends(get_db)):
+    return await VehicleController.lookup_vehicle_by_plate_ctrl(license_plate, db)

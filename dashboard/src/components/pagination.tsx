@@ -5,9 +5,8 @@ import {
   MenuItem,
   IconButton,
 } from '@mui/material';
-import Select, {
-  type SelectChangeEvent,
-} from '@mui/material/Select';
+import Select from '@mui/material/Select';
+import type { SelectChangeEvent } from '@mui/material/Select';
 import { ArrowBackIosNew, ArrowForwardIos } from '@mui/icons-material';
 
 export interface PaginationBarProps {

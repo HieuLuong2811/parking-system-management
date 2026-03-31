@@ -57,8 +57,6 @@ class DetectService():
 
         return text
 
-
-
     @staticmethod
     def detect_video(video_path: str, output_path: str = 'results.mp4'):
         cap = cv2.VideoCapture(video_path)

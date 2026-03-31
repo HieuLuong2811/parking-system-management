@@ -23,7 +23,3 @@ class parkingSessionService:
         session_id: str, payload: ParkingSessionUpdate, db: AsyncSession
     ) -> ParkingSession:
         return await parkingSessionService.crud.update(db, session_id, payload)
-
-    @staticmethod
-    async def delete_session(session_id: str, db: AsyncSession) -> ParkingSession:
-        return await parkingSessionService.crud.delete(db, session_id)

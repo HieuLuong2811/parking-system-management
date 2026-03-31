@@ -11,7 +11,6 @@ from .mixins import SoftDeleteMixin, TimestampMixin
 
 
 class SubscriptionPlanBase(SQLModel):
-    plan_code: str = Field(max_length=50, nullable=False)
     plan_name: str = Field(max_length=255, nullable=False)
     price_per_day: int = Field(sa_column=SAColumn(Integer, nullable=False))
     description: Optional[str] = Field(default=None, sa_column=SAColumn(Text))

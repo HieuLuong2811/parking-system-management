@@ -22,5 +22,5 @@ async def get_all_users(db: AsyncSession = Depends(get_db)):
 
 
 @router.delete("/{user_code}/{role_id}", response_model=DeleteResponse)
-async def revoke_user_role(user_code: str, role_id: int, db: AsyncSession = Depends(get_db)):
+async def revoke_user_role(user_code: str, role_id: str, db: AsyncSession = Depends(get_db)):
     return await UserRolesController.revoke_user_role_ctrl(user_code, role_id, db)

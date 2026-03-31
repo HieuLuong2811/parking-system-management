@@ -1,6 +1,7 @@
 from fastapi import APIRouter, Depends, HTTPException
 from sqlalchemy.ext.asyncio import AsyncSession
 from app.db.session import get_db
+from app.models.auth import UserBulkImportRequest
 from app.models.responses import DeleteResponse
 from app.models.users import UsersCreate, UsersRead, UsersUpdate
 from app.api.controller.users import UserController
@@ -13,6 +14,22 @@ async def create_user(
 ):
     return await UserController.create_user_ctrl(user_in, db)
 
+@router.post("/{user_code}", response_model=UsersRead)
+async def get_user_by_user_code(
+    user_code: str,
+    db: AsyncSession = Depends(get_db),
+):
+    return await UserController.get_user_by_user_code_ctrl(user_code, db)
+
+
+@router.post("/import/{role_code}", response_model=list[UsersRead])
+async def import_users(
+    role_code: str,
+    payload: UserBulkImportRequest,
+    db: AsyncSession = Depends(get_db),
+):
+    return await UserController.import_users_ctrl(role_code, payload, db)
+
 
 @router.get("/", response_model=list[UsersRead])
 async def get_all_users(db: AsyncSession = Depends(get_db)):
@@ -22,11 +39,11 @@ async def get_all_users(db: AsyncSession = Depends(get_db)):
     return users
 
 
-@router.patch("/{id}", response_model=UsersRead)
-async def update_user(id: str, user_in: UsersUpdate, db: AsyncSession = Depends(get_db)):
-    return await UserController.update_user_ctrl(id, user_in, db)
+@router.patch("/{user_code}", response_model=UsersRead)
+async def update_user(user_code: str, user_in: UsersUpdate, db: AsyncSession = Depends(get_db)):
+    return await UserController.update_user_ctrl(user_code, user_in, db)
 
 
-@router.delete("/{id}", response_model=DeleteResponse)
-async def delete_user(id: str, db: AsyncSession = Depends(get_db)):
-    return await UserController.delete_user_ctrl(id, db)
+@router.delete("/{user_code}", response_model=DeleteResponse)
+async def delete_user(user_code: str, db: AsyncSession = Depends(get_db)):
+    return await UserController.delete_user_ctrl(user_code, db)

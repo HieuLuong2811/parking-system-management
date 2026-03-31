@@ -2,28 +2,31 @@ from __future__ import annotations
 
 from datetime import datetime
 from typing import Optional
+import uuid
 
-from sqlalchemy import Column as SAColumn, Integer, String
+from sqlalchemy import Column as SAColumn, String
 from sqlmodel import Field, SQLModel
 
 
 class RolesBase(SQLModel):
     role_code: str = Field(max_length=50, sa_column=SAColumn(String(50), nullable=False))
     role_name: str = Field(max_length=255, sa_column=SAColumn(String(255), nullable=False))
-    created_at: datetime = Field(default_factory=datetime.utcnow, nullable=False)
 
 
 class Roles(RolesBase, table=True):
     __tablename__ = "roles"
-    id: Optional[int] = Field(default=None, primary_key=True)
+    id: uuid.UUID = Field(default_factory=uuid.uuid4, primary_key=True, index=True)
+    created_at: datetime = Field(default_factory=datetime.utcnow, nullable=False)
 
 
-class RolesCreate(RolesBase):
-    pass
+class RolesCreate(SQLModel):
+    role_code: str = Field(max_length=50, sa_column=SAColumn(String(50), nullable=False))
+    role_name: str = Field(max_length=255, sa_column=SAColumn(String(255), nullable=False))
 
 
 class RolesRead(RolesBase):
-    id: int
+    id: uuid.UUID
+    created_at: datetime
 
 
 class RolesUpdate(SQLModel):

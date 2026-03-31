@@ -1,6 +1,7 @@
+from fastapi import HTTPException, status
 from sqlalchemy.ext.asyncio import AsyncSession
 
-from app.models.responses import DeleteResponse
+from app.models.responses import DeleteResponse, VehicleLookupResponse
 from app.models.vehicles import VehicleCreate, VehicleRead, VehicleUpdate
 from app.service.vehicles import vehicleService
 
@@ -26,3 +27,19 @@ class VehicleController:
     async def delete_vehicle_ctrl(vehicle_id: str, db: AsyncSession) -> DeleteResponse:
         await vehicleService.delete_vehicle(vehicle_id, db)
         return DeleteResponse(message="Deleted vehicle")
+
+    @staticmethod
+    async def lookup_vehicle_by_plate_ctrl(license_plate: str, db: AsyncSession) -> VehicleLookupResponse:
+        try:
+            vehicle, user = await vehicleService.get_by_license_plate(license_plate, db)
+        except ValueError:
+            raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Vehicle not found")
+        return VehicleLookupResponse(
+            id=str(vehicle.id),
+            user_code=user.user_code,
+            vehicle_type=vehicle.vehicle_type.value,
+            license_plate=vehicle.license_plate,
+            qr_code=vehicle.qr_code,
+            user_full_name=user.full_name,
+            user_email=user.email,
+        )

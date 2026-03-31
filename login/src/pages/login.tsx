@@ -1,171 +1,261 @@
-import React, { useCallback, useMemo, useState } from 'react';
-import { Link as RouterLink } from 'react-router-dom';
+import React, { useCallback, useMemo, useState } from "react";
 import {
   Alert,
   Box,
   Button,
-  ButtonGroup,
   CircularProgress,
-  Container,
-  TextField,
+  FormControl,
+  InputLabel,
+  MenuItem,
+  Select,
   Typography,
-} from '@mui/material';
-import LockOutlinedIcon from '@mui/icons-material/LockOutlined';
-import { COOKIE_NAME, deleteCookie, setCookie } from '../utils/cookieUtils';
-import { VITE_DASHBOARD_URL } from '../constant/config';
+} from "@mui/material";
+import type { SelectChangeEvent } from "@mui/material";
+import { AUTH_LOGIN_URL, VITE_CLIENT_WEB_URL, VITE_DASHBOARD_URL } from "../constant/config";
 import {
   getStoredLanguage,
-  languageLabels,
-  Language,
   supportedLanguages,
   setStoredLanguage,
-} from '../utils/language';
-import { loginTranslations } from '../translations/login';
+} from "../utils/language";
 
-const mockLoginApi = (user: string, pass: string): Promise<string> => {
-  return new Promise((resolve, reject) => {
-    setTimeout(() => {
-      if (user === 'admin' && pass === 'password') {
-        resolve('mock_jwt_token_1234567890');
-      } else {
-        reject(new Error('Sai tên đăng nhập hoặc mật khẩu.'));
-      }
-    }, 1500);
-  });
-};
+type Language = (typeof supportedLanguages)[number];
+import { loginTranslations } from "../translations/login";
+import { RuleTranslations } from "../translations/rule";
+import { clearSessionToken, setSessionToken } from "../utils/tokenStorage";
+import { FormInput } from "../components/FormInput";
+import { languageOptions } from "../ultis/flags";
 
 const LoginPage: React.FC = () => {
   const [language, setLanguage] = useState<Language>(() => getStoredLanguage());
-  const [username, setUsername] = useState<string>('');
-  const [password, setPassword] = useState<string>('');
+  const [usercode, setUsercode] = useState<string>("");
+  const [password, setPassword] = useState<string>("");
   const [isLoading, setIsLoading] = useState<boolean>(false);
-  const [error, setError] = useState<string>('');
+  const [error, setError] = useState<string>("");
+  const [fieldErrors, setFieldErrors] = useState<{
+    usercode?: string;
+    password?: string;
+  }>({});
 
   const t = useMemo(
     () => (key: string) => loginTranslations[language][key] ?? key,
-    [language]
+    [language],
+  );
+
+  const tRule = useMemo(
+    () => (key: string) => RuleTranslations[language][key] ?? key,
+    [language],
   );
 
   const handleLanguageChange = useCallback(
-    (lang: Language) => {
+    (event: SelectChangeEvent<Language>) => {
+      const lang = event.target.value as Language;
       setLanguage(lang);
       setStoredLanguage(lang);
     },
-    [setLanguage, setStoredLanguage]
+    [],
   );
 
-  const handleLogin = async (event: React.FormEvent) => {
-    event.preventDefault();
-    
-    if (!username || !password) {
-      setError(t('login.error.empty'));
+  const mockdata = {
+    user_code: "admin",
+    password: "admin123",
+  };
+
+  const mockrole = { ADMIN: "ADMIN", USER: "USER" };
+
+  const handleLogin = async (usercode: string, password: string) => {
+
+    const role = "USER";
+
+    const requiredUsercode = t("login.required-first.usercode");
+    const requiredPassword = t("login.required-first.password");
+
+    const requiredMessage = tRule("login.rule.required-field");
+    const nextFieldErrors: typeof fieldErrors = {};
+    if (!usercode) {
+      nextFieldErrors.usercode = [requiredUsercode, requiredMessage].join(" ");
+    }
+    if (!password) {
+      nextFieldErrors.password = [requiredPassword, requiredMessage].join(" ");
+    }
+
+    if (nextFieldErrors.usercode || nextFieldErrors.password) {
+      setFieldErrors(nextFieldErrors);
+      setError("");
       return;
     }
 
+    if (usercode !== mockdata.user_code || password !== mockdata.password) {
+      setError(t("login.error.invalid"));
+      return;
+    }
+
+    setFieldErrors({});
+
     setIsLoading(true);
-    setError('');
+    setError("");
 
     try {
-      const token = await mockLoginApi(username, password);
-      
-      setCookie(COOKIE_NAME, token, 7);
-      window.location.href = VITE_DASHBOARD_URL;
+      clearSessionToken();
+      const response = await fetch(AUTH_LOGIN_URL, {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+        },
+        body: JSON.stringify({
+          user_code: usercode.trim(),
+          password,
+        }),
+      });
 
-    } catch (e) {
-      setError(t('login.error.invalid'));
-      deleteCookie(COOKIE_NAME); 
+      if (!response.ok) {
+        const payload = await response.json().catch(() => null);
+        const detail = payload?.detail ?? t("login.error.invalid");
+        throw new Error(
+          typeof detail === "string" ? detail : t("login.error.invalid"),
+        );
+      }
+
+      const { access_token } = await response.json();
+      setSessionToken(access_token);
+
+      if (role === mockrole.ADMIN) {
+        window.location.href = VITE_DASHBOARD_URL;
+      } else {
+        window.location.href = VITE_CLIENT_WEB_URL;
+      }
+      
+    } catch (error) {
+      setFieldErrors({});
+      setError(
+        error instanceof Error ? error.message : t("login.error.invalid"),
+      );
+      clearSessionToken();
       setIsLoading(false);
     }
   };
 
-  const languageButtons = useMemo(
-    () =>
-      supportedLanguages.map(lang => (
-        <Button
-          key={lang}
-          size="small"
-          variant={language === lang ? 'contained' : 'outlined'}
-          onClick={() => handleLanguageChange(lang)}
-        >
-          {languageLabels[lang]}
-        </Button>
-      )),
-    [language, handleLanguageChange]
-  );
+  const handleChange = (field: "usercode" | "password", setter: (v: string) => void) =>
+    (event: React.ChangeEvent<HTMLInputElement>) => {
+      setter(event.target.value);
+
+      if (fieldErrors[field]) {
+        setFieldErrors((prev) => ({
+          ...prev,
+          [field]: undefined,
+        }));
+      }
+  };
 
   return (
-    <Container component="main" maxWidth="xs">
-      <Box
-        sx={{
-          marginTop: 8,
-          display: 'flex',
-          flexDirection: 'column',
-          alignItems: 'center',
-          p: 4,
-          boxShadow: 3,
-          borderRadius: 2,
-          bgcolor: 'white',
-        }}
-      >
-        <LockOutlinedIcon color="primary" sx={{ m: 1, fontSize: 40 }} />
-        <Typography component="h1" variant="h5" sx={{ mb: 2 }}>
-          {t('login.title')}
-        </Typography>
-        <ButtonGroup sx={{ mb: 2 }}>{languageButtons}</ButtonGroup>
-
-        {error && (
-          <Alert severity="error" sx={{ width: '100%', mb: 2 }}>
-            {error}
-          </Alert>
-        )}
-        <Typography variant="body2" color="text.secondary" sx={{ mb: 2 }}>
-          {t('login.credentials-hint')}
-        </Typography>
-
-        <Box component="form" onSubmit={handleLogin} noValidate sx={{ mt: 1, width: '100%' }}>
-          <TextField
-            margin="normal"
-            required
-            fullWidth
-            id="username"
-            label={t('login.username')}
-            name="username"
-            autoFocus
-            value={username}
-            onChange={e => setUsername(e.target.value)}
-            disabled={isLoading}
-          />
-          <TextField
-            margin="normal"
-            required
-            fullWidth
-            name="password"
-            label={t('login.password')}
-            type="password"
-            id="password"
-            value={password}
-            onChange={e => setPassword(e.target.value)}
-            disabled={isLoading}
-          />
-          <Button
-            type="submit"
-            fullWidth
-            variant="contained"
-            sx={{ mt: 3, mb: 2, py: 1.5 }}
-            disabled={isLoading}
-            startIcon={isLoading ? <CircularProgress size={20} color="inherit" /> : null}
+    <Box className="login-shell">
+      <Box className="login-card">
+        <Box className="login-grid">
+          <Box className="login-gradient">
+            <Box sx={{ display: "flex", alignItems: "center", gap: 2 }}>
+              <Box component="img" src="/Logo.png" alt={t("login.logo-alt")} />
+              <Typography className="login-gradient-title" variant="h6">
+                {t("login.subtitle")}
+              </Typography>
+            </Box>
+            <Typography className="login-gradient-title" variant="h4">
+              {t("login.title")}
+            </Typography>
+            <Typography className="login-gradient-description">
+              {t("login.description")}
+            </Typography>
+            <Box className="login-gap" />
+            <Typography variant="subtitle1" color="rgba(255,255,255,0.6)">
+              {t("login.subtitle")} — 2026
+            </Typography>
+          </Box>
+          <Box
+            component="form"
+            onSubmit={(e) => {
+              e.preventDefault();
+              handleLogin(usercode, password);
+            }}
+            noValidate
+            className="login-form"
           >
-            {isLoading ? t('login.loading') : t('login.button')}
-          </Button>
-          <Typography variant="body2">
-            {t('login.no-account')}{' '}
-            <RouterLink to="/register" style={{ textDecoration: 'none', color: '#1976d2' }}>
-              {t('login.register-link')}
-            </RouterLink>
-          </Typography>
+            <Typography variant="h5" sx={{ fontWeight: 600, color: "#0c1f4b", textAlign: "center" }}>
+              {t("login.form-title")}
+            </Typography>
+            {error && (
+              <Alert severity="error" onClose={() => setError("")}>
+                {error}
+              </Alert>
+            )}
+
+            <FormInput
+              label={t("login.usercode")}
+              required
+              value={usercode}
+              onChange={handleChange("usercode", setUsercode)}
+              error={fieldErrors.usercode}
+              disabled={isLoading}
+            />
+
+            <FormInput
+              label={t("login.password")}
+              type="password"
+              required
+              value={password}
+              onChange={handleChange("password", setPassword)}
+              error={fieldErrors.password}
+              disabled={isLoading}
+            />  
+
+            <Button
+              variant="contained"
+              type="submit"
+              size="large"
+              disabled={isLoading}
+              sx={{ mt: 1, borderRadius: 2, width: "100%" }}
+              className="auth-button"
+            >
+              {isLoading ? (
+                <CircularProgress size={20} color="inherit" />
+              ) : (
+                t("login.button")
+              )}
+            </Button>
+            <Typography
+              className="login-footer-link"
+              variant="body2"
+              component="a"
+              href="#"
+            >
+              {t("login.forgot-password")}
+            </Typography>
+            <FormControl
+              fullWidth
+              variant="standard"
+              className="login-language"
+            >
+              <InputLabel id="language-select-label">
+                {t("login.language-label")}
+              </InputLabel>
+              <Select
+                labelId="language-select-label"
+                value={language}
+                onChange={handleLanguageChange}
+                disabled={isLoading}
+                label={t("login.language-label")}
+              >
+                {languageOptions.map((lang) => (
+                  <MenuItem key={lang.code} value={lang.code}>
+                    <Box sx={{ display: "flex", alignItems: "center", gap: 1 }}>
+                      <Box component="img" src={lang.flag} alt={lang.name} sx={{ width: 20, height: 14, objectFit: "cover" }}/>
+                      {lang.name}
+                    </Box>
+                  </MenuItem>
+                ))}
+              </Select>
+            </FormControl>
+          </Box>
         </Box>
       </Box>
-    </Container>
+    </Box>
   );
 };
 

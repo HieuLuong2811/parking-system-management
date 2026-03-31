@@ -42,6 +42,11 @@ class Settings(BaseSettings):
     # Security
     SECRET_KEY: str = secrets.token_urlsafe(32)
     ACCESS_TOKEN_EXPIRE_MINUTES: int = 60 * 24 * 8  # 8 days
+    JWT_SECRET: str
+
+    # Stripe
+    STRIPE_SECRET_KEY: str | None = None
+    STRIPE_WEBHOOK_SECRET: str | None = None
 
     # Superuser
     FIRST_SUPERUSER: EmailStr
@@ -94,6 +99,17 @@ class Settings(BaseSettings):
     EMAIL_RESET_TOKEN_EXPIRE_HOURS: int = 48
     EMAIL_TEST_USER: EmailStr = "test@example.com"
     DATABASE_URL: str = "http://localhost:8000/api/v1/"
+    BACKEND_HOST: str = "http://localhost:8000"
+
+    # MoMo Payment
+    MOMO_PARTNER_CODE: str = ""
+    MOMO_ACCESS_KEY: str = ""
+    MOMO_SECRET_KEY: str = ""
+
+    MOMO_ENDPOINT: str = "https://test-payment.momo.vn/v2/gateway/api/create"
+    MOMO_REDIRECT_URL: str = "https://webhook.site/b3088a6a-2d17-4f8d-a383-71389a6c600b"
+    MOMO_IPN_URL: str = "http://localhost:8000/api/v1/payment/momo-ipn"
+
     @computed_field  
     @property
     def emails_enabled(self) -> bool:
@@ -122,6 +138,7 @@ class Settings(BaseSettings):
         self._check_default_secret("SECRET_KEY", self.SECRET_KEY)
         self._check_default_secret("POSTGRES_PASSWORD", self.POSTGRES_PASSWORD)
         self._check_default_secret("FIRST_SUPERUSER_PASSWORD", self.FIRST_SUPERUSER_PASSWORD)
+        self._check_default_secret("JWT_SECRET", self.JWT_SECRET)
         return self
 
 

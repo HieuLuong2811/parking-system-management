@@ -10,7 +10,6 @@ from .mixins import TimestampMixin
 
 
 class AcademicTermBase(SQLModel):
-    term_code: str = Field(max_length=50, nullable=False)
     term_name: str = Field(max_length=255, nullable=False)
     start_date: date
     end_date: date

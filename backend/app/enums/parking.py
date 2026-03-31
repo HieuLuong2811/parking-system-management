@@ -32,3 +32,21 @@ class InvoiceStatus(str, Enum):
 class TransactionStatus(str, Enum):
     SUCCESS = "SUCCESS"
     FAILED = "FAILED"
+
+
+class ParkingSessionStatus(str, Enum):
+    ACTIVE = "ACTIVE"
+    DONE = "DONE"
+
+
+class PaymentStatus(str, Enum):
+    PENDING = "PENDING"
+    PAID = "PAID"
+    FAILED = "FAILED"
+
+
+class UserType(str, Enum):
+    GUEST = "GUEST"
+    STUDENT = "STUDENT"
+    STAFF = "STAFF"
+    VISITOR = "VISITOR"

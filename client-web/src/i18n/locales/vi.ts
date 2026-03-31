@@ -1,0 +1,327 @@
+﻿const vi = {
+  announcement: {
+    name: 'Hệ thống đăng ký gửi xe cho sinh viên Trường Đại học Sư phạm Kỹ thuật Hưng Yên',
+  },
+
+  nav: {
+    home: 'Trang chủ',
+    plan: 'Đăng ký gói',
+    vehicles: 'Phương tiện',
+    sessions: 'Phiên gửi xe',
+    invoices: 'Hóa đơn',
+    profile: 'Hồ sơ',
+    userName: 'Hiếu',
+  },
+
+  footer: {
+    hotline: 'Hotline hỗ trợ: 1900 1234',
+    email: 'Email: support@campusparking.vn',
+  },
+
+  home: {
+    activePlanTitle: 'Gói đang hoạt động',
+    noPlanLabel: 'Bạn chưa có gói nào',
+    noPlanDescription: 'Đăng ký để giữ chỗ gửi xe.',
+    registerPlan: 'Đăng ký gói',
+    vehiclesTitle: 'Phương tiện đã đăng ký',
+    vehiclesEmpty: 'Bạn chưa thêm phương tiện nào.',
+    sessionsTitle: 'Phiên gửi xe gần đây',
+    sessionsEmpty: 'Chưa có phiên gửi xe nào.',
+    manageVehicles: 'Quản lý phương tiện',
+    viewSessions: 'Xem tất cả phiên',
+  },
+
+  vehicle: {
+    sectionTitle: 'Đăng ký phương tiện',
+    subtitle: 'Thêm xe để chuẩn bị thông tin gửi nhanh chóng.',
+    registerPlanButton: 'Đăng ký gói gửi xe',
+    registerVehicleButton: 'Đăng ký phương tiện',
+    search: {
+      userCode: 'Mã người dùng',
+      license: 'Biển số',
+    },
+    applyFilter: 'Lọc',
+    table: {
+      vehicleId: 'Mã xe',
+      userCode: 'Mã người dùng',
+      type: 'Loại',
+      licensePlate: 'Biển số',
+      qrCode: 'Mã QR',
+      createdAt: 'Ngày tạo',
+      actions: 'Hành động',
+      actionsMenu: {
+        edit: 'Sửa',
+        delete: 'Xóa',
+      },
+    },
+    empty: 'Chưa có phương tiện nào.',
+    error: {
+      load: 'Không thể tải danh sách phương tiện. Vui lòng thử lại sau.',
+    },
+    modal: {
+      title: 'Thêm phương tiện',
+      submit: 'Đăng ký phương tiện',
+      cancel: 'Hủy',
+      tabs: {
+        withPlate: 'Có biển số',
+        withoutPlate: 'Không biển số',
+      },
+      actions: {
+        generateQr: 'Tạo mã QR',
+      },
+      generatingQr: 'Đang tạo QR…',
+      fields: {
+        userCode: 'Mã người dùng',
+        vehicleType: 'Loại phương tiện',
+        licensePlate: 'Biển số',
+        qrCode: 'QR code',
+        description: 'Ghi chú',
+      },
+      errors: {
+        generic: 'Không thể đăng ký phương tiện. Vui lòng thử lại.',
+        required: 'Trường này là bắt buộc.',
+        qrGenerate: 'Điền thông tin bắt buộc trước khi tạo QR.',
+        qrFailed: 'Không thể tạo mã QR.',
+        qrMissing: 'Tạo mã QR trước khi đăng ký.',
+      },
+    },
+    form: {
+      plateLabel: 'Biển số',
+      platePlaceholder: 'Ví dụ: 51A-123.45',
+      brandLabel: 'Tên xe',
+      brandPlaceholder: 'Toyota Vios 2023',
+      colorLabel: 'Màu sắc',
+      colorPlaceholder: 'Trắng ngọc trai',
+      purposeLabel: 'Mục đích sử dụng',
+      purposeOptions: {
+        personal: 'Xe cá nhân',
+        family: 'Xe gia đình',
+        work: 'Xe đi làm',
+      },
+      saveButton: 'Lưu phương tiện',
+    },
+  },
+
+  invoices: {
+    sectionTitle: 'Hóa đơn',
+    headerTitle: 'Lịch sử thanh toán',
+    filters: {
+      from: 'Từ ngày',
+      to: 'Đến ngày',
+    },
+    resultsTitle: 'Kết quả tìm kiếm',
+    empty: 'Không có hóa đơn nào tương ứng.',
+    issuedOn: 'Ngày phát hành',
+    dueOn: 'Hạn thanh toán',
+    amountLabel: 'Số tiền',
+    status: {
+      paid: 'Đã thanh toán',
+      pending: 'Đang chờ',
+      overdue: 'Quá hạn',
+    },
+  },
+
+  sessions: {
+    sectionTitle: 'Phiên gửi xe',
+    loading: 'Đang tải phiên gửi xe…',
+    sessionId: 'Phiên {{id}}',
+    notProvided: 'Chưa có',
+    checkIn: 'Thời điểm vào',
+    checkOut: 'Thời điểm ra',
+    totalDays: 'Số ngày gửi',
+    totalAmount: 'Tổng tiền',
+    statusUnknown: 'Chờ',
+    empty: 'Không tìm thấy phiên nào phù hợp.',
+    filters: {
+      from: 'Từ thời điểm',
+      to: 'Đến thời điểm',
+      search: 'Tìm kiếm',
+      searchPlaceholder: 'Biển số, mã phiên',
+    },
+    table: {
+      vehicle: 'Phương tiện',
+      checkIn: 'Thời điểm vào',
+      checkOut: 'Thời điểm ra',
+      status: 'Trạng thái',
+      userType: 'Loại người dùng',
+      amount: 'Tổng tiền',
+    },
+    userType: {
+      guest: 'Khách vãng lai',
+      student: 'Sinh viên',
+      staff: 'Nhân viên',
+      visitor: 'Khách',
+    },
+  },
+
+  profile: {
+    loading: 'Đang tải hồ sơ…',
+    sectionTitle: 'Thông tin cá nhân',
+    tagline: 'Khách hàng {{id}}',
+    highlightTitle: 'Tổng quan nhanh',
+    planLabel: 'Gói hiện tại:',
+    update: 'Cập nhật hồ sơ',
+    download: 'Tải tài liệu',
+    logout: 'Đăng xuất',
+  },
+
+  plan: {
+    sectionTitle: 'Đăng ký gói gửi xe theo học kỳ',
+
+    steps: ['Chọn học kỳ', 'Cập nhật nhu cầu', 'Xác nhận'],
+
+    vehiclePackages: {
+      sectionTitle: 'Gói gửi xe theo loại phương tiện',
+      description: 'Chọn gói phù hợp với xe có hoặc không có biển số trước khi đăng ký.',
+      cta: 'Đăng ký gói này',
+      withoutPlate: {
+        subtitle: 'Xe không biển số',
+        title: 'Không biển số',
+        price: '4.500 đ / ngày',
+        description: 'Dành cho xe mang thẻ sinh viên hoặc không gắn biển số thường xuyên.',
+        features: [
+          'Hỗ trợ thẻ mã QR để check-in nhanh',
+          'Ghi nhận lượt gửi qua mã QR tự động',
+          'Không cần nhập biển số khi ra vào',
+          'Thông báo trạng thái gửi qua ứng dụng',
+          'Ưu tiên xếp hàng vào giờ cao điểm',
+        ],
+      },
+      withPlate: {
+        subtitle: 'Xe có biển số',
+        title: 'Có biển số',
+        price: '5.200 đ / ngày',
+        description: 'Lựa chọn tối ưu cho xe có biển số cá nhân, ghi nhận chính xác từng lượt.',
+        features: [
+          'Camera phát hiện biển số tự động',
+          'Đối soát chính xác giấy tờ với biển số',
+          'Cảnh báo biển số trùng hoặc nghi ngờ gian lận',
+          'Phân quyền vào ra theo người dùng',
+          'Thống kê thời gian gửi theo từng biển số',
+        ],
+      },
+    },
+
+    form: {
+      timeLabel: 'Thời gian ưu tiên',
+      timePlaceholder: 'Ví dụ: 6:30 – 18:00',
+      notesLabel: 'Ghi chú thêm',
+      notesPlaceholder: 'Yêu cầu về vị trí hoặc thời gian gửi',
+    },
+
+    registering: 'Bạn đang đăng ký',
+    notes: 'Ghi chú:',
+    noNotes: 'Không có ghi chú',
+    reminder: 'Quay lại bước trước nếu cần chỉnh sửa.',
+    noPlans: 'Chưa có gói gửi xe nào trong hệ thống.',
+    planMeta: {
+      created: 'Tạo lúc {{date}}',
+      updated: 'Cập nhật lúc {{date}}',
+    },
+
+    back: 'Quay lại',
+    next: 'Tiếp theo',
+    submit: 'Gửi yêu cầu',
+
+    alert: 'Yêu cầu đã được gửi!',
+    notChosen: 'Chưa chọn',
+
+    checkoutTitle: 'Thanh toán',
+    checkoutSubtitle: 'Hoàn tất thông tin thanh toán để giữ chỗ gửi xe',
+    checkoutCta: 'Đăng ký gói này',
+    checkoutConfirmed: 'Đã xác nhận thanh toán cho {{plan}}',
+    priceNote: 'Giá hiển thị bằng VND để giữ sự nhất quán.',
+    checkoutFields: {
+      cardNumber: 'Số thẻ',
+      bank: 'Ngân hàng phát hành',
+      paymentMethod: 'Hình thức thanh toán',
+      full: 'Thanh toán toàn bộ',
+      installment: 'Thanh toán định kỳ',
+      notes: 'Ghi chú',
+      notesPlaceholder: 'Ghi thêm yêu cầu hoặc số tham chiếu',
+    },
+
+    checkoutRules:
+      'Khi xác nhận, bạn đồng ý với chính sách bãi xe, điều kiện hoàn tiền và nhắc nhở tự động.',
+
+    checkoutCancel: 'Hủy',
+    checkoutConfirm: 'Xác nhận thanh toán',
+    checkoutPaymentMomo: 'Thanh toán qua MoMo',
+    checkoutPlanNote: 'Thông tin gói đăng ký được hiển thị để bạn kiểm tra.',
+    checkoutStepper: {
+      steps: ['Chọn học kỳ', 'Hình thức thanh toán', 'Thông tin thanh toán'],
+      termLabel: 'Học kỳ',
+      termPlaceholder: 'Chọn học kỳ',
+      termHelper: 'Chọn học kỳ phù hợp để tiếp tục quy trình thanh toán.',
+      termOptions: ['Học kỳ Xuân 2026', 'Học kỳ Hè 2026', 'Học kỳ Thu 2026'],
+      termEmpty: 'Đang cập nhật gói học kỳ. Vui lòng thử lại sau.',
+      paymentPlanLabel: 'Hình thức thanh toán',
+      paymentPlanDescription: 'Lựa chọn thanh toán định kỳ hoặc một lần để mở form phía dưới.',
+      cardFormTitle: 'Nhập thông tin thẻ',
+      cardHolder: 'Tên chủ thẻ',
+      cardExpiry: 'Hạn sử dụng (MM/YY)',
+      cardCvc: 'CVC',
+      momoTitle: 'Thanh toán qua MoMo',
+      momoDescription: 'Bạn sẽ được chuyển hướng sang trang MoMo để hoàn tất giao dịch trong vòng 5 phút.',
+      momoRedirect: 'Chúng tôi sẽ mở MoMo để bạn xác nhận thanh toán.',
+      next: 'Tiếp theo',
+      back: 'Quay lại',
+      confirm: 'Xác nhận thanh toán',
+      payMomo: 'Thanh toán bằng MoMo',
+      termCards: [
+        {
+          id: 'spring-2026',
+          term_name: 'Học kỳ 1',
+          start_date: '01/09/2026',
+          end_date: '31/01/2027',
+        },
+        {
+          id: 'summer-2026',
+          term_name: 'Học kỳ 2',
+          start_date: '01/02/2027',
+          end_date: '30/06/2027',
+        },
+        {
+          id: 'fall-2026',
+          term_name: 'Cả năm học',
+          start_date: '01/09/2026',
+          end_date: '30/06/2027',
+        },
+      ],
+      termRange: 'Từ {{start}} đến {{end}}',
+    },
+    checkoutMomoTitle: 'Thanh toán qua MoMo',
+    checkoutMomoDescription: 'Quét mã QR và hoàn tất thanh toán trong vòng 5 phút.',
+    checkoutMomoSteps: {
+      step1: 'Mở app MoMo và chọn “Quét mã”',
+      step2: 'Hướng camera vào mã QR để đọc thông tin',
+      step3: 'Kiểm tra số tiền rồi xác nhận thanh toán',
+    },
+    checkoutMomoAccount: 'TK MoMo: Campus Parking (0912 345 678)',
+    checkoutMomoNote: 'Gửi ảnh xác nhận giao dịch để đội ngũ kiểm duyệt thanh toán.',
+    paymentModes: {
+      recurring: {
+        title: 'Thanh toán định kỳ',
+        price: '1.200.000 VND / tháng',
+        suffix: 'VND / tháng',
+        description: 'Tự động thanh toán hàng tháng.',
+        badge: 'Đề xuất',
+        perkReminder: 'Nhắc trước 3 ngày',
+        perkSecureCard: 'Lưu thẻ an toàn cho lần thanh toán tiếp theo',
+        perkFlexible: 'Tạm dừng hoặc kích hoạt lại linh hoạt',
+      },
+      oneTime: {
+        title: 'Thanh toán một lần',
+        price: '4.900.000 VND / học kỳ',
+        suffix: 'VND / học kỳ',
+        description: 'Thanh toán một lần để giữ mức phí tốt nhất.',
+        badge: 'Tiết kiệm 8%',
+        perkFast: 'Xác nhận ngay trong 24h',
+        perkNoRenewal: 'Không tự động gia hạn',
+        perkSupport: 'Hỗ trợ chuyển khoản & ví điện tử',
+      },
+    },
+  },
+};
+
+export default vi;

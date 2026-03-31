@@ -11,8 +11,8 @@ class InvoiceController:
         return await invoiceService.create_invoice(payload, db)
 
     @staticmethod
-    async def get_invoice_ctrl(invoice_id: str, db: AsyncSession) -> InvoiceRead:
-        return await invoiceService.get_invoice(invoice_id, db)
+    async def get_invoice_by_user_code_ctrl(user_id: str, db: AsyncSession) -> InvoiceRead:
+        return await invoiceService.get_invoice_by_user_code(user_id, db)
 
     @staticmethod
     async def get_all_invoices_ctrl(db: AsyncSession) -> list[InvoiceRead]:
@@ -21,8 +21,3 @@ class InvoiceController:
     @staticmethod
     async def update_invoice_ctrl(invoice_id: str, payload: InvoiceUpdate, db: AsyncSession) -> InvoiceRead:
         return await invoiceService.update_invoice(invoice_id, payload, db)
-
-    @staticmethod
-    async def delete_invoice_ctrl(invoice_id: str, db: AsyncSession) -> DeleteResponse:
-        await invoiceService.delete_invoice(invoice_id, db)
-        return DeleteResponse(message="Deleted invoice")

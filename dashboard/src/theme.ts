@@ -18,7 +18,6 @@ const theme = createTheme({
       fontWeight: 500,
       lineHeight: 1.4,
     },
-    // Nội dung (Content)
     body1: {
       fontSize: '1rem',
       fontWeight: 400,
@@ -29,11 +28,9 @@ const theme = createTheme({
       fontWeight: 400,
       lineHeight: 1.6,
     },
-    // Chữ cho nút (button)
     button: {
       fontSize: '0.875rem',
       fontWeight: 600,
-      textTransform: 'uppercase',
     },
   },
   spacing: 8,
@@ -47,15 +44,57 @@ const theme = createTheme({
     },
   },
   palette: {
+    mode: 'light',
     primary: {
-      main: '#1976d2',
+      main: '#5e4fd8',
+      light: '#7b6df0',
+      dark: '#3430a5',
+      contrastText: '#ffffff',
     },
     secondary: {
-      main: '#dc004e',
+      main: '#f94a8a',
+      contrastText: '#ffffff',
     },
     text: {
-      primary: '#000000',
-      secondary: '#ffffff',
+      primary: '#0f172a',
+      secondary: '#475569',
+    },
+    background: {
+      default: '#f4f6fb',
+      paper: '#ffffff',
+    },
+    divider: '#e0e3ec',
+  },
+  shape: {
+    borderRadius: 16,
+  },
+  components: {
+    MuiAppBar: {
+      styleOverrides: {
+        root: {
+          backgroundColor: '#ffffff',
+          boxShadow: '0 10px 35px rgba(15, 23, 42, 0.08)',
+          borderBottom: '1px solid #e0e3ec',
+        },
+      },
+    },
+    MuiPaper: {
+      styleOverrides: {
+        root: {
+          backgroundColor: '#ffffff',
+          borderRadius: 20,
+        },
+      },
+    },
+    MuiButton: {
+      styleOverrides: {
+        root: {
+          textTransform: 'none',
+          borderRadius: 12,
+          boxShadow: 'none',
+          fontWeight: 600,
+        },
+      },
     },
   },
 });

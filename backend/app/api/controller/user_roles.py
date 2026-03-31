@@ -15,6 +15,6 @@ class UserRolesController:
         return await userRolesService.assign_role(userRoles_in, db)
 
     @staticmethod
-    async def revoke_user_role_ctrl(user_code: str, role_id: int, db: AsyncSession) -> DeleteResponse:
+    async def revoke_user_role_ctrl(user_code: str, role_id: str, db: AsyncSession) -> DeleteResponse:
         await userRolesService.revoke_role(user_code, role_id, db)
         return DeleteResponse(message="Revoked user role")

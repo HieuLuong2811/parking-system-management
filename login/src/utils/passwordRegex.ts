@@ -1,10 +1,10 @@
 export const passwordRegex = {
-  allowedChars: /^[A-Za-z0-9!@#$%^&*()\-_=+\[\]{}?/|]+$/,
+  allowedChars: /^[A-Za-z0-9!@#$%^&*()\-_=+[\]{}?/|]+$/,
   uppercase: /[A-Z]/,
   lowercase: /[a-z]/,
   digits: /\d/,
-  special: /[!@#$%^&*()\-_=+\[\]{}?/|]/,
-  specialOnly: /^[!@#$%^&*()\-_=+\[\]{}?/|]+$/,
+  special: /[!@#$%^&*()\-_=+[\]{}?/|]/,
+  specialOnly: /^[!@#$%^&*()\-_=+[\]{}?/|]+$/,
 };
 
 export const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;

@@ -12,17 +12,29 @@ from .mixins import SoftDeleteMixin, TimestampMixin
 class UsersBase(SQLModel):
     full_name: str = Field(max_length=255)
     email: str = Field(max_length=255, sa_column=SAColumn(String(255), nullable=False))
-    password_hash: str = Field(sa_column=SAColumn(Text, nullable=False))
+    phone_number: Optional[str] = Field(
+        default=None,
+        max_length=10,
+        sa_column=SAColumn(String(10), nullable=True),
+    )
+    language_use: Optional[str] = Field(default="en", max_length=10)
     is_active: bool = Field(default=True, sa_column=SAColumn(Boolean, nullable=False))
+    stripe_customer_id: Optional[str] = Field(
+        default=None,
+        max_length=255,
+        sa_column=SAColumn(String(255), nullable=True),
+    )
 
 
 class Users(UsersBase, TimestampMixin, SoftDeleteMixin, table=True):
     __tablename__ = "users"
     user_code: str = Field(max_length=50, primary_key=True, index=True)
+    password: str = Field(sa_column=SAColumn(Text, nullable=False))
 
 
 class UsersCreate(UsersBase):
     user_code: str = Field(max_length=50)
+    password: str = Field(min_length=6)
 
 
 class UsersRead(UsersBase):
@@ -35,6 +47,9 @@ class UsersRead(UsersBase):
 class UsersUpdate(SQLModel):
     full_name: Optional[str] = Field(default=None, max_length=255)
     email: Optional[str] = Field(default=None, max_length=255)
-    password_hash: Optional[str] = Field(default=None)
+    phone_number: Optional[str] = Field(default=None, max_length=10)
+    language_use: Optional[str] = Field(default=None, max_length=10)
+    password: Optional[str] = Field(default=None, min_length=6)
     is_active: Optional[bool] = Field(default=None)
     deleted_at: Optional[datetime] = Field(default=None)
+    stripe_customer_id: Optional[str] = Field(default=None, max_length=255)

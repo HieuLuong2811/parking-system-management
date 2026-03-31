@@ -19,11 +19,11 @@ async def get_all_roles(db: AsyncSession = Depends(get_db)):
     return roles
 
 @router.patch("/{id}", response_model=RolesRead)
-async def update_role(id: int, role_in: RolesUpdate, db: AsyncSession = Depends(get_db)):
+async def update_role(id: str, role_in: RolesUpdate, db: AsyncSession = Depends(get_db)):
     return await RoleController.update_role_ctrl(id, role_in, db)
 
 
 @router.delete("/{id}", response_model=DeleteResponse)
-async def delete_role(id: int, db: AsyncSession = Depends(get_db)):
+async def delete_role(id: str, db: AsyncSession = Depends(get_db)):
     await RoleController.delete_role_ctrl(id, db)
     return DeleteResponse(message="Deleted role")

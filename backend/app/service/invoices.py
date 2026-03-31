@@ -11,8 +11,8 @@ class invoiceService:
         return await invoiceService.crud.create(db, payload)
 
     @staticmethod
-    async def get_invoice(invoice_id: str, db: AsyncSession) -> Invoice:
-        return await invoiceService.crud.get(db, invoice_id)
+    async def get_invoice_by_user_code(user_code: str, db: AsyncSession) -> Invoice:
+        return await invoiceService.crud.get(db, user_code)
 
     @staticmethod
     async def get_all_invoices(db: AsyncSession) -> list[Invoice]:
@@ -21,7 +21,3 @@ class invoiceService:
     @staticmethod
     async def update_invoice(invoice_id: str, payload: InvoiceUpdate, db: AsyncSession) -> Invoice:
         return await invoiceService.crud.update(db, invoice_id, payload)
-
-    @staticmethod
-    async def delete_invoice(invoice_id: str, db: AsyncSession) -> Invoice:
-        return await invoiceService.crud.delete(db, invoice_id)

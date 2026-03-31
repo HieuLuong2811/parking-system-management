@@ -1,13 +1,22 @@
-body {
-  margin: 0;
-  font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', 'Roboto', 'Oxygen',
-    'Ubuntu', 'Cantarell', 'Fira Sans', 'Droid Sans', 'Helvetica Neue',
-    sans-serif;
-  -webkit-font-smoothing: antialiased;
-  -moz-osx-font-smoothing: grayscale;
+﻿:root {
+  font-family: 'Inter', 'Segoe UI', system-ui, sans-serif;
+  background-color: #eef2ff;
+  color: #0e1a42;
 }
 
-code {
-  font-family: source-code-pro, Menlo, Monaco, Consolas, 'Courier New',
-    monospace;
+* {
+  box-sizing: border-box;
+}
+
+body {
+  margin: 0;
+  background-color: #eef2ff;
+}
+
+button {
+  text-transform: none;
+}
+
+.css-1a4edti-MuiButtonBase-root-MuiButton-root {
+  color: #0e1a42 !important;
 }
