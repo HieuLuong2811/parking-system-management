@@ -41,6 +41,5 @@ build/
 Thumbs.db
 
 /backend/.venv
-/client-mobile/
 /backend/YOLOv8/
 /backend/app/models/runs/
