@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+from datetime import datetime, timezone
 from typing import Any, Generic, TypeVar
 
 from fastapi import HTTPException, status
@@ -10,6 +11,12 @@ from sqlmodel import SQLModel
 ModelType = TypeVar("ModelType", bound=SQLModel)
 CreateSchemaType = TypeVar("CreateSchemaType", bound=SQLModel)
 UpdateSchemaType = TypeVar("UpdateSchemaType", bound=SQLModel)
+
+
+def _drop_tz(value: Any) -> Any:
+    if isinstance(value, datetime) and value.tzinfo is not None:
+        return value.astimezone(timezone.utc).replace(tzinfo=None)
+    return value
 
 
 class CRUDService(Generic[ModelType, CreateSchemaType, UpdateSchemaType]):
@@ -42,7 +49,7 @@ class CRUDService(Generic[ModelType, CreateSchemaType, UpdateSchemaType]):
         instance = await self.get(db, identifier)
         update_data = payload.dict(exclude_unset=True, exclude_none=True)
         for field, value in update_data.items():
-            setattr(instance, field, value)
+            setattr(instance, field, _drop_tz(value))
         await db.commit()
         await db.refresh(instance)
         return instance

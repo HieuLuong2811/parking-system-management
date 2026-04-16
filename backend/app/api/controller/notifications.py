@@ -21,6 +21,10 @@ class NotificationController:
         return await notificationService.get_all_notifications(db, receiver_id)
 
     @staticmethod
+    async def get_notifications_for_user_ctrl(user_code: str, db: AsyncSession) -> list[NotificationRead]:
+        return await notificationService.get_all_notifications(db, user_code)
+
+    @staticmethod
     async def update_notification_ctrl(notification_id: str, payload: NotificationUpdate, db: AsyncSession) -> NotificationRead:
         return await notificationService.update_notification(notification_id, payload, db)
 

@@ -1,132 +1,301 @@
-import React, { useMemo, useState } from 'react';
-import { FormControl, InputLabel, MenuItem, Select } from '@mui/material';
-import type { SelectChangeEvent } from '@mui/material/Select';
+import React, { useCallback, useMemo, useState } from 'react';
+import {
+  Alert,
+  Box,
+  Button,
+  Chip,
+  Drawer,
+  FormControl,
+  IconButton,
+  InputLabel,
+  MenuItem,
+  Select,
+  Stack,
+  TextField,
+  Typography,
+} from '@mui/material';
+import FormatListBulletedIcon from '@mui/icons-material/FormatListBulleted';
+import { useTranslation } from 'react-i18next';
+
+import { SoftDataGrid } from '../components/common/SoftDataGrid';
+import { DrawerUserSubscription } from '../components/users/DrawerUserSubscription';
+import { useSubscriptionDetails, useSubscriptionSearch } from '../api/subscriptions';
+import type { AdminUser, UserSubscriptionDetailRecord } from '../api/types';
+import { formatCurrency, formatDateTime } from '../ultis/format';
 import type { GridColDef } from '@mui/x-data-grid';
-import { ResourceTableLayout } from '../components/resource/resourceTableLayout';
-import { useSubscriptionSearch } from '../api/subscriptions';
-import type { SubscriptionSearchRow } from '../api/types';
-import { formatCurrency } from '../ultis/format';
 
-const statusOptions = ['ALL', 'ACTIVE', 'EXPIRED', 'SUSPENDED'];
+const statusOptions = ['ALL', 'ACTIVE', 'EXPIRED', 'SUSPENDED'] as const;
 
-const columns: GridColDef<SubscriptionSearchRow>[] = [
-  { field: 'id', headerName: 'Subscription ID', width: 220, sortable: true },
-  { field: 'user_code', headerName: 'User code', width: 180, sortable: true },
-  {
-    field: 'full_name',
-    headerName: 'User name',
-    width: 220,
-    sortable: true,
-    valueGetter: (params: { row: SubscriptionSearchRow }) => params.row.user?.full_name ?? '-',
-  },
-  {
-    field: 'plan_name',
-    headerName: 'Plan',
-    width: 220,
-    sortable: true,
-    valueGetter: (params: { row: SubscriptionSearchRow }) => params.row.plan?.plan_name ?? '-',
-  },
-  {
-    field: 'term_id',
-    headerName: 'Term ID',
-    width: 180,
-    sortable: true,
-  },
-  {
-    field: 'payment_plan',
-    headerName: 'Payment plan',
-    width: 220,
-    sortable: true,
-    valueGetter: (params: { row: SubscriptionSearchRow }) => params.row.payment_plan?.plan_name ?? '-',
-  },
-  {
-    field: 'status',
-    headerName: 'Status',
-    width: 140,
-    sortable: true,
-  },
-  {
-    field: 'amount',
-    headerName: 'Amount',
-    width: 160,
-    sortable: true,
-    renderCell: (params) => <span>{formatCurrency(params.value as number | null | undefined)}</span>,
-  },
-  {
-    field: 'paid_amount',
-    headerName: 'Paid',
-    width: 140,
-    sortable: true,
-    renderCell: (params) => <span>{formatCurrency(params.value as number | null | undefined)}</span>,
-  },
-  {
-    field: 'start_date',
-    headerName: 'Start date',
-    width: 170,
-    sortable: true,
-  },
-  {
-    field: 'end_date',
-    headerName: 'End date',
-    width: 170,
-    sortable: true,
-  },
-];
+const statusColorMap: Record<string, 'success' | 'warning' | 'info' | 'default'> = {
+  ACTIVE: 'success',
+  EXPIRED: 'warning',
+  SUSPENDED: 'info',
+};
+
+const formatStatusLabel = (status: string, t: ReturnType<typeof useTranslation>['t']) =>
+  t(`profile.subscriptions.status.${status.toLowerCase()}`, { defaultValue: status });
 
 export const SubscriptionsPage: React.FC = () => {
+  const { t } = useTranslation();
   const [searchTerm, setSearchTerm] = useState('');
-  const [statusFilter, setStatusFilter] = useState('ALL');
+  const [statusFilter, setStatusFilter] = useState<typeof statusOptions[number]>('ALL');
+  const [drawerOpen, setDrawerOpen] = useState(false);
+  const [selectedUser, setSelectedUser] = useState<AdminUser | null>(null);
 
-  const filters = useMemo(
-    () => ({
-      query: searchTerm,
-      status: statusFilter === 'ALL' ? undefined : statusFilter,
-    }),
-    [searchTerm, statusFilter]
-  );
+  const { data: subscriptionDetails = [], isLoading, isError } = useSubscriptionDetails();
+  const {
+    data: subscriptionSearchRows = [],
+    raw: subscriptionSearchRaw = [],
+    isLoading: isSearchLoading,
+  } = useSubscriptionSearch();
 
-  const { data = [], isLoading, isError } = useSubscriptionSearch(filters);
+  const normalizedQuery = useMemo(() => searchTerm.trim().toLowerCase(), [searchTerm]);
 
-  const searchKeys = useMemo(
-    () => (row: SubscriptionSearchRow) => [
-      row.id,
-      row.user_code,
-      row.user?.full_name,
-      row.plan?.plan_name,
-      row.payment_plan?.plan_name,
-    ],
-    []
-  );
+  const filteredSubscriptions = useMemo(() => {
+    return subscriptionDetails.filter((subscription) => {
+      if (statusFilter !== 'ALL' && subscription.status !== statusFilter) {
+        return false;
+      }
+      if (!normalizedQuery) {
+        return true;
+      }
+      const haystack = [
+        subscription.user_code,
+        subscription.subscription_plan?.plan_name,
+        subscription.payment_plan?.plan_name,
+        subscription.term?.term_name,
+        subscription.vehicle?.license_plate,
+      ]
+        .filter(Boolean)
+        .map((value) => String(value).toLowerCase())
+        .join('|');
+      return haystack.includes(normalizedQuery);
+    });
+  }, [subscriptionDetails, normalizedQuery, statusFilter]);
 
-  const filterControls = (
-    <FormControl size="small">
-      <InputLabel>Status</InputLabel>
-      <Select value={statusFilter} label="Status" onChange={(event: SelectChangeEvent<string>) => setStatusFilter(event.target.value)}>
-        {statusOptions.map((status) => (
-          <MenuItem key={status} value={status}>
-            {status}
-          </MenuItem>
-        ))}
-      </Select>
-    </FormControl>
-  );
+  const userMap = useMemo(() => {
+    const map = new Map<string, AdminUser>();
+    subscriptionSearchRaw.forEach((row) => {
+    console.log('row.user_code', row.user_code);
+    console.log('row.user', row.user);
+
+    if (row.user) {
+      map.set(String(row.user_code), row.user);
+    }
+  });
+
+  console.log('subscriptionSearchRaw', subscriptionSearchRaw);
+  console.log('userMap entries', Array.from(map.entries()));
+    return map;
+  }, [subscriptionSearchRaw]);
+
+  const openDrawerForUser = useCallback((user: AdminUser) => {
+    setSelectedUser(user);
+    setDrawerOpen(true);
+  }, []);
+
+  const closeDrawer = useCallback(() => {
+    setDrawerOpen(false);
+    setSelectedUser(null);
+  }, []);
+
+  const handleViewSubscriptions = useCallback(() => {
+    closeDrawer();
+  }, [closeDrawer]);
+
+  const columns = useMemo<GridColDef<UserSubscriptionDetailRecord>[]>(() => {
+    return [
+      {
+        field: 'user_code',
+        headerName: t('subscriptionsPage.columns.user', 'User'),
+        minWidth: 160,
+        flex: 1,
+        renderCell: (params) => {
+          const user = userMap.get(params.row.user_code);
+          return (
+            <Stack spacing={0.5}>
+              <Typography variant="subtitle2">{params.value}</Typography>
+              {user?.full_name && (
+                <Typography variant="body2" color="text.secondary">
+                  {user.full_name}
+                </Typography>
+              )}
+            </Stack>
+          );
+        },
+      },
+      {
+        field: 'subscription_plan',
+        headerName: t('subscriptionsPage.columns.plan', 'Plan'),
+        minWidth: 180,
+        flex: 1,
+        renderCell: (params) => (
+          <Typography>{params.row.subscription_plan?.plan_name ?? '—'}</Typography>
+        ),
+      },
+      {
+        field: 'payment_plan',
+        headerName: t('subscriptionsPage.columns.paymentPlan', 'Payment plan'),
+        minWidth: 170,
+        renderCell: (params) => (
+          <Typography>{params.row.payment_plan?.plan_name ?? '—'}</Typography>
+        ),
+      },
+      {
+        field: 'term',
+        headerName: t('subscriptionsPage.columns.term', 'Term'),
+        minWidth: 150,
+        renderCell: (params) => (
+          <Typography>{params.row.term?.term_name ?? '—'}</Typography>
+        ),
+      },
+      {
+        field: 'period',
+        headerName: t('subscriptionsPage.columns.period', 'Period'),
+        minWidth: 200,
+        renderCell: (params) => (
+          <Typography>
+            {formatDateTime(params.row.start_date)} – {formatDateTime(params.row.end_date)}
+          </Typography>
+        ),
+      },
+      {
+        field: 'amount',
+        headerName: t('subscriptionsPage.columns.amount', 'Amount'),
+        minWidth: 140,
+        renderCell: (params) => (
+          <Stack direction="column" spacing={0.25}>
+            <Typography>{formatCurrency(params.row.total_amount)}</Typography>
+            <Typography variant="caption" color="text.secondary">
+              {t('subscriptionsPage.columns.paid', 'Paid')}: {formatCurrency(params.row.paid_amount)}
+            </Typography>
+          </Stack>
+        ),
+      },
+      {
+        field: 'vehicle',
+        headerName: t('subscriptionsPage.columns.vehicle', 'Vehicle'),
+        minWidth: 150,
+        renderCell: (params) => (
+          <Typography>{params.row.vehicle?.license_plate ?? '—'}</Typography>
+        ),
+      },
+      {
+        field: 'status',
+        headerName: t('subscriptionsPage.columns.status', 'Status'),
+        minWidth: 120,
+        renderCell: (params) => (
+          <Chip
+            label={formatStatusLabel(params.row.status, t)}
+            color={statusColorMap[params.row.status] ?? 'default'}
+            size="small"
+          />
+        ),
+      },
+      {
+        field: 'actions',
+        headerName: t('subscriptionsPage.columns.actions', 'Actions'),
+        minWidth: 120,
+        sortable: false,
+        renderCell: (params) => {
+          const user = userMap.get(params.row.user_code);
+          console.log('user', user);
+          console.log('row user_code', params.row.user_code);
+          console.log('userMap key', Array.from(userMap.keys()));
+          return (
+            <IconButton
+              size="small"
+              onClick={() => user && openDrawerForUser(user)}
+              disabled={!user}
+            >
+              <FormatListBulletedIcon fontSize="small" />
+            </IconButton>
+          );
+        },
+      },
+    ];
+  }, [t, userMap, openDrawerForUser]);
+
+  const handleClearFilters = () => {
+    setSearchTerm('');
+    setStatusFilter('ALL');
+  };
 
   return (
-    <ResourceTableLayout
-      title="User subscriptions"
-      description="Danh sách đăng ký của người dùng."
-      columns={columns}
-      rows={data}
-      loading={isLoading}
-      error={isError ? 'Error occurred while fetching subscriptions.' : undefined}
-      searchTerm={searchTerm}
-      onSearchChange={setSearchTerm}
-      searchPlaceholder="Search by user, plan or ID"
-      searchKeys={searchKeys}
-      emptyMessage="No subscriptions yet."
-      getRowId={(row) => row.id}
-      filterControls={filterControls}
-      maxHeight={520}
-    />
+    <Box>
+      <Stack direction="row" justifyContent="space-between" alignItems="center" flexWrap="wrap" gap={2} sx={{ mb: 2 }}>
+        <Box>
+          <Typography variant="h5">{t('subscriptionsPage.title')}</Typography>
+          <Typography variant="body2" color="text.secondary">
+            {t('subscriptionsPage.description')}
+          </Typography>
+        </Box>
+        <Stack direction="row" spacing={1} alignItems="center" sx={{ flexWrap: 'wrap' }}>
+          <TextField
+            size="small"
+            variant="outlined"
+            placeholder={t('subscriptionsPage.searchPlaceholder')}
+            value={searchTerm}
+            onChange={(event) => setSearchTerm(event.target.value)}
+          />
+          <FormControl size="small">
+            <InputLabel>{t('subscriptionsPage.filters.status')}</InputLabel>
+            <Select
+              value={statusFilter}
+              label={t('subscriptionsPage.filters.status')}
+              onChange={(event) =>
+                setStatusFilter(event.target.value as typeof statusOptions[number])
+              }
+            >
+              {statusOptions.map((status) => (
+                <MenuItem key={status} value={status}>
+                  {t(`profile.subscriptions.status.${status.toLowerCase()}`, { defaultValue: status })}
+                </MenuItem>
+              ))}
+            </Select>
+          </FormControl>
+          <Button onClick={handleClearFilters} variant="outlined" size="small">
+            {t('button.clear')}
+          </Button>
+        </Stack>
+      </Stack>
+
+      {isError && (
+        <Alert severity="error" sx={{ mb: 2 }}>
+          {t('subscriptionsPage.error')}
+        </Alert>
+      )}
+
+      <Box sx={{ mt: 2 }}>
+        <SoftDataGrid
+          rows={filteredSubscriptions}
+          columns={columns}
+          loading={isLoading}
+          getRowId={(row) => row.id}
+          maxHeight={560}
+          emptyMessage={t('subscriptionsPage.empty')}
+        />
+      </Box>
+
+      <Drawer anchor="right" open={drawerOpen} onClose={closeDrawer}>
+        <Box
+          sx={{
+            width: { xs: 320, sm: 380 },
+            height: '100%',
+            display: 'flex',
+            flexDirection: 'column',
+            gap: 2,
+            p: 3,
+          }}
+        >
+          <DrawerUserSubscription
+            selectedUser={selectedUser}
+            subscriptionRows={subscriptionSearchRows}
+            isLoading={isSearchLoading}
+            onViewSubscriptions={handleViewSubscriptions}
+          />
+        </Box>
+      </Drawer>
+    </Box>
   );
 };

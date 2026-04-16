@@ -4,7 +4,6 @@ export type AdminUser = {
   email: string;
   language_use?: string | null;
   phone_number?: string | null;
-  is_active: boolean;
   created_at: string;
   updated_at: string;
   deleted_at?: string | null;
@@ -49,7 +48,6 @@ export type VehicleRecord = {
   created_at?: string | null;
   updated_at?: string | null;
   deleted_at?: string | null;
-  is_active: boolean;
 };
 
 export type UserSubscriptionRecord = {
@@ -73,6 +71,22 @@ export type SubscriptionSearchRow = UserSubscriptionRecord & {
   vehicle?: VehicleRecord;
   payment_plan?: PaymentPlanRecord;
   plan?: SubscriptionPlanRecord;
+};
+
+export type UserSubscriptionDetailRecord = {
+  id: string;
+  user_code: string;
+  status: 'ACTIVE' | 'EXPIRED' | 'SUSPENDED';
+  start_date: string;
+  end_date: string;
+  total_amount: number;
+  paid_amount: number;
+  created_at: string;
+  updated_at: string;
+  subscription_plan?: SubscriptionPlanRecord | null;
+  payment_plan?: PaymentPlanRecord | null;
+  term?: AcademicTermRecord | null;
+  vehicle?: VehicleRecord | null;
 };
 
 export type InvoiceAdminRecord = {
@@ -115,6 +129,17 @@ export type UserRoleRecord = {
   user_code: string;
   role_id: string;
   created_at: string;
+};
+
+export type RoleSummary = {
+  id: string;
+  role_name: string;
+  role_code: string;
+};
+
+export type UserWithRoles = {
+  user: AdminUser;
+  roles: RoleSummary[];
 };
 
 export type PaymentTransactionRecord = {

@@ -21,8 +21,6 @@ async def create_log(payload: BillingEventLogCreate, db: AsyncSession = Depends(
 @router.get("/", response_model=list[BillingEventLogRead])
 async def list_logs(db: AsyncSession = Depends(get_db)):
     logs = await BillingEventLogController.get_all_logs_ctrl(db)
-    if not logs:
-        raise HTTPException(status_code=404, detail="No billing event logs found")
     return logs
 
 

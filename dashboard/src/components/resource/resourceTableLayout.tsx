@@ -1,4 +1,4 @@
-import { Box, Alert, Divider, Stack, TextField, Typography } from '@mui/material';
+import { Box, Alert, Divider, Stack, TextField, Typography, Snackbar, Button } from '@mui/material';
 import type { GridColDef } from '@mui/x-data-grid';
 import React, { useMemo } from 'react';
 
@@ -21,6 +21,8 @@ interface ResourceTableLayoutProps<RowType extends Record<string, unknown>> {
   searchPlaceholder?: string;
   searchKeys: (row: RowType) => SearchValue[];
   filterControls?: React.ReactNode;
+  onClearFilters?: () => void;
+  clearLabel?: string;
   emptyMessage?: string;
   maxHeight?: number | string;
   getRowId?: RowIdentifier<RowType>;
@@ -39,6 +41,8 @@ export const ResourceTableLayout = <RowType extends Record<string, unknown>>({
   searchPlaceholder = 'Search records',
   searchKeys,
   filterControls,
+  onClearFilters,
+  clearLabel = 'Clear filters',
   emptyMessage = 'No records found',
   maxHeight = 460,
   getRowId,
@@ -96,20 +100,25 @@ export const ResourceTableLayout = <RowType extends Record<string, unknown>>({
             size="small"
             sx={{ flex: '1 1 280px', minWidth: 260 }}
           />
-          {filterControls && <Box sx={{ display: 'flex', gap: 2, flexWrap: 'wrap', alignItems: 'flex-end' }}>{filterControls}</Box>}
+          {(filterControls || onClearFilters) && (
+            <Box sx={{ display: 'flex', gap: 2, alignItems: 'flex-end', flexWrap: 'wrap' }}>
+              {filterControls}
+              {onClearFilters && (
+                <Button variant="outlined" size="small" onClick={onClearFilters}>
+                  {clearLabel}
+                </Button>
+              )}
+            </Box>
+          )}
         </Box>
       </Stack>
 
       {errorMessage && (
-        <Alert severity="error" sx={{ mb: 2 }}>
-          {errorMessage}
-        </Alert>
-      )}
-
-      {!loading && filteredRows.length === 0 && !errorMessage && (
-        <Alert severity="info" variant="outlined" sx={{ mb: 2 }}>
-          {emptyMessage}
-        </Alert>
+        <Snackbar open={Boolean(errorMessage)} autoHideDuration={6000} onClose={() => {}} anchorOrigin={{ vertical: 'top', horizontal: 'right' }}>
+          <Alert severity="error" sx={{ mb: 2 }}>
+            {errorMessage}
+          </Alert>
+        </Snackbar>
       )}
 
       <Divider />
@@ -121,6 +130,7 @@ export const ResourceTableLayout = <RowType extends Record<string, unknown>>({
           loading={loading}
           getRowId={getRowId}
           maxHeight={maxHeight}
+          emptyMessage={emptyMessage}
         />
       </Box>
     </Box>

@@ -7,7 +7,7 @@ import uuid
 from sqlalchemy import Column as SAColumn, Enum, Integer
 from sqlmodel import Field, SQLModel
 
-from app.enums.parking import SubscriptionStatus
+from app.enums.parking import PaymentType, SubscriptionStatus, VehicleType
 from .mixins import TimestampMixin
 
 
@@ -50,3 +50,44 @@ class UserSubscriptionUpdate(SQLModel):
     end_date: Optional[date] = None
     total_amount: Optional[int] = None
     paid_amount: Optional[int] = None
+
+
+class VehicleSummary(SQLModel):
+    id: uuid.UUID
+    license_plate: Optional[str]
+    vehicle_type: VehicleType
+
+
+class SubscriptionPlanSummary(SQLModel):
+    id: uuid.UUID
+    plan_name: str
+    price_per_day: int
+
+
+class PaymentPlanSummary(SQLModel):
+    id: uuid.UUID
+    plan_name: str
+    payment_type: PaymentType
+
+
+class AcademicTermSummary(SQLModel):
+    id: uuid.UUID
+    term_name: str
+    start_date: date
+    end_date: date
+
+
+class UserSubscriptionDetail(SQLModel):
+    id: uuid.UUID
+    user_code: str
+    status: SubscriptionStatus
+    start_date: date
+    end_date: date
+    total_amount: int
+    paid_amount: int
+    created_at: datetime
+    updated_at: datetime
+    subscription_plan: Optional[SubscriptionPlanSummary]
+    payment_plan: Optional[PaymentPlanSummary]
+    term: Optional[AcademicTermSummary]
+    vehicle: Optional[VehicleSummary]

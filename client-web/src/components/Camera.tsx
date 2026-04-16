@@ -6,7 +6,7 @@ export default function DetectForm() {
   const [objects, setObjects] = useState([]);
 
   useEffect(() => {
-    const ws = new WebSocket("http://127.0.0.1:8000/api/v1/ws");
+    const ws = new WebSocket("http://localhost:8000/api/v1/ws");
 
     ws.onmessage = (event) => {
       const data = JSON.parse(event.data);
@@ -25,7 +25,7 @@ export default function DetectForm() {
 
       <Box
         component="img"
-        src="http://127.0.0.1:8000/api/v1/stream"
+        src="http://localhost:8000/api/v1/stream"
         alt="Camera Stream"
         sx={{ width: "100%", borderRadius: 2, boxShadow: 3 }}
       />

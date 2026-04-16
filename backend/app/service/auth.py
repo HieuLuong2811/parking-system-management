@@ -5,7 +5,7 @@ from typing import List, Tuple
 
 from app.core.security import create_access_token, verify_password
 from app.models.auth import TokenPayload
-from app.models.users import Users
+from app.models.users import UsersUpdate
 from app.service.user_roles import userRolesService
 from app.service.users import userService
 from fastapi import HTTPException, status
@@ -21,11 +21,11 @@ class authService:
                 status_code=status.HTTP_401_UNAUTHORIZED,
                 detail="Invalid credentials"
             )
-        
-        if user and not user.is_active == True:
+                
+        if user.deleted_at is not None:
             raise HTTPException(
                 status_code=status.HTTP_403_FORBIDDEN,
-                detail="User account is inactive"
+                detail="User account is deleted"
             )
 
         if not verify_password(password, user.password):
@@ -51,3 +51,13 @@ class authService:
         user = await userService.crud.get(db, payload.user_code)
         roles = payload.roles or await userRolesService.get_roles_for_user(payload.user_code, db)
         return user, roles
+
+    @staticmethod
+    async def change_password(user_code: str, current_password: str, new_password: str, db: AsyncSession) -> None:
+        user = await userService.crud.get(db, user_code)
+        if not verify_password(current_password, user.password):
+            raise HTTPException(
+                status_code=status.HTTP_400_BAD_REQUEST,
+                detail="Current password is incorrect",
+            )
+        await userService.update_user(user_code, UsersUpdate(password=new_password), db)

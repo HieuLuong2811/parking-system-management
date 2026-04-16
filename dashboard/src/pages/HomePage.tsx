@@ -14,7 +14,7 @@ import {
 } from '@mui/material';
 import { useTranslation } from 'react-i18next';
 import { CalendarMonth, PeopleAlt, LocalAtm, ShowChart } from '@mui/icons-material';
-import { useAuth } from '../contexts/authContext';
+import { useAuth } from '../contexts/useAuth';
 
 const termOptions = ['Spring', 'Summer', 'Fall'];
 const yearOptions = ['2023 - 2024', '2024 - 2025', '2025 - 2026'];

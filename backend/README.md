@@ -2,7 +2,7 @@
 
 ## Link Swagger
 
-http://127.0.0.1:8000/api/v1/docs
+http://localhost:8000/api/v1/docs
 
 ## Requirements
 
@@ -31,7 +31,7 @@ Start the local development environment with Docker Compose following the guide 
 3. Run the application:
 
    ```console
-   $ python -m uvicorn app.main:app --reload
+   $ python -m uvicorn app.main:app --host localhost --port 8000 --reload
    ```
 
 Be sure your editor is using `backend/.venv/bin/python` (or the Windows equivalent interpreter).

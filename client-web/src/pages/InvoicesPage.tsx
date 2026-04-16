@@ -18,6 +18,7 @@ import React, { useEffect, useMemo, useState } from 'react';
 import { useTranslation } from 'react-i18next';
 import SectionCard from '../components/shared/SectionCard';
 import { useInvoices } from '../api/invoices';
+import { invoices_status } from '../constant/config';
 
 export default function InvoicesPage() {
   const { t } = useTranslation();
@@ -109,33 +110,30 @@ export default function InvoicesPage() {
                       <TableHead>
                         <TableRow>
                           <TableCell>{t('invoices.table.invoiceId')}</TableCell>
-                          <TableCell>{t('invoices.table.period')}</TableCell>
-                          <TableCell>{t('invoices.table.issuedOn')}</TableCell>
-                          <TableCell>{t('invoices.table.dueOn')}</TableCell>
+                          <TableCell>{t('invoices.table.created_at')}</TableCell>
                           <TableCell align="right">{t('invoices.table.amount')}</TableCell>
                           <TableCell align="right">{t('invoices.table.status')}</TableCell>
                         </TableRow>
                       </TableHead>
                       <TableBody>
                         {pageInvoices.map((invoice) => {
-                          const dueAt = typeof invoice.metadata?.due_at === 'string' ? invoice.metadata.due_at : undefined;
-                          const period = typeof invoice.metadata?.period === 'string' ? invoice.metadata.period : '';
+                          const invoices_paid = invoices_status.PAID
+                          const invoices_pending = invoices_status.PENDING
                           const statusKey =
-                            invoice.status === 'PAID'
+                            invoice.status === invoices_paid
                               ? 'paid'
-                              : invoice.status === 'PENDING'
+                              : invoice.status === invoices_pending
                               ? 'pending'
                               : 'overdue';
                           const chipColor =
-                            invoice.status === 'PAID'
+                            invoice.status === invoices_paid
                               ? 'success'
-                              : invoice.status === 'PENDING'
+                              : invoice.status === invoices_pending
                               ? 'warning'
                               : 'error';
                           return (
                             <TableRow key={invoice.id} hover>
                               <TableCell sx={{ fontWeight: 600 }}>{invoice.id}</TableCell>
-                              <TableCell>{period || t('plan.notChosen')}</TableCell>
                               <TableCell>
                                 {new Date(invoice.created_at).toLocaleString(undefined, {
                                   year: 'numeric',
@@ -144,17 +142,6 @@ export default function InvoicesPage() {
                                   hour: '2-digit',
                                   minute: '2-digit',
                                 })}
-                              </TableCell>
-                              <TableCell>
-                                {dueAt
-                                  ? new Date(dueAt).toLocaleString(undefined, {
-                                      year: 'numeric',
-                                      month: 'short',
-                                      day: 'numeric',
-                                      hour: '2-digit',
-                                      minute: '2-digit',
-                                    })
-                                  : t('sessions.notProvided')}
                               </TableCell>
                               <TableCell align="right" sx={{ fontWeight: 600 }}>
                                 {new Intl.NumberFormat('vi-VN', { style: 'currency', currency: 'VND' }).format(

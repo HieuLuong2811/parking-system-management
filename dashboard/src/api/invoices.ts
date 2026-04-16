@@ -7,6 +7,7 @@ import type { AdminUser, InvoiceAdminRecord, InvoiceSearchRow } from './types';
 export type InvoiceSearchFilters = {
   query?: string;
   status?: string;
+  subscriptionId?: string;
 };
 
 const fetchInvoices = () => httpGet<InvoiceAdminRecord[]>('/invoices');
@@ -36,6 +37,7 @@ export const useInvoiceSearch = (filters: InvoiceSearchFilters = {}) => {
   const filtered = useMemo(() => {
     const query = filters.query?.trim().toLowerCase();
     return data.filter((row) => {
+      if (filters.subscriptionId && row.subscription_id !== filters.subscriptionId) return false;
       if (filters.status && row.status !== filters.status) return false;
       if (!query) return true;
       return (
@@ -44,7 +46,7 @@ export const useInvoiceSearch = (filters: InvoiceSearchFilters = {}) => {
         !!row.user?.full_name?.toLowerCase().includes(query)
       );
     });
-  }, [data, filters.query, filters.status]);
+  }, [data, filters.query, filters.status, filters.subscriptionId]);
 
   return {
     data: filtered,

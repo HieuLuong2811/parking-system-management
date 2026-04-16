@@ -19,5 +19,10 @@ class InvoiceController:
         return await invoiceService.get_all_invoices(db)
 
     @staticmethod
+    async def get_invoices_by_user_ctrl(user_code: str, db: AsyncSession) -> list[InvoiceRead]:
+        invoices = await invoiceService.get_invoices_by_user_code(user_code, db)
+        return [invoice for invoice in invoices]
+
+    @staticmethod
     async def update_invoice_ctrl(invoice_id: str, payload: InvoiceUpdate, db: AsyncSession) -> InvoiceRead:
         return await invoiceService.update_invoice(invoice_id, payload, db)

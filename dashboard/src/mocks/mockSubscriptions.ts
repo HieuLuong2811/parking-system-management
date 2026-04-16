@@ -2,29 +2,29 @@ const baseTime = new Date('2026-03-30T00:00:00.000Z');
 const shiftDays = (days: number) => new Date(baseTime.getTime() + days * 24 * 60 * 60 * 1000).toISOString();
 
 export const mockUsers = [
-  { user_code: 'USR001', full_name: 'Nguyễn Văn A', email: 'a.student@campus.edu', language_use: 'vi', is_active: true, created_at: shiftDays(-60), updated_at: shiftDays(-10) },
-  { user_code: 'USR002', full_name: 'Trần Thị B', email: 'b.staff@campus.edu', language_use: 'en', is_active: true, created_at: shiftDays(-90), updated_at: shiftDays(-5) },
-  { user_code: 'USR003', full_name: 'Lê Minh C', email: 'c.student@campus.edu', language_use: 'vi', is_active: true, created_at: shiftDays(-120), updated_at: shiftDays(-7) },
-  { user_code: 'USR004', full_name: 'Phạm Hồng D', email: 'd.student@campus.edu', language_use: 'en', is_active: true, created_at: shiftDays(-45), updated_at: shiftDays(-3) },
-  { user_code: 'USR005', full_name: 'Võ Kim E', email: 'e.staff@campus.edu', language_use: 'vi', is_active: true, created_at: shiftDays(-33), updated_at: shiftDays(-2) },
-  { user_code: 'USR006', full_name: 'Hoàng Văn F', email: 'f.student@campus.edu', language_use: 'vi', is_active: true, created_at: shiftDays(-75), updated_at: shiftDays(-4) },
-  { user_code: 'USR007', full_name: 'Đỗ Thị G', email: 'g.student@campus.edu', language_use: 'en', is_active: true, created_at: shiftDays(-15), updated_at: shiftDays(-1) },
-  { user_code: 'USR008', full_name: 'Ngô Văn H', email: 'h.student@campus.edu', language_use: 'en', is_active: true, created_at: shiftDays(-180), updated_at: shiftDays(-30) },
-  { user_code: 'USR009', full_name: 'Bùi Minh I', email: 'i.staff@campus.edu', language_use: 'vi', is_active: true, created_at: shiftDays(-210), updated_at: shiftDays(-40) },
-  { user_code: 'USR010', full_name: 'Lý Văn K', email: 'k.student@campus.edu', language_use: 'vi', is_active: true, created_at: shiftDays(-27), updated_at: shiftDays(-11) },
+  { user_code: 'USR001', full_name: 'Nguyễn Văn A', email: 'a.student@campus.edu', language_use: 'vi', created_at: shiftDays(-60), updated_at: shiftDays(-10) },
+  { user_code: 'USR002', full_name: 'Trần Thị B', email: 'b.staff@campus.edu', language_use: 'en', created_at: shiftDays(-90), updated_at: shiftDays(-5) },
+  { user_code: 'USR003', full_name: 'Lê Minh C', email: 'c.student@campus.edu', language_use: 'vi', created_at: shiftDays(-120), updated_at: shiftDays(-7) },
+  { user_code: 'USR004', full_name: 'Phạm Hồng D', email: 'd.student@campus.edu', language_use: 'en', created_at: shiftDays(-45), updated_at: shiftDays(-3) },
+  { user_code: 'USR005', full_name: 'Võ Kim E', email: 'e.staff@campus.edu', language_use: 'vi', created_at: shiftDays(-33), updated_at: shiftDays(-2) },
+  { user_code: 'USR006', full_name: 'Hoàng Văn F', email: 'f.student@campus.edu', language_use: 'vi', created_at: shiftDays(-75), updated_at: shiftDays(-4) },
+  { user_code: 'USR007', full_name: 'Đỗ Thị G', email: 'g.student@campus.edu', language_use: 'en', created_at: shiftDays(-15), updated_at: shiftDays(-1) },
+  { user_code: 'USR008', full_name: 'Ngô Văn H', email: 'h.student@campus.edu', language_use: 'en', created_at: shiftDays(-180), updated_at: shiftDays(-30) },
+  { user_code: 'USR009', full_name: 'Bùi Minh I', email: 'i.staff@campus.edu', language_use: 'vi', created_at: shiftDays(-210), updated_at: shiftDays(-40) },
+  { user_code: 'USR010', full_name: 'Lý Văn K', email: 'k.student@campus.edu', language_use: 'vi', created_at: shiftDays(-27), updated_at: shiftDays(-11) },
 ].map((user) => ({ ...user, deleted_at: null }));
 
 export const mockVehicles = [
-  { id: 'veh-101', user_code: 'USR001', vehicle_type: 'MOTORBIKE', license_plate: '29A-123.45', qr_code: 'QR-101', created_at: shiftDays(-60), updated_at: shiftDays(-10), is_active: true },
-  { id: 'veh-102', user_code: 'USR002', vehicle_type: 'BICYCLE', license_plate: '30B-678.90', qr_code: 'QR-102', created_at: shiftDays(-90), updated_at: shiftDays(-5), is_active: true },
-  { id: 'veh-103', user_code: 'USR003', vehicle_type: 'MOTORBIKE', license_plate: '11C-222.33', qr_code: 'QR-103', created_at: shiftDays(-120), updated_at: shiftDays(-7), is_active: true },
-  { id: 'veh-104', user_code: 'USR004', vehicle_type: 'ELECTRIC_BICYCLE', license_plate: '22D-444.55', qr_code: 'QR-104', created_at: shiftDays(-45), updated_at: shiftDays(-3), is_active: true },
-  { id: 'veh-105', user_code: 'USR005', vehicle_type: 'MOTORBIKE', license_plate: '33E-555.66', qr_code: 'QR-105', created_at: shiftDays(-33), updated_at: shiftDays(-2), is_active: true },
-  { id: 'veh-106', user_code: 'USR006', vehicle_type: 'BICYCLE', license_plate: '44F-777.88', qr_code: 'QR-106', created_at: shiftDays(-75), updated_at: shiftDays(-4), is_active: true },
-  { id: 'veh-107', user_code: 'USR007', vehicle_type: 'MOTORBIKE', license_plate: '55G-888.99', qr_code: 'QR-107', created_at: shiftDays(-15), updated_at: shiftDays(-1), is_active: true },
-  { id: 'veh-108', user_code: 'USR008', vehicle_type: 'BICYCLE', license_plate: '66H-999.00', qr_code: 'QR-108', created_at: shiftDays(-180), updated_at: shiftDays(-30), is_active: true },
-  { id: 'veh-109', user_code: 'USR009', vehicle_type: 'MOTORBIKE', license_plate: '77I-111.22', qr_code: 'QR-109', created_at: shiftDays(-210), updated_at: shiftDays(-40), is_active: true },
-  { id: 'veh-110', user_code: 'USR010', vehicle_type: 'BICYCLE', license_plate: '88K-333.44', qr_code: 'QR-110', created_at: shiftDays(-27), updated_at: shiftDays(-11), is_active: true },
+  { id: 'veh-101', user_code: 'USR001', vehicle_type: 'MOTORBIKE', license_plate: '29A-123.45', qr_code: 'QR-101', created_at: shiftDays(-60), updated_at: shiftDays(-10) },
+  { id: 'veh-102', user_code: 'USR002', vehicle_type: 'BICYCLE', license_plate: '30B-678.90', qr_code: 'QR-102', created_at: shiftDays(-90), updated_at: shiftDays(-5) },
+  { id: 'veh-103', user_code: 'USR003', vehicle_type: 'MOTORBIKE', license_plate: '11C-222.33', qr_code: 'QR-103', created_at: shiftDays(-120), updated_at: shiftDays(-7) },
+  { id: 'veh-104', user_code: 'USR004', vehicle_type: 'ELECTRIC_BICYCLE', license_plate: '22D-444.55', qr_code: 'QR-104', created_at: shiftDays(-45), updated_at: shiftDays(-3) },
+  { id: 'veh-105', user_code: 'USR005', vehicle_type: 'MOTORBIKE', license_plate: '33E-555.66', qr_code: 'QR-105', created_at: shiftDays(-33), updated_at: shiftDays(-2) },
+  { id: 'veh-106', user_code: 'USR006', vehicle_type: 'BICYCLE', license_plate: '44F-777.88', qr_code: 'QR-106', created_at: shiftDays(-75), updated_at: shiftDays(-4) },
+  { id: 'veh-107', user_code: 'USR007', vehicle_type: 'MOTORBIKE', license_plate: '55G-888.99', qr_code: 'QR-107', created_at: shiftDays(-15), updated_at: shiftDays(-1) },
+  { id: 'veh-108', user_code: 'USR008', vehicle_type: 'BICYCLE', license_plate: '66H-999.00', qr_code: 'QR-108', created_at: shiftDays(-180), updated_at: shiftDays(-30) },
+  { id: 'veh-109', user_code: 'USR009', vehicle_type: 'MOTORBIKE', license_plate: '77I-111.22', qr_code: 'QR-109', created_at: shiftDays(-210), updated_at: shiftDays(-40) },
+  { id: 'veh-110', user_code: 'USR010', vehicle_type: 'BICYCLE', license_plate: '88K-333.44', qr_code: 'QR-110', created_at: shiftDays(-27), updated_at: shiftDays(-11) },
 ].map((vehicle) => ({ ...vehicle, deleted_at: null }));
 
 export const mockSubscriptionPlans = [

@@ -9,6 +9,7 @@ import stripe
 from app.core.config import settings
 
 stripe_client: Final = stripe
+stripe_client.api_base = settings.STRIPE_API_URL
 
 if settings.STRIPE_SECRET_KEY:
     stripe_client.api_key = settings.STRIPE_SECRET_KEY

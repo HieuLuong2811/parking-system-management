@@ -1,7 +1,7 @@
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 
 import { httpDelete, httpGet, httpPatch, httpPost } from './httpClient';
-import type { AdminUser } from './types';
+import type { AdminUser, UserWithRoles } from './types';
 
 export type UserCreatePayload = {
   user_code: string;
@@ -9,7 +9,6 @@ export type UserCreatePayload = {
   email: string;
   password: string;
   language_use?: string;
-  is_active?: boolean;
 };
 
 export type UserUpdatePayload = {
@@ -17,15 +16,29 @@ export type UserUpdatePayload = {
   email?: string;
   password?: string;
   language_use?: string;
-  is_active?: boolean;
 };
 
-const fetchUsers = () => httpGet<AdminUser[]>('/users');
+export type UserListFilters = {
+  search?: string;
+  phone?: string;
+  role?: string;
+  is_deleted?: boolean;
+};
 
-export const useFetchUsers = () => {
+const fetchUsers = (filters: UserListFilters = {}) => {
+  const params = new URLSearchParams();
+  if (filters.search) params.append('search', filters.search);
+  if (filters.phone) params.append('phone', filters.phone);
+  if (filters.role) params.append('role', filters.role);
+  if (filters.is_deleted !== undefined) params.append('is_deleted', String(filters.is_deleted));
+  const query = params.toString();
+  return httpGet<UserWithRoles[]>(`/users${query ? `?${query}` : ''}`);
+};
+
+export const useFetchUsers = (filters: UserListFilters = {}) => {
   return useQuery({
-    queryKey: ['admin', 'users'],
-    queryFn: fetchUsers,
+    queryKey: ['admin', 'users', filters],
+    queryFn: () => fetchUsers(filters),
     staleTime: 1000 * 60,
     retry: false,
   });
@@ -42,7 +55,7 @@ export const useCreateUser = () => {
   const queryClient = useQueryClient();
   return useMutation({
     mutationFn: (payload: UserCreatePayload) => createUser(payload),
-    onSuccess: () => queryClient.invalidateQueries({ queryKey: ['admin', 'users'] }),
+    onSuccess: () => queryClient.invalidateQueries({ queryKey: ['admin', 'users'], exact: false }),
   });
 };
 
@@ -51,7 +64,7 @@ export const useUpdateUser = () => {
   return useMutation({
     mutationFn: ({ userCode, payload }: { userCode: string; payload: UserUpdatePayload }) =>
       updateUser(userCode, payload),
-    onSuccess: () => queryClient.invalidateQueries({ queryKey: ['admin', 'users'] }),
+    onSuccess: () => queryClient.invalidateQueries({ queryKey: ['admin', 'users'], exact: false }),
   });
 };
 
@@ -59,6 +72,6 @@ export const useDeleteUser = () => {
   const queryClient = useQueryClient();
   return useMutation({
     mutationFn: (userCode: string) => deleteUser(userCode),
-    onSuccess: () => queryClient.invalidateQueries({ queryKey: ['admin', 'users'] }),
+    onSuccess: () => queryClient.invalidateQueries({ queryKey: ['admin', 'users'], exact: false }),
   });
 };

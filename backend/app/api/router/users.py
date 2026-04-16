@@ -3,7 +3,7 @@ from sqlalchemy.ext.asyncio import AsyncSession
 from app.db.session import get_db
 from app.models.auth import UserBulkImportRequest
 from app.models.responses import DeleteResponse
-from app.models.users import UsersCreate, UsersRead, UsersUpdate
+from app.models.users import UsersCreate, UsersRead, UsersUpdate, UserWithRoles
 from app.api.controller.users import UserController
 router = APIRouter(prefix="/users", tags=["users"])
 
@@ -14,12 +14,11 @@ async def create_user(
 ):
     return await UserController.create_user_ctrl(user_in, db)
 
-@router.post("/{user_code}", response_model=UsersRead)
-async def get_user_by_user_code(
-    user_code: str,
-    db: AsyncSession = Depends(get_db),
+@router.post("/seed", response_model=list[UsersRead])
+async def seed_users(
+    db: AsyncSession = Depends(get_db)
 ):
-    return await UserController.get_user_by_user_code_ctrl(user_code, db)
+    return await UserController.seed_users_ctrl(db)
 
 
 @router.post("/import/{role_code}", response_model=list[UsersRead])
@@ -31,11 +30,21 @@ async def import_users(
     return await UserController.import_users_ctrl(role_code, payload, db)
 
 
-@router.get("/", response_model=list[UsersRead])
-async def get_all_users(db: AsyncSession = Depends(get_db)):
-    users = await UserController.get_all_users_ctrl(db)
-    if not users:
-        raise HTTPException(status_code=404, detail="No users found")
+@router.get("/", response_model=list[UserWithRoles])
+async def get_all_users(
+    search: str | None = None,
+    phone: str | None = None,
+    role: str | None = None,
+    is_deleted: bool | None = None,
+    db: AsyncSession = Depends(get_db),
+):
+    users = await UserController.get_all_users_ctrl(
+        db=db,
+        search=search,
+        phone=phone,
+        role=role,
+        is_deleted=is_deleted,
+    )
     return users
 
 

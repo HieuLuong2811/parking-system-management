@@ -1,11 +1,13 @@
-from fastapi import APIRouter, Depends, HTTPException
+from fastapi import APIRouter, Depends
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.api.controller.subscriptions import SubscriptionController
+from app.authen.current_user import AuthUser, is_admin_user, required_roles
 from app.db.session import get_db
 from app.models.responses import DeleteResponse
 from app.models.subscriptions import (
     UserSubscriptionCreate,
+    UserSubscriptionDetail,
     UserSubscriptionRead,
     UserSubscriptionUpdate,
 )
@@ -19,11 +21,31 @@ async def create_subscription(payload: UserSubscriptionCreate, db: AsyncSession 
 
 
 @router.get("/", response_model=list[UserSubscriptionRead])
-async def list_subscriptions(db: AsyncSession = Depends(get_db)):
-    subscriptions = await SubscriptionController.get_all_subscriptions_ctrl(db)
-    if not subscriptions:
-        raise HTTPException(status_code=404, detail="No subscriptions found")
-    return subscriptions
+async def list_subscriptions(
+    db: AsyncSession = Depends(get_db),
+    current_user: AuthUser = Depends(required_roles("USER", "ADMIN")),
+):
+    if is_admin_user(current_user):
+        return await SubscriptionController.get_all_subscriptions_ctrl(db)
+    return await SubscriptionController.get_subscriptions_by_user_ctrl(current_user.user_code, db)
+
+
+@router.get("/me", response_model=list[UserSubscriptionDetail])
+async def get_current_user_subscriptions(
+    current_user: AuthUser = Depends(required_roles("USER")),
+    db: AsyncSession = Depends(get_db),
+):
+    return await SubscriptionController.get_user_subscriptions_by_user_ctrl(
+        current_user.user_code, db
+    )
+
+
+@router.get("/details", response_model=list[UserSubscriptionDetail])
+async def get_subscription_details(
+    current_user: AuthUser = Depends(required_roles("ADMIN")),
+    db: AsyncSession = Depends(get_db),
+):
+    return await SubscriptionController.get_all_subscription_details_ctrl(db)
 
 
 @router.get("/{subscription_id}", response_model=UserSubscriptionRead)

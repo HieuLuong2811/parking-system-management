@@ -1,0 +1,17 @@
+<mjml>
+  <mj-body>
+    <mj-section>
+      <mj-column>
+        <mj-text font-size="20px" font-weight="bold">
+          System Test Email
+        </mj-text>
+        <mj-text>
+          Hello {{user_name}},
+        </mj-text>
+        <mj-text>
+          This is a test email for account {{user_code}}.
+        </mj-text>
+      </mj-column>
+    </mj-section>
+  </mj-body>
+</mjml>

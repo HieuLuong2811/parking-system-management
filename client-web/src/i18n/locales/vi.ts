@@ -30,17 +30,23 @@
     manageVehicles: 'Quản lý phương tiện',
     viewSessions: 'Xem tất cả phiên',
   },
-
+  common: {
+    loading: 'Đang tải...',
+    error: 'Đã xảy ra lỗi. Vui lòng thử lại.',
+  },
+  validation: {
+    requiredField: '{{field}} là bắt buộc.',
+    fieldFallback: 'Trường',
+  },
   vehicle: {
-    sectionTitle: 'Đăng ký phương tiện',
-    subtitle: 'Thêm xe để chuẩn bị thông tin gửi nhanh chóng.',
+    subtitle: 'Quản lý phương tiện cá nhân',
     registerPlanButton: 'Đăng ký gói gửi xe',
     registerVehicleButton: 'Đăng ký phương tiện',
     search: {
       userCode: 'Mã người dùng',
       license: 'Biển số',
     },
-    applyFilter: 'Lọc',
+    clearFilter: 'Xóa bộ lọc',
     table: {
       vehicleId: 'Mã xe',
       userCode: 'Mã người dùng',
@@ -58,6 +64,10 @@
     error: {
       load: 'Không thể tải danh sách phương tiện. Vui lòng thử lại sau.',
     },
+    tabs: {
+      withPlate: 'Có biển số',
+      withoutPlate: 'Không biển số',
+    },
     modal: {
       title: 'Thêm phương tiện',
       submit: 'Đăng ký phương tiện',
@@ -65,6 +75,11 @@
       tabs: {
         withPlate: 'Có biển số',
         withoutPlate: 'Không biển số',
+      },
+      types: {
+        motorbike: 'Xe máy',
+        bicycle: 'Xe đạp',
+        electricBicycle: 'Xe đạp điện',
       },
       actions: {
         generateQr: 'Tạo mã QR',
@@ -74,12 +89,13 @@
         userCode: 'Mã người dùng',
         vehicleType: 'Loại phương tiện',
         licensePlate: 'Biển số',
+        licensePlatePlaceholder: 'Ví dụ: 30K12345',
         qrCode: 'QR code',
         description: 'Ghi chú',
+        vehicleTypePlaceholder: 'Chọn loại phương tiện',
       },
       errors: {
         generic: 'Không thể đăng ký phương tiện. Vui lòng thử lại.',
-        required: 'Trường này là bắt buộc.',
         qrGenerate: 'Điền thông tin bắt buộc trước khi tạo QR.',
         qrFailed: 'Không thể tạo mã QR.',
         qrMissing: 'Tạo mã QR trước khi đăng ký.',
@@ -137,13 +153,13 @@
       to: 'Đến thời điểm',
       search: 'Tìm kiếm',
       searchPlaceholder: 'Biển số, mã phiên',
+      clear: 'Xóa bộ lọc',
     },
     table: {
-      vehicle: 'Phương tiện',
+      vehicle: 'Mã phương tiện',
       checkIn: 'Thời điểm vào',
       checkOut: 'Thời điểm ra',
       status: 'Trạng thái',
-      userType: 'Loại người dùng',
       amount: 'Tổng tiền',
     },
     userType: {
@@ -163,44 +179,72 @@
     update: 'Cập nhật hồ sơ',
     download: 'Tải tài liệu',
     logout: 'Đăng xuất',
+    tabs: {
+      profile: 'Thông tin cá nhân',
+      subscriptions: 'Gói đã đăng ký',
+    },
+    statusLabel: 'Trạng thái:',
+    statusActive: 'Đang hoạt động',
+    statusInactive: 'Đã khoá',
+    fields: {
+      userCode: 'Mã người dùng',
+      fullName: 'Họ và tên',
+      email: 'Email',
+      phone: 'Số điện thoại',
+      saveSuccess: 'Thông tin đã được cập nhật.',
+    },
+    saveChanges: 'Lưu thay đổi',
+    passwordDialog: {
+      button: 'Đổi mật khẩu',
+      title: 'Đổi mật khẩu',
+      currentLabel: 'Mật khẩu hiện tại',
+      newLabel: 'Mật khẩu mới',
+      confirmLabel: 'Nhập lại mật khẩu mới',
+      save: 'Lưu',
+      cancel: 'Hủy',
+      minLength: 'Mật khẩu phải có ít nhất 6 ký tự.',
+      confirmMismatch: 'Mật khẩu nhập lại không trùng.',
+      success: 'Mật khẩu đã được cập nhật.',
+      genericError: 'Không thể thay đổi mật khẩu. Vui lòng thử lại.',
+    },
+    subscriptions: {
+      heading: 'Gói đã đăng ký',
+      empty: 'Bạn chưa đăng ký gói nào.',
+      vehicle: 'Xe',
+      term: 'Học kỳ',
+      paymentPlan: 'Hình thức thanh toán',
+      amount: 'Tổng tiền',
+      period: 'Thời hạn',
+      paidAmount: 'Đã thanh toán',
+      changePaymentMethod: 'Thay đổi phương thức thanh toán',
+      stripeHeader: 'Cập nhật thẻ định kỳ',
+      stripeCardMissing: 'Biểu mẫu thẻ chưa sẵn sàng.',
+      stripeCardNotReady: 'Không thể lưu phương thức thanh toán.',
+      stripeNotReady: 'Stripe chưa sẵn sàng. Vui lòng thử lại sau.',
+      stripeSuccess: 'Đã cập nhật phương thức thanh toán thành công.',
+      savePaymentMethod: 'Lưu thẻ mới',
+      cancelChange: 'Hủy',
+      unnamedPlan: 'Gói chưa có tên',
+      noPaymentPlan: 'Chưa chọn hình thức thanh toán',
+      status: {
+        active: 'Đang hoạt động',
+        pending: 'Đang chờ',
+        expired: 'Hết hạn',
+        suspended: 'Tạm ngưng',
+      },
+    },
   },
 
   plan: {
     sectionTitle: 'Đăng ký gói gửi xe theo học kỳ',
+    sectionDescription:
+      'Chọn gói phù hợp với nhu cầu gửi xe theo học kỳ, sau đó hoàn tất đăng ký để giữ chỗ.',
+    cta: 'Đăng ký gói này',
 
     steps: ['Chọn học kỳ', 'Cập nhật nhu cầu', 'Xác nhận'],
-
-    vehiclePackages: {
-      sectionTitle: 'Gói gửi xe theo loại phương tiện',
-      description: 'Chọn gói phù hợp với xe có hoặc không có biển số trước khi đăng ký.',
-      cta: 'Đăng ký gói này',
-      withoutPlate: {
-        subtitle: 'Xe không biển số',
-        title: 'Không biển số',
-        price: '4.500 đ / ngày',
-        description: 'Dành cho xe mang thẻ sinh viên hoặc không gắn biển số thường xuyên.',
-        features: [
-          'Hỗ trợ thẻ mã QR để check-in nhanh',
-          'Ghi nhận lượt gửi qua mã QR tự động',
-          'Không cần nhập biển số khi ra vào',
-          'Thông báo trạng thái gửi qua ứng dụng',
-          'Ưu tiên xếp hàng vào giờ cao điểm',
-        ],
-      },
-      withPlate: {
-        subtitle: 'Xe có biển số',
-        title: 'Có biển số',
-        price: '5.200 đ / ngày',
-        description: 'Lựa chọn tối ưu cho xe có biển số cá nhân, ghi nhận chính xác từng lượt.',
-        features: [
-          'Camera phát hiện biển số tự động',
-          'Đối soát chính xác giấy tờ với biển số',
-          'Cảnh báo biển số trùng hoặc nghi ngờ gian lận',
-          'Phân quyền vào ra theo người dùng',
-          'Thống kê thời gian gửi theo từng biển số',
-        ],
-      },
-    },
+    backToVehicles: 'Quay lại trang quản lý phương tiện',
+    calculatingPrice: 'Đang tính giá…',
+    pricingSummary: '{{days}} ngày phải trả (đã loại bỏ {{sundayDays}} ngày Chủ nhật và {{holidayDays}} ngày lễ).',
 
     form: {
       timeLabel: 'Thời gian ưu tiên',
@@ -228,6 +272,18 @@
 
     checkoutTitle: 'Thanh toán',
     checkoutSubtitle: 'Hoàn tất thông tin thanh toán để giữ chỗ gửi xe',
+    priceLabel: 'Giá',
+    perDay: '/ Ngày',
+    cards: {
+      noPlate: {
+        title: 'Xe đạp / Xe đạp điện',
+        subtitle: 'Không có biển số xe',
+      },
+      withPlate: {
+        title: 'Xe máy / Xe đạp điện',
+        subtitle: 'Có biển số xe',
+      },
+    },
     checkoutCta: 'Đăng ký gói này',
     checkoutConfirmed: 'Đã xác nhận thanh toán cho {{plan}}',
     priceNote: 'Giá hiển thị bằng VND để giữ sự nhất quán.',
@@ -261,9 +317,17 @@
       cardHolder: 'Tên chủ thẻ',
       cardExpiry: 'Hạn sử dụng (MM/YY)',
       cardCvc: 'CVC',
+      cardSetupError: 'Không thể kết nối đến Stripe, vui lòng thử lại sau.',
+      cardNotLoaded: 'Biểu mẫu thẻ chưa sẵn sàng.',
+      cardNotReady: 'Không nhận diện được phương thức thanh toán.',
+      cardGeneralError: 'Không thể lưu thông tin thẻ. Vui lòng thử lại.',
       momoTitle: 'Thanh toán qua MoMo',
       momoDescription: 'Bạn sẽ được chuyển hướng sang trang MoMo để hoàn tất giao dịch trong vòng 5 phút.',
       momoRedirect: 'Chúng tôi sẽ mở MoMo để bạn xác nhận thanh toán.',
+      momoMissingVehicle: 'Vui lòng đăng ký xe trước khi thanh toán bằng MoMo.',
+      momoSetupError: 'Thiếu dữ liệu cần thiết để thanh toán MoMo. Vui lòng thử lại sau.',
+      momoUrlMissing: 'Không tìm thấy đường dẫn thanh toán MoMo.',
+      momoGeneralError: 'Không thể khởi tạo thanh toán MoMo. Vui lòng thử lại.',
       next: 'Tiếp theo',
       back: 'Quay lại',
       confirm: 'Xác nhận thanh toán',

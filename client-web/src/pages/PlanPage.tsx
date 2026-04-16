@@ -1,125 +1,120 @@
 import { Box, Button, Typography } from '@mui/material';
-import { useMemo } from 'react';
+import ArrowBackIcon from '@mui/icons-material/ArrowBack';
+import { useEffect, useState } from 'react';
 import { useTranslation } from 'react-i18next';
-import { useNavigate } from 'react-router-dom';
-import { SubscriptionPlan } from '../api/clientApi';
+import { Link } from 'react-router-dom';
 import { useSubscriptionPlans } from '../api/subscription_plans';
+import PlanCheckoutPanel from '../components/plan/PlanCheckoutPanel';
+import { getPlanCardKey } from '../ultis/planCards';
 
-const currencyFormatter = new Intl.NumberFormat('vi-VN', { style: 'currency', currency: 'VND' });
-
-type VehiclePackageOption = {
-  id: string;
-  title: string;
-  subtitle: string;
-  price: string;
-  description: string;
-  features: string[];
-};
+const priceFormatter = new Intl.NumberFormat('en-US', { maximumFractionDigits: 0 });
 
 export default function PlanPage() {
   const { t } = useTranslation();
-  const navigate = useNavigate();
   const { data: plans = [] } = useSubscriptionPlans();
+  const [selectedPlanId, setSelectedPlanId] = useState<string | null>(null);
 
-  const uiPlans = useMemo<SubscriptionPlan[]>(() => {
-    return plans.map((plan) => {
-      const priceLabel = currencyFormatter.format(plan.price_per_day);
-      return {
-        id: plan.id,
-        label: plan.plan_name,
-        description: plan.description ?? t('plan.checkoutSubtitle'),
-        duration: `${priceLabel} / ngày`,
-        perk: plan.description ?? t('plan.checkoutSubtitle'),
-        price: priceLabel,
-        features: [
-          `${t('plan.reminder')}`,
-          `${t('plan.checkoutPlanNote')}`,
-          `${t('plan.checkoutFields.bank')}`,
-        ],
-      };
-    });
-  }, [plans, t]);
+  useEffect(() => {
+    if (!selectedPlanId && plans.length > 0) {
+      setSelectedPlanId(plans[0].id);
+    }
+  }, [plans, selectedPlanId]);
 
-  const vehiclePackages = useMemo<VehiclePackageOption[]>(() => {
-    return [
-      {
-        id: 'without-plate',
-        title: t('plan.vehiclePackages.withoutPlate.title'),
-        subtitle: t('plan.vehiclePackages.withoutPlate.subtitle'),
-        price: t('plan.vehiclePackages.withoutPlate.price'),
-        description: t('plan.vehiclePackages.withoutPlate.description'),
-        features: t('plan.vehiclePackages.withoutPlate.features', { returnObjects: true }) as string[],
-      },
-      {
-        id: 'with-plate',
-        title: t('plan.vehiclePackages.withPlate.title'),
-        subtitle: t('plan.vehiclePackages.withPlate.subtitle'),
-        price: t('plan.vehiclePackages.withPlate.price'),
-        description: t('plan.vehiclePackages.withPlate.description'),
-        features: t('plan.vehiclePackages.withPlate.features', { returnObjects: true }) as string[],
-      },
-    ];
-  }, [t]);
+  const selectedPlan = plans.find((plan) => plan.id === selectedPlanId) ?? null;
 
-  const handleOpenCheckout = (plan: SubscriptionPlan) => {
-    navigate('/plan/checkout', { state: { plan } });
-  };
+  const dayLabel = t('plan.perDay');
+  // const priceLabel = t('plan.priceLabel');
 
   return (
-    <Box sx={{ margin: '0 5rem', maxWidth: 1200, padding: 2 }}>
-      {/* <Box className="plan-header">
-        <Typography variant="subtitle2" className="section-label">
-          {t('plan.sectionTitle')}
-        </Typography>
-        <Typography variant="body2" className="section-description">
-          {t('plan.checkoutSubtitle')}
-        </Typography>
-      </Box> */}
+    <Box className="plan-page-shell">
+      <Box className='plan-page-shell-body'>
+        <Box className="plan-page-header">
+          <Button
+            component={Link}
+            to="/vehicle"
+            startIcon={<ArrowBackIcon />}
+            className="plan-back-link"
+          >
+            {t('plan.backToVehicles')}
+          </Button>
+          <Typography variant="h4" gutterBottom>
+            {t('plan.sectionTitle')}
+          </Typography>
+          <Typography variant="body2" color="text.secondary">
+            {t('plan.sectionDescription')}
+          </Typography>
+        </Box>
 
-      <Box className="vehicle-packages-section">
-        <Typography variant="subtitle2" className="section-label">
-          {t('plan.vehiclePackages.sectionTitle')}
-        </Typography>
-        <Typography variant="body2" className="section-description">
-          {t('plan.vehiclePackages.description')}
-        </Typography>
-        <Box className="vehicle-package-grid">
-          {vehiclePackages.map((vehiclePackage, index) => {
-            const uiPlanForPackage = uiPlans[index] ?? uiPlans[0] ?? null;
-            return (
-              <Box key={vehiclePackage.id} className="vehicle-package-card">
-                <Typography variant="body2" className="vehicle-package-subtitle">
-                  {vehiclePackage.subtitle}
+        <Box className="plan-page-body">
+          <Box className="plan-option-grid">
+            {plans.length === 0 && (
+              <Box sx={{ gridColumn: '1 / -1' }}>
+                <Typography variant="body1" align="center">
+                  {t('plan.noPlans')}
                 </Typography>
-                <Typography variant="h6" className="vehicle-package-title">
-                  {vehiclePackage.title}
-                </Typography>
-                <Typography variant="body1" className="vehicle-package-price">
-                  {vehiclePackage.price}
-                </Typography>
-                <Typography variant="caption" className="price-note">
-                  {t('plan.priceNote')}
-                </Typography>
-                <Typography variant="body2" className="vehicle-package-description">
-                  {vehiclePackage.description}
-                </Typography>
-                <ul className="vehicle-package-features">
-                  {vehiclePackage.features.map((feature) => (
-                    <li key={`${vehiclePackage.id}-${feature}`}>{feature}</li>
-                  ))}
-                </ul>
-                <Box className="vehicle-package-actions">
+              </Box>
+            )}
+
+            {plans.map((plan) => {
+              const planKey = getPlanCardKey(plan.plan_name);
+              const title =
+                planKey !== null
+                  ? t(`plan.cards.${planKey}.title`, { defaultValue: plan.plan_name })
+                  : plan.plan_name;
+              const subtitle =
+                planKey !== null
+                  ? t(`plan.cards.${planKey}.subtitle`, { defaultValue: plan.description ?? '' })
+                  : plan.description ?? '';
+              const priceValue = `${priceFormatter.format(plan.price_per_day)} VND`;
+
+              return (
+                <Box
+                  key={plan.id}
+                  className={`plan-option-card ${selectedPlanId === plan.id ? 'plan-option-card--active' : ''}`}
+                >
+                  <Box className="plan-card-meta">
+                    {subtitle && (
+                      <Typography variant="h6" textTransform="unset" className="plan-card-label">
+                        {subtitle}
+                      </Typography>
+                    )}
+                    <Typography variant="h5" fontWeight={600} className="plan-card-title">
+                      {title}
+                    </Typography>
+                  </Box>
+                  <Typography variant="h5" mt={1} className="plan-card-price-line">
+                    {priceValue}
+                    <span className="plan-card-per-day">{dayLabel}</span>
+                  </Typography>
+                  {plan.description && (
+                    <Typography variant="body2" className="plan-card-description">
+                      {plan.description}
+                    </Typography>
+                  )}
                   <Button
-                    variant="outlined"
-                    onClick={() => uiPlanForPackage && handleOpenCheckout(uiPlanForPackage)}
-                    disabled={!uiPlanForPackage}
+                    variant={selectedPlanId === plan.id ? 'contained' : 'outlined'}
+                    onClick={() => setSelectedPlanId(plan.id)}
                   >
-                    {t('plan.vehiclePackages.cta')}
+                    {t('plan.cta')}
                   </Button>
                 </Box>
+              );
+            })}
+          </Box>
+
+          {selectedPlan ? (
+            <Box className="plan-checkout-frame">
+              <Box className="plan-checkout-header">
+                <Typography variant="h5">{t('plan.checkoutTitle')}</Typography>
+                <Typography variant="body2">{t('plan.checkoutSubtitle')}</Typography>
               </Box>
-            );
-          })}
+              <PlanCheckoutPanel plan={selectedPlan} />
+            </Box>
+          ) : (
+            <Box className="plan-checkout-placeholder">
+              <Typography variant="body1">{t('plan.notChosen')}</Typography>
+            </Box>
+          )}
         </Box>
       </Box>
     </Box>

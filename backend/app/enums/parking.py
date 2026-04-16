@@ -7,6 +7,7 @@ class PaymentType(str, Enum):
 
 
 class SubscriptionStatus(str, Enum):
+    PENDING = "PENDING"
     ACTIVE = "ACTIVE"
     EXPIRED = "EXPIRED"
     SUSPENDED = "SUSPENDED"
@@ -19,8 +20,10 @@ class VehicleType(str, Enum):
 
 
 class PaymentMethod(str, Enum):
-    SYSTEM = "SYSTEM"
     CASH = "CASH"
+    STRIPE = "STRIPE"
+    MOMO = "MOMO"
+
 
 
 class InvoiceStatus(str, Enum):

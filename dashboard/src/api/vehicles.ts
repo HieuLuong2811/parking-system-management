@@ -5,7 +5,7 @@ import type { VehicleRecord } from './types';
 
 const fetchVehicles = () => httpGet<VehicleRecord[]>('/vehicles');
 
-export const useAdminVehicles = () => {
+export const useVehicles = () => {
   return useQuery({
     queryKey: ['admin', 'vehicles'],
     queryFn: fetchVehicles,

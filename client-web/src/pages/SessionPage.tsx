@@ -1,5 +1,6 @@
 import {
   Box,
+  Button,
   Chip,
   Pagination,
   Paper,
@@ -17,6 +18,7 @@ import React, { useEffect, useMemo, useState } from 'react';
 import { useTranslation } from 'react-i18next';
 import SectionCard from '../components/shared/SectionCard';
 import { useParkingSessions } from '../api/parking_sessions';
+import useDebouncedValue from '../hooks/useDebouncedValue';
 
 const formatDateValue = (value?: string | null) =>
   value ? new Date(value).toLocaleString('vi-VN', { hour12: false }) : null;
@@ -40,12 +42,13 @@ export default function SessionPage() {
   const [fromDate, setFromDate] = useState('');
   const [toDate, setToDate] = useState('');
   const [query, setQuery] = useState('');
+  const debouncedQuery = useDebouncedValue(query, 420);
   const [page, setPage] = useState(1);
   const { data: sessions = [], isLoading, isError } = useParkingSessions();
 
   useEffect(() => {
     setPage(1);
-  }, [fromDate, toDate, query]);
+  }, [fromDate, toDate, debouncedQuery]);
 
   const filterFields = [
     { key: 'from', type: 'datetime-local', value: fromDate, setter: setFromDate },
@@ -60,14 +63,21 @@ export default function SessionPage() {
     },
   ];
 
-  const tableColumns = ['vehicle', 'checkIn', 'checkOut', 'status', 'userType', 'amount'];
+  const clearFilters = () => {
+    setFromDate('');
+    setToDate('');
+    setQuery('');
+    setPage(1);
+  };
+
+  const tableColumns = ['vehicle', 'checkIn', 'checkOut', 'status', 'amount'];
 
   const filtered = useMemo(() => {
     return sessions.filter((session) => {
       const checkIn = session.check_in_time ? new Date(session.check_in_time) : null;
       if (fromDate && checkIn && new Date(fromDate) > checkIn) return false;
       if (toDate && checkIn && new Date(toDate) < checkIn) return false;
-      const keyword = query.trim().toLowerCase();
+      const keyword = debouncedQuery.trim().toLowerCase();
       if (keyword) {
         const text = `${session.license_plate ?? ''} ${session.vehicle_id}`.toLowerCase();
         if (!text.includes(keyword)) return false;
@@ -85,7 +95,7 @@ export default function SessionPage() {
         {t('sessions.sectionTitle')}
       </Typography>
 
-      <Stack direction={{ xs: 'column', sm: 'row' }} spacing={2} mb={3}>
+      <Stack direction={{ xs: 'column', sm: 'row' }} spacing={2} mb={3} alignItems="flex-end">
         {filterFields.map(({ key, type, value, setter, flex, placeholder }) => (
           <TextField
             key={key}
@@ -99,6 +109,15 @@ export default function SessionPage() {
             disabled={isLoading || isError}
           />
         ))}
+        <Button
+          variant="outlined"
+          color="primary"
+          onClick={clearFilters}
+          disabled={!fromDate && !toDate && !query}
+          sx={{ height: 40, alignSelf: 'flex-start' }}
+        >
+          {t('sessions.filters.clear')}
+        </Button>
       </Stack>
 
       {filtered.length === 0 ? (
@@ -148,11 +167,6 @@ export default function SessionPage() {
                             size="small"
                             sx={{ textTransform: 'capitalize' }}
                           />
-                        </TableCell>
-                        <TableCell>
-                          {t(`sessions.userType.${session.user_type.toLowerCase()}`, {
-                            defaultValue: session.user_type,
-                          })}
                         </TableCell>
                         <TableCell>{currencyFormat(session.total_amount)}</TableCell>
                       </TableRow>

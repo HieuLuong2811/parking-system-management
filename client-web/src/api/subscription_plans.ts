@@ -4,13 +4,9 @@ import {
   requestWithContext,
   SubscriptionPlanRecord,
 } from './clientApi';
-import { isMockMode, mockSubscriptionPlans } from '../mocks/mockData';
 
 const fetchSubscriptionPlans = async (): Promise<SubscriptionPlanRecord[]> => {
-  if (isMockMode) {
-    return mockSubscriptionPlans;
-  }
-  return requestWithContext(clientHttp.get<SubscriptionPlanRecord[]>('/subscription_plans'), 'Load subscription plans');
+  return requestWithContext(clientHttp.get<SubscriptionPlanRecord[]>('/subscription_plans/me'), 'Load subscription plans');
 };
 
 export const useSubscriptionPlans = () => {

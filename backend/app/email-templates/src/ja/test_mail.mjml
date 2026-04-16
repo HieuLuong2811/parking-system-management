@@ -1,0 +1,17 @@
+<mjml>
+  <mj-body>
+    <mj-section>
+      <mj-column>
+        <mj-text font-size="20px" font-weight="bold">
+          システムテストメール
+        </mj-text>
+        <mj-text>
+          {{user_name}}様
+        </mj-text>
+        <mj-text>
+          これはアカウント {{user_code}} のテストメールです。
+        </mj-text>
+      </mj-column>
+    </mj-section>
+  </mj-body>
+</mjml>

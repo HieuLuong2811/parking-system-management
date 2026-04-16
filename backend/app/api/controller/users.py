@@ -2,17 +2,30 @@ from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.models.auth import UserBulkImportRequest
 from app.models.responses import DeleteResponse
-from app.models.users import UsersCreate, UsersRead, UsersUpdate
+from app.models.users import UsersCreate, UsersRead, UsersUpdate, UserWithRoles
 from app.service.users import userService
 
 
 class UserController:
     @staticmethod
-    async def get_all_users_ctrl(db: AsyncSession) -> list[UsersRead]:
-        return await userService.get_all_users(db)
-    
-    async def get_user_by_user_code_ctrl(user_code: str, db: AsyncSession) -> UsersRead:
-        return await userService.get_user_by_user_code(user_code, db)
+    async def get_all_users_ctrl(
+        db: AsyncSession,
+        search: str | None = None,
+        phone: str | None = None,
+        role: str | None = None,
+        is_deleted: bool | None = None,
+    ) -> list[UserWithRoles]:
+        return await userService.get_users(
+            db=db,
+            search=search,
+            phone=phone,
+            role=role,
+            is_deleted=is_deleted,
+        )
+
+    @staticmethod
+    async def seed_users_ctrl(db: AsyncSession) -> list[UsersRead]:
+        return await userService.seed_users(db)
 
     @staticmethod
     async def create_user_ctrl(user_in: UsersCreate, db: AsyncSession) -> UsersRead:

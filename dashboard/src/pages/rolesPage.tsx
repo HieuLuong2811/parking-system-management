@@ -3,7 +3,7 @@ import type { GridColDef } from '@mui/x-data-grid';
 import { ResourceTableLayout } from '../components/resource/resourceTableLayout';
 import { useAdminRoles } from '../api/roles';
 import type { RoleRecord } from '../api/types';
-import { formatTimestamp } from '../ultis/format';
+import { formatDateTime } from '../ultis/format';
 
 const columns: GridColDef<RoleRecord>[] = [
   { field: 'id', headerName: 'Role ID', width: 220, sortable: true },
@@ -14,7 +14,7 @@ const columns: GridColDef<RoleRecord>[] = [
     headerName: 'Created at',
     width: 220,
     sortable: true,
-    valueGetter: (value, row) => formatTimestamp(row.created_at),
+    renderCell: (params) => formatDateTime(params.row.created_at),
   },
 ];
 

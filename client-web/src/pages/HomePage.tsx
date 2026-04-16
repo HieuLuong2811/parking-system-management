@@ -1,11 +1,11 @@
-import { Box, Button, Typography, Paper } from '@mui/material';
+import { Box, Typography, Paper } from '@mui/material';
 // import { useTranslation } from 'react-i18next';
 import Carousel from 'react-material-ui-carousel';
-import { useNavigate } from 'react-router-dom';
+// import { useNavigate } from 'react-router-dom';
 
 export default function HomePage() {
   // const { t } = useTranslation();
-  const navigate = useNavigate();
+  // const navigate = useNavigate();
 
   const campusImages = ['/CS1.jpg', '/CS2.jpg', '/CS3.jpg'];
 
@@ -44,7 +44,6 @@ export default function HomePage() {
       <Paper
         elevation={0}
         sx={{
-          background: 'linear-gradient(135deg, #f0f7ff 0%, #e6f0ff 100%)',
           borderRadius: 6,
           overflow: 'hidden',
           boxShadow: '0 20px 60px rgba(23, 83, 255, 0.08)',
@@ -70,29 +69,17 @@ export default function HomePage() {
             <Typography
               variant="h3"
               component="h1"
-              fontWeight={800}
-              gutterBottom
-              sx={{ fontSize: { xs: '2.2rem', md: '3.5rem' }, lineHeight: 1.1 }}
+              fontWeight={600}
             >
-              Hệ thống bãi đỗ xe thông minh
+              Hệ thống bãi đỗ xe UTEHY
             </Typography>
             <Typography
               variant="h6"
               color="text.secondary"
               sx={{ mb: 4, maxWidth: 480 }}
             >
-              Quản lý chỗ đỗ tiện lợi, an toàn, tiết kiệm thời gian cho sinh viên, giảng viên và nhân viên.
+              Quản lý chỗ đỗ tiện lợi, an toàn, tiết kiệm thời gian cho sinh viên, giảng viên và khách hàng.
             </Typography>
-            <Box sx={{ display: 'flex', gap: 2, flexWrap: 'wrap' }}>
-              <Button
-                variant="contained"
-                size="large"
-                sx={{ p: 2, fontSize: '1.2rem' }}
-                onClick={() => navigate('/profile')}
-              >
-                Đăng nhập ngay
-              </Button>
-            </Box>
           </Box>
 
           <Box sx={{ flex: 1, position: 'relative', minHeight: { xs: 300 } }}>
@@ -153,7 +140,6 @@ export default function HomePage() {
                 alt={feature.title}
                 sx={{
                   width: '100%',
-                  height: 160,
                   objectFit: 'cover',
                   borderRadius: 3,
                   mb: 2,

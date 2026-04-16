@@ -4,6 +4,7 @@ import Navbar from './navbar';
 import Footer from './footer';
 import { useEffect } from 'react';
 import { validateRequiredFields, clearFieldError } from '../../ultis/requiredValidation';
+import QueryLoadingOverlay from './QueryLoadingOverlay';
 
 export default function ClientLayout() {
   useEffect(() => {
@@ -42,6 +43,7 @@ export default function ClientLayout() {
       <Navbar />
 
       <Box className="client-body">
+        <QueryLoadingOverlay />
         <Box className="client-content">
           <Outlet />
         </Box>

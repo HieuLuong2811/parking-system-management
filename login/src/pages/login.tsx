@@ -1,4 +1,4 @@
-import React, { useCallback, useMemo, useState } from "react";
+import React, { useCallback, useEffect, useMemo, useState } from "react";
 import {
   Alert,
   Box,
@@ -8,33 +8,75 @@ import {
   InputLabel,
   MenuItem,
   Select,
+  Snackbar,
   Typography,
 } from "@mui/material";
 import type { SelectChangeEvent } from "@mui/material";
-import { AUTH_LOGIN_URL, VITE_CLIENT_WEB_URL, VITE_DASHBOARD_URL } from "../constant/config";
+import axios from "axios";
+
+import {
+  Role,
+  VITE_CLIENT_WEB_URL,
+  VITE_DASHBOARD_URL,
+  AUTH_ME_URL,
+} from "../constant/config";
 import {
   getStoredLanguage,
   supportedLanguages,
   setStoredLanguage,
 } from "../utils/language";
-
-type Language = (typeof supportedLanguages)[number];
 import { loginTranslations } from "../translations/login";
 import { RuleTranslations } from "../translations/rule";
-import { clearSessionToken, setSessionToken } from "../utils/tokenStorage";
 import { FormInput } from "../components/FormInput";
 import { languageOptions } from "../ultis/flags";
+import { useLogin } from "../hooks/useLogin";
+
+type Language = (typeof supportedLanguages)[number];
+
+const appendCodeParam = (baseUrl: string, code: string) => {
+  if (!baseUrl) return baseUrl;
+  const sanitizedBase = baseUrl.trim();
+  try {
+    const url = typeof window !== "undefined"
+      ? new URL(sanitizedBase, window.location.origin)
+      : new URL(sanitizedBase);
+    url.searchParams.set("code", code);
+    return url.toString();
+  } catch {
+    const separator = sanitizedBase.includes("?") ? "&" : "?";
+    return `${sanitizedBase}${separator}code=${encodeURIComponent(code)}`;
+  }
+};
 
 const LoginPage: React.FC = () => {
+  useEffect(() => {
+    const redirectIfAuthenticated = async () => {
+      try {
+        const response = await axios.get(AUTH_ME_URL, { withCredentials: true });
+        const roles = (response.data.roles || []).map((role: string) => role.toLowerCase());
+        if (roles.includes(Role.ADMIN)) {
+          window.location.href = VITE_DASHBOARD_URL;
+        } else {
+          window.location.href = VITE_CLIENT_WEB_URL;
+        }
+      } catch (error) {
+        console.error('Check auth failed:', error);
+      }
+    };
+
+    redirectIfAuthenticated();
+  }, []);
+
   const [language, setLanguage] = useState<Language>(() => getStoredLanguage());
   const [usercode, setUsercode] = useState<string>("");
   const [password, setPassword] = useState<string>("");
-  const [isLoading, setIsLoading] = useState<boolean>(false);
   const [error, setError] = useState<string>("");
   const [fieldErrors, setFieldErrors] = useState<{
     usercode?: string;
     password?: string;
   }>({});
+
+  const { mutate, isPending } = useLogin();
 
   const t = useMemo(
     () => (key: string) => loginTranslations[language][key] ?? key,
@@ -55,17 +97,7 @@ const LoginPage: React.FC = () => {
     [],
   );
 
-  const mockdata = {
-    user_code: "admin",
-    password: "admin123",
-  };
-
-  const mockrole = { ADMIN: "ADMIN", USER: "USER" };
-
   const handleLogin = async (usercode: string, password: string) => {
-
-    const role = "USER";
-
     const requiredUsercode = t("login.required-first.usercode");
     const requiredPassword = t("login.required-first.password");
 
@@ -84,53 +116,34 @@ const LoginPage: React.FC = () => {
       return;
     }
 
-    if (usercode !== mockdata.user_code || password !== mockdata.password) {
-      setError(t("login.error.invalid"));
-      return;
-    }
-
     setFieldErrors({});
-
-    setIsLoading(true);
     setError("");
 
     try {
-      clearSessionToken();
-      const response = await fetch(AUTH_LOGIN_URL, {
-        method: "POST",
-        headers: {
-          "Content-Type": "application/json",
+        mutate({ user_code: usercode, password }, {
+          onSuccess: (data) => {
+          if (!data.code) {
+            setError(t("login.error.invalid"));
+            return;
+          }
+          const role = (data.roles || []).map((r) => r.toLowerCase());
+          if (role.includes(Role.ADMIN)) {
+            window.location.href = appendCodeParam(VITE_DASHBOARD_URL, data.code);
+          } else {
+            window.location.href = appendCodeParam(VITE_CLIENT_WEB_URL, data.code);
+          }
         },
-        body: JSON.stringify({
-          user_code: usercode.trim(),
-          password,
-        }),
+        onError: (error) => {
+          setError(
+            error instanceof Error ? error.message : t("login.error.invalid"),
+          );
+        },
       });
-
-      if (!response.ok) {
-        const payload = await response.json().catch(() => null);
-        const detail = payload?.detail ?? t("login.error.invalid");
-        throw new Error(
-          typeof detail === "string" ? detail : t("login.error.invalid"),
-        );
-      }
-
-      const { access_token } = await response.json();
-      setSessionToken(access_token);
-
-      if (role === mockrole.ADMIN) {
-        window.location.href = VITE_DASHBOARD_URL;
-      } else {
-        window.location.href = VITE_CLIENT_WEB_URL;
-      }
-      
     } catch (error) {
       setFieldErrors({});
       setError(
         error instanceof Error ? error.message : t("login.error.invalid"),
       );
-      clearSessionToken();
-      setIsLoading(false);
     }
   };
 
@@ -181,9 +194,11 @@ const LoginPage: React.FC = () => {
               {t("login.form-title")}
             </Typography>
             {error && (
-              <Alert severity="error" onClose={() => setError("")}>
-                {error}
-              </Alert>
+              <Snackbar open={!!error} autoHideDuration={3000} onClose={() => setError("")} anchorOrigin={{ vertical: "top", horizontal: "right" }}>
+                <Alert severity="error" onClose={() => setError("")}>
+                  {error}
+                </Alert>
+              </Snackbar>
             )}
 
             <FormInput
@@ -192,7 +207,7 @@ const LoginPage: React.FC = () => {
               value={usercode}
               onChange={handleChange("usercode", setUsercode)}
               error={fieldErrors.usercode}
-              disabled={isLoading}
+              disabled={isPending}
             />
 
             <FormInput
@@ -202,18 +217,18 @@ const LoginPage: React.FC = () => {
               value={password}
               onChange={handleChange("password", setPassword)}
               error={fieldErrors.password}
-              disabled={isLoading}
-            />  
+              disabled={isPending}
+            />
 
             <Button
               variant="contained"
               type="submit"
               size="large"
-              disabled={isLoading}
+              disabled={isPending}
               sx={{ mt: 1, borderRadius: 2, width: "100%" }}
               className="auth-button"
             >
-              {isLoading ? (
+              {isPending ? (
                 <CircularProgress size={20} color="inherit" />
               ) : (
                 t("login.button")
@@ -239,7 +254,7 @@ const LoginPage: React.FC = () => {
                 labelId="language-select-label"
                 value={language}
                 onChange={handleLanguageChange}
-                disabled={isLoading}
+                disabled={isPending}
                 label={t("login.language-label")}
               >
                 {languageOptions.map((lang) => (

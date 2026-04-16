@@ -1,10 +1,14 @@
-from typing import Optional
-from curl_cffi import Request
 from sqlalchemy.ext.asyncio import AsyncSession
 
+from app.models.momo_payment import MomoInfor
 from app.service.momo_payment import MomoPaymentService
+
 
 class MomoPaymentController:
     @staticmethod
-    async def create_momo_payment_ctrl(request: Request) -> JSONResponse:
-        return await MomoPaymentService.create_momo_payment(request)
+    def create_momo_payment_ctrl(momo_infor: MomoInfor):
+        return MomoPaymentService.create_momo_payment(momo_infor)
+
+    @staticmethod
+    async def momo_ipn_ctrl(payload: dict, db: AsyncSession):
+        return await MomoPaymentService.handle_momo_ipn(payload, db)

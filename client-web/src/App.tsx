@@ -1,5 +1,6 @@
-import "./App.css";
 import { BrowserRouter, Navigate, Route, Routes } from "react-router-dom";
+import { Elements } from "@stripe/react-stripe-js";
+import { stripePromise } from "./lib/stripe";
 
 import HomePage from "./pages/HomePage";
 import SessionPage from "./pages/SessionPage";
@@ -9,23 +10,40 @@ import CheckoutPage from "./pages/CheckoutPage";
 import ClientLayout from "./components/layout/ClientLayout";
 import ProfilePage from "./pages/profilePage";
 import InvoicesPage from "./pages/InvoicesPage";
+import { AppAuthProvider } from "./contexts/AppAuthContext";
+import "./App.css";
 
 function App() {
   return (
-    <BrowserRouter>
-      <Routes>
-        <Route element={<ClientLayout />}>
-          <Route index element={<HomePage />} />
-          <Route path="sessions" element={<SessionPage />} />
-          <Route path="profile" element={<ProfilePage />} />
-          <Route path="plan" element={<PlanPage />} />
-          <Route path="plan/checkout" element={<CheckoutPage />} />
-          <Route path="vehicle" element={<VehiclePage />} />
-          <Route path="invoices" element={<InvoicesPage />} />
-          <Route path="*" element={<Navigate to="/" replace />} />
-        </Route>
-      </Routes>
-    </BrowserRouter>
+    <AppAuthProvider>
+      <BrowserRouter>
+        <Routes>
+          <Route
+            path="plan"
+            element={
+              <Elements stripe={stripePromise}>
+                <PlanPage />
+              </Elements>
+            }
+          />
+          <Route path="/*" element={<ClientLayout />}>
+            <Route index element={<HomePage />} />
+            <Route path="sessions" element={<SessionPage />} />
+            <Route
+              path="profile"
+              element={
+                <Elements stripe={stripePromise}>
+                  <ProfilePage />
+                </Elements>
+              }
+            />
+            <Route path="vehicle" element={<VehiclePage />} />
+            <Route path="invoices" element={<InvoicesPage />} />
+            <Route path="*" element={<Navigate to="/" replace />} />
+          </Route>
+        </Routes>
+      </BrowserRouter>
+    </AppAuthProvider>
   );
 }
 

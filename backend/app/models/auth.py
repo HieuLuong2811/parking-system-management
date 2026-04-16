@@ -29,19 +29,38 @@ class TokenResponse(Token):
     roles: List[str] = []
 
 
+class AuthCodeResponse(BaseModel):
+    code: str
+    expires_at: datetime
+    user_code: str
+    roles: List[str] = []
+
+
+class ExchangeCodeRequest(BaseModel):
+    code: str
+
+class ChangePasswordRequest(BaseModel):
+    current_password: str
+    new_password: str
+
+
 class AuthUser(BaseModel):
     user_code: str
     full_name: str
     email: EmailStr
     roles: List[str] = []
-    is_active: bool
 
 
 class UserImportEntry(BaseModel):
     user_code: str
     full_name: str
     email: EmailStr
+    phone_number: str | None = None
 
 
 class UserBulkImportRequest(BaseModel):
     entries: List[UserImportEntry]
+
+
+class LogoutRequest(BaseModel):
+    app_id: str

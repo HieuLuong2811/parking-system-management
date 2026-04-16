@@ -1,17 +1,26 @@
 import {
   Box,
   Button,
+  CircularProgress,
   Dialog,
   DialogActions,
   DialogContent,
   DialogTitle,
+  FormControl,
+  MenuItem,
+  Select,
+  SelectChangeEvent,
   Typography,
 } from '@mui/material';
+import PedalBikeIcon from '@mui/icons-material/PedalBike';
+import TwoWheelerIcon from '@mui/icons-material/TwoWheeler';
 import QRCode from 'qrcode';
-import React, { useState } from 'react';
+import React, { useEffect, useMemo, useState } from 'react';
 import { useTranslation } from 'react-i18next';
 
-import { useCreateVehicle } from '../../api/vehicles';
+import { VehicleInfo } from '../../api/clientApi';
+import { useCreateVehicle, useUpdateVehicle } from '../../api/vehicles';
+import { useAppAuth } from '../../contexts/useAppAuth';
 
 const plateFields = [
   { name: 'user_code', labelKey: 'vehicle.modal.fields.userCode', required: true },
@@ -22,15 +31,15 @@ const plateFields = [
 const noPlateFields = [
   { name: 'user_code', labelKey: 'vehicle.modal.fields.userCode', required: true },
   { name: 'vehicle_type', labelKey: 'vehicle.modal.fields.vehicleType', required: true },
-  { name: 'description', labelKey: 'vehicle.modal.fields.description', required: false },
 ];
 
 const initialPlateForm = { user_code: '', vehicle_type: '', license_plate: '' };
-const initialNoPlateForm = { user_code: '', vehicle_type: '', description: '', qr_code: '' };
+const initialNoPlateForm = { user_code: '', vehicle_type: '' };
 
 type ModalProps = {
   open: boolean;
   onClose: () => void;
+  vehicle?: VehicleInfo | null;
 };
 
 const renderField = (
@@ -39,7 +48,9 @@ const renderField = (
   value: string,
   onChange: (value: string) => void,
   error?: string,
-  required = true
+  required = true,
+  disabled = false,
+  placeholder = ''
 ) => (
   <div className="vehicle-modal-field" key={id}>
     <label htmlFor={id}>
@@ -51,6 +62,8 @@ const renderField = (
       value={value}
       onChange={(event) => onChange(event.target.value)}
       className="plain-input"
+      disabled={disabled}
+      placeholder={placeholder}
     />
     {error && (
       <Typography variant="caption" color="error">
@@ -60,9 +73,58 @@ const renderField = (
   </div>
 );
 
-const VehicleRegistrationModal: React.FC<ModalProps> = ({ open, onClose }) => {
+type SelectOption = {
+  value: string;
+  label: string;
+};
+
+const renderSelectField = (
+  id: string,
+  label: string,
+  value: string,
+  onChange: (value: string) => void,
+  options: SelectOption[],
+  placeholder: string,
+  error?: string,
+  required = true
+) => (
+  <div className="vehicle-modal-field" key={id}>
+    <label htmlFor={id}>
+      {label}
+      {required && <span className="required">*</span>}
+    </label>
+    <FormControl fullWidth error={Boolean(error)} variant="standard">
+      <Select
+        id={id}
+        value={value}
+        displayEmpty
+        onChange={(event: SelectChangeEvent<string>) => onChange(event.target.value)}
+        className="vehicle-type-select"
+      >
+        <MenuItem value="" disabled>
+          <em>{placeholder}</em>
+        </MenuItem>
+        {options.map((option) => (
+          <MenuItem key={option.value} value={option.value}>
+            {option.label}
+          </MenuItem>
+        ))}
+      </Select>
+    </FormControl>
+    {error && (
+      <Typography variant="caption" color="error">
+        {error}
+      </Typography>
+    )}
+  </div>
+);
+
+const VehicleRegistrationModal: React.FC<ModalProps> = ({ open, onClose, vehicle }) => {
   const { t } = useTranslation();
+  const { user: currentUser } = useAppAuth();
+  const currentUserCode = currentUser?.user_code ?? '';
   const createVehicle = useCreateVehicle();
+  const updateVehicle = useUpdateVehicle();
   const [activeTab, setActiveTab] = useState<'plate' | 'noPlate'>('plate');
   const [formPlate, setFormPlate] = useState(initialPlateForm);
   const [formNoPlate, setFormNoPlate] = useState(initialNoPlateForm);
@@ -73,11 +135,21 @@ const VehicleRegistrationModal: React.FC<ModalProps> = ({ open, onClose }) => {
   const [qrError, setQrError] = useState('');
   const [isGeneratingQR, setIsGeneratingQR] = useState(false);
 
+  const fieldLabels = useMemo(() => ({
+    user_code: t('vehicle.modal.fields.userCode'),
+    vehicle_type: t('vehicle.modal.fields.vehicleType'),
+    license_plate: t('vehicle.modal.fields.licensePlate'),
+    qr_code: t('vehicle.modal.fields.qrCode'),
+  }), [t]) as Record<string, string>;
+
+  const getRequiredMessage = (field: string) =>
+    t('validation.requiredField', { field: fieldLabels[field] ?? field });
+
   const validateFields = (values: Record<string, string>, required: string[]) => {
     const errors: Record<string, string> = {};
     required.forEach((field) => {
       if (!values[field] || !values[field].trim()) {
-        errors[field] = t('vehicle.modal.errors.required');
+        errors[field] = getRequiredMessage(field);
       }
     });
     return errors;
@@ -99,38 +171,139 @@ const VehicleRegistrationModal: React.FC<ModalProps> = ({ open, onClose }) => {
     onClose();
   };
 
-  const handleGenerateQR = async () => {
-    const errors = validateFields(formNoPlate, ['user_code', 'vehicle_type']);
-    setFormErrorsNoPlate(errors);
-    setQrError('');
-    if (Object.keys(errors).length) {
-      setQrError(t('vehicle.modal.errors.qrGenerate'));
-      return;
+  useEffect(() => {
+    if (vehicle) {
+      const hasPlate = Boolean(vehicle.license_plate?.trim());
+      setActiveTab(hasPlate ? 'plate' : 'noPlate');
+      setFormPlate({
+        user_code: vehicle.user_code ?? currentUserCode,
+        vehicle_type: vehicle.vehicle_type ?? '',
+        license_plate: vehicle.license_plate ?? '',
+      });
+      setFormNoPlate({
+        user_code: vehicle.user_code ?? currentUserCode,
+        vehicle_type: vehicle.vehicle_type ?? '',
+      });
+      setGeneratedQR(vehicle.qr_code ?? '');
+    } else {
+      setFormPlate((prev) => ({ ...prev, user_code: currentUserCode }));
+      setFormNoPlate((prev) => ({ ...prev, user_code: currentUserCode }));
     }
+  }, [currentUserCode, open, vehicle]);
+
+  const tabDefinitions = useMemo(
+    () => [
+      {
+        id: 'plate' as const,
+        title: t('vehicle.modal.tabs.withPlate'),
+        icon: <TwoWheelerIcon className="vehicle-modal-tab-icon" fontSize="small" />,
+      },
+      {
+        id: 'noPlate' as const,
+        title: t('vehicle.modal.tabs.withoutPlate'),
+        icon: <PedalBikeIcon className="vehicle-modal-tab-icon" fontSize="small" />,
+      },
+    ],
+    [t]
+  );
+
+  const vehicleTypeOptions = useMemo<SelectOption[]>(
+    () => [
+      {
+        value: 'MOTORBIKE',
+        label: t('vehicle.modal.types.motorbike'),
+      },
+      {
+        value: 'BICYCLE',
+        label: t('vehicle.modal.types.bicycle'),
+      },
+      {
+        value: 'ELECTRIC_BICYCLE',
+        label: t('vehicle.modal.types.electricBicycle'),
+      },
+    ],
+    [t]
+  );
+
+  const getVehicleTypeOptionsForTab = (tab: 'plate' | 'noPlate'): SelectOption[] => {
+    if (tab === 'plate') {
+      return vehicleTypeOptions.filter((option) => option.value !== 'BICYCLE');
+    }
+    return vehicleTypeOptions.filter((option) => option.value !== 'MOTORBIKE');
+  };
+
+  const vehicleTypePlaceholder = t('vehicle.modal.fields.vehicleTypePlaceholder', {
+    defaultValue: 'Select a vehicle type',
+  });
+
+  const licensePlatePlaceholder = t('vehicle.modal.fields.licensePlatePlaceholder', {
+    defaultValue: 'e.g. 30K12345',
+  });
+
+  const generateNoPlatePayload = () =>
+    `${formNoPlate.user_code.trim()}|${formNoPlate.vehicle_type.trim()}`;
+
+  const generateNoPlateQRCode = async () => {
+    setQrError('');
     setIsGeneratingQR(true);
     try {
-      const payload = `${formNoPlate.user_code}|${formNoPlate.vehicle_type}|${formNoPlate.description}`;
+      const payload = generateNoPlatePayload();
       const qr = await QRCode.toDataURL(payload, { width: 200, margin: 1 });
       setGeneratedQR(qr);
-      setFormNoPlate((prev) => ({ ...prev, qr_code: qr }));
-      setQrError('');
+      return qr;
     } catch (error) {
       setQrError(t('vehicle.modal.errors.qrFailed'));
+      throw error;
     } finally {
       setIsGeneratingQR(false);
     }
   };
 
-  const handleSubmit = async () => {
-    setSubmitError('');
-    if (activeTab === 'plate') {
-      const errors = validateFields(formPlate, ['user_code', 'vehicle_type', 'license_plate']);
-      setFormErrorsPlate(errors);
-      if (Object.keys(errors).length) return;
+  const handlePlateSubmission = async () => {
+    const errors = validateFields(formPlate, ['user_code', 'vehicle_type', 'license_plate']);
+    setFormErrorsPlate(errors);
+    if (Object.keys(errors).length) return;
+    try {
+      const payload = {
+        user_code: formPlate.user_code,
+        vehicle_type: formPlate.vehicle_type,
+        license_plate: formPlate.license_plate,
+        qr_code: formPlate.license_plate || undefined,
+      };
+      if (vehicle) {
+        await updateVehicle.mutateAsync({
+          vehicleId: vehicle.id,
+          payload,
+        });
+      } else {
+        await createVehicle.mutateAsync(payload);
+      }
+      resetModalState();
+      onClose();
+    } catch (error) {
+      setSubmitError(
+        error instanceof Error ? error.message : (t('vehicle.modal.errors.generic') as string)
+      );
+    }
+  };
+
+  const handleNoPlateSubmission = async () => {
+    const errors = validateFields(formNoPlate, ['user_code', 'vehicle_type']);
+    setFormErrorsNoPlate(errors);
+    if (Object.keys(errors).length) return;
+    const payloadBase = {
+      user_code: formNoPlate.user_code,
+      vehicle_type: formNoPlate.vehicle_type,
+      license_plate: '',
+    };
+    if (vehicle) {
       try {
-        await createVehicle.mutateAsync({
-          ...formPlate,
-          qr_code: formPlate.license_plate || undefined,
+        await updateVehicle.mutateAsync({
+          vehicleId: vehicle.id,
+          payload: {
+            ...payloadBase,
+            qr_code: generatedQR || vehicle.qr_code || '',
+          },
         });
         resetModalState();
         onClose();
@@ -141,19 +314,11 @@ const VehicleRegistrationModal: React.FC<ModalProps> = ({ open, onClose }) => {
       }
       return;
     }
-    const errors = validateFields(formNoPlate, ['user_code', 'vehicle_type']);
-    setFormErrorsNoPlate(errors);
-    if (Object.keys(errors).length) return;
-    if (!generatedQR) {
-      setQrError(t('vehicle.modal.errors.qrMissing'));
-      return;
-    }
     try {
+      const qrCode = await generateNoPlateQRCode();
       await createVehicle.mutateAsync({
-        user_code: formNoPlate.user_code,
-        vehicle_type: formNoPlate.vehicle_type,
-        license_plate: '',
-        qr_code: generatedQR,
+        ...payloadBase,
+        qr_code: qrCode,
       });
       resetModalState();
       onClose();
@@ -164,30 +329,54 @@ const VehicleRegistrationModal: React.FC<ModalProps> = ({ open, onClose }) => {
     }
   };
 
+  const handleSubmit = () => {
+    setSubmitError('');
+    if (activeTab === 'plate') {
+      void handlePlateSubmission();
+      return;
+    }
+    void handleNoPlateSubmission();
+  };
+
   return (
     <Dialog open={open} onClose={handleClose} fullWidth maxWidth="sm">
       <DialogTitle>{t('vehicle.modal.title')}</DialogTitle>
       <DialogContent dividers>
         <Box className="vehicle-modal-tabs">
-          <button
-            type="button"
-            className={activeTab === 'plate' ? 'tab active' : 'tab'}
-            onClick={() => setActiveTab('plate')}
-          >
-            {t('vehicle.modal.tabs.withPlate')}
-          </button>
-          <button
-            type="button"
-            className={activeTab === 'noPlate' ? 'tab active' : 'tab'}
-            onClick={() => setActiveTab('noPlate')}
-          >
-            {t('vehicle.modal.tabs.withoutPlate')}
-          </button>
+          {tabDefinitions.map((tab) => (
+            <button
+              key={tab.id}
+              type="button"
+              className={activeTab === tab.id ? 'tab active' : 'tab'}
+              onClick={() => setActiveTab(tab.id)}
+            >
+              {tab.icon}
+              <span className="vehicle-modal-tab-text">
+                <span className="vehicle-modal-tab-title">{tab.title}</span>
+              </span>
+            </button>
+          ))}
         </Box>
         <Box className="vehicle-modal-panel">
           {activeTab === 'plate' ? (
-            plateFields.map((field) =>
-              renderField(
+            plateFields.map((field) => {
+              if (field.name === 'vehicle_type') {
+                return renderSelectField(
+                  field.name,
+                  t(field.labelKey),
+                  (formPlate as Record<string, string>)[field.name],
+                  (value) =>
+                    setFormPlate((prev) => ({
+                      ...prev,
+                      [field.name]: value,
+                    })),
+                  getVehicleTypeOptionsForTab('plate'),
+                  vehicleTypePlaceholder,
+                  formErrorsPlate[field.name],
+                  field.required
+                );
+              }
+              return renderField(
                 field.name,
                 t(field.labelKey),
                 (formPlate as Record<string, string>)[field.name],
@@ -197,13 +386,31 @@ const VehicleRegistrationModal: React.FC<ModalProps> = ({ open, onClose }) => {
                     [field.name]: value,
                   })),
                 formErrorsPlate[field.name],
-                field.required
-              )
-            )
+                field.required,
+                field.name === 'user_code',
+                field.name === 'license_plate' ? licensePlatePlaceholder : ''
+              );
+            })
           ) : (
             <>
-              {noPlateFields.map((field) =>
-                renderField(
+              {noPlateFields.map((field) => {
+                if (field.name === 'vehicle_type') {
+                  return renderSelectField(
+                    field.name,
+                    t(field.labelKey),
+                    (formNoPlate as Record<string, string>)[field.name],
+                    (value) =>
+                      setFormNoPlate((prev) => ({
+                        ...prev,
+                        [field.name]: value,
+                      })),
+                    getVehicleTypeOptionsForTab('noPlate'),
+                    vehicleTypePlaceholder,
+                    formErrorsNoPlate[field.name],
+                    field.required
+                  );
+                }
+                return renderField(
                   field.name,
                   t(field.labelKey),
                   (formNoPlate as Record<string, string>)[field.name],
@@ -213,30 +420,48 @@ const VehicleRegistrationModal: React.FC<ModalProps> = ({ open, onClose }) => {
                       [field.name]: value,
                     })),
                   formErrorsNoPlate[field.name],
-                  field.required
-                )
-              )}
+                  field.required,
+                  field.name === 'user_code'
+                );
+              })}
               <div className="vehicle-modal-field">
                 <label>
                   {t('vehicle.modal.fields.qrCode')}
                   <span className="required">*</span>
                 </label>
-                <Button variant="text" onClick={handleGenerateQR} disabled={isGeneratingQR}>
-                  {isGeneratingQR
-                    ? t('vehicle.modal.generatingQr')
-                    : t('vehicle.modal.actions.generateQr')}
-                </Button>
-                {generatedQR && (
-                  <Box
-                    component="img"
-                    src={generatedQR}
-                    alt="QR code"
-                    sx={{ width: 120, mt: 1, borderRadius: 1, border: '1px solid #e0e0e0' }}
-                  />
-                )}
-                {(qrError || formErrorsNoPlate.qr_code) && (
+                <Box
+                  sx={{
+                    mt: 1,
+                    display: 'flex',
+                    alignItems: 'center',
+                    justifyContent: 'flex-start',
+                    minHeight: '120px',
+                  }}
+                >
+                  {isGeneratingQR ? (
+                    <CircularProgress size={16} />
+                  ) : generatedQR ? (
+                    <Box
+                      component="img"
+                      src={generatedQR}
+                      alt="QR code"
+                      sx={{ width: 120, borderRadius: 1, border: '1px solid #e0e0e0' }}
+                    />
+                  ) : (
+                    <Typography variant="caption" color="text.secondary">
+                      {vehicle
+                        ? t('vehicle.modal.info.qrLocked', {
+                            defaultValue: 'QR code cannot be edited for existing no-plate vehicles.',
+                          })
+                        : t('vehicle.modal.info.qrAutoGenerate', {
+                            defaultValue: 'QR code will be created when you submit.',
+                          })}
+                    </Typography>
+                  )}
+                </Box>
+                {qrError && (
                   <Typography variant="caption" color="error">
-                    {qrError || formErrorsNoPlate.qr_code}
+                    {qrError}
                   </Typography>
                 )}
               </div>

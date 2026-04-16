@@ -4,7 +4,6 @@ import {
   requestWithContext,
   VehicleInfo,
 } from './clientApi';
-import { isMockMode, mockVehicles } from '../mocks/mockData';
 
 export type VehiclePayload = {
   user_code: string;
@@ -16,29 +15,23 @@ export type VehiclePayload = {
 export type UpdateVehicleArgs = {
   vehicleId: string;
   payload: VehiclePayload;
-  userCode?: string;
 };
 
 export type DeleteVehicleArgs = {
   vehicleId: string;
-  userCode?: string;
 };
 
-export const fetchVehicles = async (userCode?: string): Promise<VehicleInfo[]> => {
-  const params = userCode ? { user_code: userCode } : undefined;
-  if (isMockMode) {
-    return Promise.resolve(mockVehicles);
-  }
+export const fetchVehicles = async (): Promise<VehicleInfo[]> => {
   return requestWithContext(
-    clientHttp.get<VehicleInfo[]>('/vehicles', { params }),
+    clientHttp.get<VehicleInfo[]>('/vehicles/me'),
     'Load vehicles'
   );
 };
 
-export const useVehicles = (userCode?: string) => {
+export const useVehicles = () => {
   return useQuery({
-    queryKey: ['vehicles', userCode || 'all'],
-    queryFn: () => fetchVehicles(userCode),
+    queryKey: ['vehicles'],
+    queryFn: fetchVehicles,
     staleTime: 1000 * 60,
   });
 };
@@ -54,9 +47,8 @@ export const useCreateVehicle = () => {
   const queryClient = useQueryClient();
   return useMutation({
     mutationFn: (payload: VehiclePayload) => createVehicle(payload),
-    onSuccess: (_, payload) => {
+    onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['vehicles'] });
-      queryClient.invalidateQueries({ queryKey: ['vehicles', payload.user_code] });
     },
   });
 };
@@ -72,11 +64,8 @@ export const useUpdateVehicle = () => {
   const queryClient = useQueryClient();
   return useMutation({
     mutationFn: (args: UpdateVehicleArgs) => updateVehicle(args),
-    onSuccess: (_, args) => {
+    onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['vehicles'] });
-      if (args.userCode) {
-        queryClient.invalidateQueries({ queryKey: ['vehicles', args.userCode] });
-      }
     },
   });
 };
@@ -89,11 +78,8 @@ export const useDeleteVehicle = () => {
   const queryClient = useQueryClient();
   return useMutation({
     mutationFn: (args: DeleteVehicleArgs) => deleteVehicle(args),
-    onSuccess: (_, args) => {
+    onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['vehicles'] });
-      if (args.userCode) {
-        queryClient.invalidateQueries({ queryKey: ['vehicles', args.userCode] });
-      }
     },
   });
 };

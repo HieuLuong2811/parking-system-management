@@ -33,8 +33,6 @@ class SubscriptionPlanRead(SubscriptionPlanBase):
 
 
 class SubscriptionPlanUpdate(SQLModel):
-    plan_code: Optional[str] = Field(default=None, max_length=50)
     plan_name: Optional[str] = Field(default=None, max_length=255)
     price_per_day: Optional[int] = None
     description: Optional[str] = None
-    deleted_at: Optional[datetime] = None

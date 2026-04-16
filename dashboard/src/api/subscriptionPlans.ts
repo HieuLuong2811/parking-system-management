@@ -11,7 +11,7 @@ export type SubscriptionPlanCreatePayload = {
 
 export type SubscriptionPlanUpdatePayload = Partial<SubscriptionPlanCreatePayload & { deleted_at?: string | null }>;
 
-const fetchSubscriptionPlans = () => httpGet<SubscriptionPlanRecord[]>('/plans');
+const fetchSubscriptionPlans = () => httpGet<SubscriptionPlanRecord[]>('/subscription_plans');
 
 export const useAdminSubscriptionPlans = () => {
   return useQuery({
@@ -23,12 +23,12 @@ export const useAdminSubscriptionPlans = () => {
 };
 
 const createSubscriptionPlan = (payload: SubscriptionPlanCreatePayload) =>
-  httpPost<SubscriptionPlanRecord>('/plans', payload);
+  httpPost<SubscriptionPlanRecord>('/subscription_plans', payload);
 
 const updateSubscriptionPlan = (id: string, payload: SubscriptionPlanUpdatePayload) =>
-  httpPatch<SubscriptionPlanRecord>(`/plans/${id}`, payload);
+  httpPatch<SubscriptionPlanRecord>(`/subscription_plans/${id}`, payload);
 
-const deleteSubscriptionPlan = (id: string) => httpDelete(`/plans/${id}`);
+const deleteSubscriptionPlan = (id: string) => httpDelete(`/subscription_plans/${id}`);
 
 export const useCreateSubscriptionPlan = () => {
   const queryClient = useQueryClient();

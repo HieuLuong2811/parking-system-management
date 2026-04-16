@@ -9,13 +9,13 @@ import { NotFoundPage } from '../pages/notFoundPage';
 import { InvoicesPage } from '../pages/invoicesPage';
 import { VehiclesPage } from '../pages/vehiclesPage';
 import { RolesPage } from '../pages/rolesPage';
-import { UserRolesPage } from '../pages/userRolesPage';
 import { TermsPage } from '../pages/termsPage';
 import { SubscriptionPlansPage } from '../pages/subscriptionPlansPage';
 import { SubscriptionsPage } from '../pages/subscriptionsPage';
 import { ParkingSessionsPage } from '../pages/parkingSessionsPage';
 import { PaymentTransactionsPage } from '../pages/paymentTransactionsPage';
 import { BillingEventLogsPage } from '../pages/billingEventLogsPage';
+import { SubscriptionInvoicesPage } from '../pages/subscriptionInvoicesPage';
 
 export const AppRouter = () => {
   return (
@@ -30,10 +30,10 @@ export const AppRouter = () => {
             <Route path="parking_sessions" element={<ParkingSessionsPage />} />
             <Route path="vehicles" element={<VehiclesPage />} />
             <Route path="roles" element={<RolesPage />} />
-            <Route path="user_roles" element={<UserRolesPage />} />
             <Route path="terms" element={<TermsPage />} />
             <Route path="plans" element={<SubscriptionPlansPage />} />
             <Route path="subscriptions" element={<SubscriptionsPage />} />
+            <Route path="subscriptions/:subscriptionId/invoices" element={<SubscriptionInvoicesPage />} />
             <Route path="payment_transactions" element={<PaymentTransactionsPage />} />
             <Route path="billing_event_logs" element={<BillingEventLogsPage />} />
             <Route path="settings" element={<SettingsPage />} />

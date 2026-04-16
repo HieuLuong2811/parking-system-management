@@ -43,10 +43,12 @@ class Settings(BaseSettings):
     SECRET_KEY: str = secrets.token_urlsafe(32)
     ACCESS_TOKEN_EXPIRE_MINUTES: int = 60 * 24 * 8  # 8 days
     JWT_SECRET: str
+    AUTH_CODE_EXPIRE_SECONDS: int = 60
 
     # Stripe
     STRIPE_SECRET_KEY: str | None = None
     STRIPE_WEBHOOK_SECRET: str | None = None
+    STRIPE_API_URL: str = "https://api.stripe.com"
 
     # Superuser
     FIRST_SUPERUSER: EmailStr
@@ -60,7 +62,9 @@ class Settings(BaseSettings):
     POSTGRES_DB: str = ""
 
     # Frontend Host
-    FRONTEND_HOST: str = "http://localhost:3000"
+    DASHBOARD_URL: HttpUrl = "http://localhost:2558/"
+    CLIENT_WEB_URL: HttpUrl = "http://localhost:2800/"
+    LOGIN_URL: HttpUrl = "http://localhost:5173/"
 
     @computed_field  # type: ignore
     @property
@@ -75,7 +79,6 @@ class Settings(BaseSettings):
         )
 
     # CORS
-    FRONTEND_HOST: str = FRONTEND_HOST
     BACKEND_CORS_ORIGINS: Annotated[
         list[AnyUrl] | str, BeforeValidator(parse_cors)
     ] = []
@@ -84,7 +87,7 @@ class Settings(BaseSettings):
     @property
     def all_cors_origins(self) -> list[str]:
         return [str(origin).rstrip("/") for origin in self.BACKEND_CORS_ORIGINS] + [
-            self.FRONTEND_HOST.rstrip("/")
+            self.DASHBOARD_URL, self.CLIENT_WEB_URL, self.LOGIN_URL
         ]
 
     # Email
@@ -97,7 +100,7 @@ class Settings(BaseSettings):
     EMAILS_FROM_EMAIL: EmailStr | None = None
     EMAILS_FROM_NAME: str | None = None
     EMAIL_RESET_TOKEN_EXPIRE_HOURS: int = 48
-    EMAIL_TEST_USER: EmailStr = "test@example.com"
+    EMAIL_TEST_USER: EmailStr = "hieuluong2811@gmail.com"
     DATABASE_URL: str = "http://localhost:8000/api/v1/"
     BACKEND_HOST: str = "http://localhost:8000"
 
@@ -108,7 +111,23 @@ class Settings(BaseSettings):
 
     MOMO_ENDPOINT: str = "https://test-payment.momo.vn/v2/gateway/api/create"
     MOMO_REDIRECT_URL: str = "https://webhook.site/b3088a6a-2d17-4f8d-a383-71389a6c600b"
-    MOMO_IPN_URL: str = "http://localhost:8000/api/v1/payment/momo-ipn"
+    MOMO_IPN_URL: str = "http://localhost:8000/api/v1/payment/momo/ipn"
+
+    DASHBOARD_APP_ID: str = "dashboard"
+    CLIENT_WEB_APP_ID: str = "client_web"
+    LOGIN_APP_ID: str = "login_app"
+
+    DASHBOARD_APP_NAME: str = "Dashboard App"
+    CLIENT_WEB_APP_NAME: str = "Client Web App"
+    LOGIN_APP_NAME: str = "Login App"
+
+    DASHBOARD_APP_TOKEN: str = "dashboard-token"
+    CLIENT_WEB_APP_TOKEN: str = "client-web-token"
+    LOGIN_APP_TOKEN: str = "login-app-token"
+    CAMERA_RTSP_URL: str | None = None
+    QR_CAMERA_SOURCE: str | None = None
+    APP_NAME: str
+    DEFAULT_EMAIL_LANG: str = "vi"
 
     @computed_field  
     @property

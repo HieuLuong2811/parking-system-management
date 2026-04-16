@@ -65,9 +65,6 @@ const theme = createTheme({
     },
     divider: '#e0e3ec',
   },
-  shape: {
-    borderRadius: 16,
-  },
   components: {
     MuiAppBar: {
       styleOverrides: {
@@ -82,7 +79,17 @@ const theme = createTheme({
       styleOverrides: {
         root: {
           backgroundColor: '#ffffff',
-          borderRadius: 20,
+        },
+      },
+    },
+    MuiTableRow: {
+      styleOverrides: {
+        root: {
+          borderBottom: '1px solid #e0e3ec',
+          '&:last-of-type': {
+            borderBottom: 'none',
+          },
+          borderCollapse: 'collapse',
         },
       },
     },
@@ -90,9 +97,15 @@ const theme = createTheme({
       styleOverrides: {
         root: {
           textTransform: 'none',
-          borderRadius: 12,
           boxShadow: 'none',
           fontWeight: 600,
+        },
+        contained: {
+          backgroundColor: '#6b4fd0',
+          color: '#ffffff',
+          '&:hover': {
+            backgroundColor: '#5440b5',
+          },
         },
       },
     },

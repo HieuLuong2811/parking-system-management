@@ -1,3 +1,5 @@
+﻿import i18n from '../i18n';
+
 export function getRequiredFields(form: HTMLFormElement) {
   return Array.from(
     form.querySelectorAll<HTMLInputElement | HTMLTextAreaElement | HTMLSelectElement>('[data-required-first]')
@@ -6,11 +8,17 @@ export function getRequiredFields(form: HTMLFormElement) {
 
 const ERROR_CLASS = 'input-error';
 
-function buildMessage(firstPart: string) {
-  if (!firstPart) {
-    return 'là bắt buộc.';
+const getFieldLabel = (label?: string) => {
+  if (label?.trim()) {
+    return label.trim();
   }
-  return `${firstPart} là bắt buộc.`;
+  return i18n.t('validation.fieldFallback', { defaultValue: 'Field' });
+};
+
+function buildMessage(firstPart: string) {
+  return i18n.t('validation.requiredField', {
+    field: getFieldLabel(firstPart),
+  });
 }
 
 function createErrorNode(message: string) {

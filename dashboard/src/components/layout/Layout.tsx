@@ -35,16 +35,17 @@ export const Layout: React.FC = () => {
         component="main"
         sx={{
           flexGrow: 1,
-          p: 3,
+          p: 4,
           width: { xs: '100%', md: `calc(100% - ${drawerWidth}px)` },
           ml: { md: `${drawerWidth}px` },
           transition: 'margin 0.3s ease, width 0.3s ease',
-          backgroundColor: '#ffffff',
           minHeight: '100vh',
         }}
       >
         <Toolbar />
-        <Outlet />
+        <Box p={4} bgcolor='#fff'>
+          <Outlet />
+        </Box>
       </Box>
     </Box>
   );

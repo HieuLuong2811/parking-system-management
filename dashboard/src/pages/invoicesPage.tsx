@@ -5,7 +5,7 @@ import { useTranslation } from 'react-i18next';
 
 import { SoftDataGrid } from '../components/common/SoftDataGrid';
 import { useInvoices } from '../api/invoices';
-import { formatCurrencyInvoice, formatMeta, formatTimestamp } from '../ultis/format';
+import { formatCurrencyInvoice, formatMeta, formatDateTime } from '../ultis/format';
 
 type ToastState = { severity: 'error'; message: string } | null;
 
@@ -44,7 +44,7 @@ const columns: GridColDef[] = [
     headerName: 'Created at',
     width: 200,
     sortable: false,
-    valueGetter: (value, row) => formatTimestamp(row.created_at),
+    valueGetter: (_value, row) => formatDateTime(row.created_at),
   },
 ];
 

@@ -1,8 +1,10 @@
-from fastapi import APIRouter, Depends, HTTPException
+from fastapi import APIRouter, Depends
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.api.controller.notifications import NotificationController
+from app.authen.current_user import required_roles
 from app.db.session import get_db
+from app.models.auth import AuthUser
 from app.models.notifications import NotificationCreate, NotificationRead, NotificationUpdate
 from app.models.responses import DeleteResponse
 
@@ -16,12 +18,19 @@ async def create_notification(payload: NotificationCreate, db: AsyncSession = De
 
 @router.get("/", response_model=list[NotificationRead])
 async def list_notifications(
-    receiver_id: str | None = None, db: AsyncSession = Depends(get_db)
+    receiver_id: str | None = None,
+    db: AsyncSession = Depends(get_db),
+    current_user: AuthUser = Depends(required_roles("ADMIN")),
 ):
-    notifications = await NotificationController.get_all_notifications_ctrl(db, receiver_id)
-    if not notifications:
-        raise HTTPException(status_code=404, detail="No notifications found")
-    return notifications
+    return await NotificationController.get_all_notifications_ctrl(db, receiver_id)
+
+
+@router.get("/me", response_model=list[NotificationRead])
+async def list_my_notifications(
+    db: AsyncSession = Depends(get_db),
+    current_user: AuthUser = Depends(required_roles("USER", "ADMIN", "SECURITY")),
+):
+    return await NotificationController.get_notifications_for_user_ctrl(current_user.user_code, db)
 
 
 @router.get("/{notification_id}", response_model=NotificationRead)

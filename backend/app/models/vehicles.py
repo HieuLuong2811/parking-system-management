@@ -4,7 +4,7 @@ from datetime import datetime
 from typing import Optional
 import uuid
 
-from sqlalchemy import Column as SAColumn, Boolean, Enum, ForeignKey, String, Text
+from sqlalchemy import Column as SAColumn, Enum, ForeignKey, String, Text
 from sqlmodel import Field, SQLModel
 
 from app.enums.parking import VehicleType
@@ -33,10 +33,6 @@ class VehicleBase(SQLModel):
         max_length=255,
         sa_column=SAColumn(String(255), nullable=True),
     )
-    is_active: bool = Field(
-        default=True,
-        sa_column=SAColumn(Boolean(), nullable=False),
-    )
 
 
 class Vehicle(VehicleBase, TimestampMixin, SoftDeleteMixin, table=True):
@@ -60,4 +56,9 @@ class VehicleUpdate(SQLModel):
     license_plate: Optional[str] = Field(default=None, max_length=50)
     qr_code: Optional[str] = None
     deleted_at: Optional[datetime] = None
-    is_active: Optional[bool] = None
+
+
+class VehicleQRVerify(SQLModel):
+    vehicle_id: uuid.UUID
+    user_code: str
+    qr_secret: str

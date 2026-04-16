@@ -52,12 +52,13 @@ const SidebarItem = ({
           px: collapsed ? 1.5 : 2.5,
           justifyContent: collapsed ? 'center' : 'flex-start',
           transition: 'all 0.3s ease',
-          backgroundColor: active ? '#5a3ebd' : 'transparent',
+          backgroundColor: active ? '#6b4fd0' : 'transparent',
           '&:hover': {
-            backgroundColor: active ? '#5a3ebd' : 'rgba(15, 23, 42, 0.06)',
+            backgroundColor: active ? '#6b4fd0' : 'rgba(15, 23, 42, 0.06)',
           },
           borderRadius: 2,
           boxShadow: active ? '0px 1px 3px rgba(0, 0, 0, 0.2)' : 'none',
+          color: active ? '#ffffff' : '#000',
         }}
       >
         <ListItemIcon sx={{ minWidth: 0, justifyContent: 'center', color: active ? '#ffffff' : '#525252cc' }}>{icon}</ListItemIcon>

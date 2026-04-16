@@ -1,64 +1,256 @@
-﻿import sys
+﻿import os
+import sys
 import cv2
-import requests
 import time
+import queue
+import requests
 from datetime import datetime
-
 from PyQt6 import QtCore, QtGui, QtWidgets
 
-from app.service.detect import DetectService, model
-from app.api.controller.vehicles import VehicleController
+from app.service.detect import DetectService, get_model
 from app.core.config import settings
 
+
 MAX_LOOKUP_ATTEMPTS = 5
+LOOKUP_DEBOUNCE_SECONDS = 2.0
+DETECT_EVERY_N_FRAMES = 5
 
 
 class CameraWorker(QtCore.QThread):
     frame_ready = QtCore.pyqtSignal(QtGui.QImage)
     detection_ready = QtCore.pyqtSignal(str)
+    status_changed = QtCore.pyqtSignal(str)
+    error_occurred = QtCore.pyqtSignal(str)
 
-    def __init__(self, camera_index=0, parent=None):
+    def __init__(self, camera_source=0, parent=None):
         super().__init__(parent)
-        self.camera_index = camera_index
+        self.camera_source = camera_source
         self._running = False
         self._latest_frame = None
 
+    def _build_capture(self):
+        # RTSP ổn định hơn khi ép TCP + FFmpeg
+        os.environ["OPENCV_FFMPEG_CAPTURE_OPTIONS"] = "rtsp_transport;tcp"
+
+        if isinstance(self.camera_source, str) and self.camera_source.startswith("rtsp://"):
+            cap = cv2.VideoCapture(self.camera_source, cv2.CAP_FFMPEG)
+        else:
+            cap = cv2.VideoCapture(self.camera_source)
+
+        cap.set(cv2.CAP_PROP_BUFFERSIZE, 1)
+        return cap
+
     def run(self):
-        cap = cv2.VideoCapture(self.camera_index)
-        if not cap.isOpened():
-            return
         self._running = True
+        frame_count = 0
+
+        try:
+            self.status_changed.emit("Loading detection model...")
+            model = get_model()
+        except Exception as e:
+            self.error_occurred.emit(f"Không tải được model: {e}")
+            return
+
+        cap = self._build_capture()
+        if not cap.isOpened():
+            self.error_occurred.emit(f"Không mở được camera source: {self.camera_source}")
+            return
+
+        self.status_changed.emit("Camera connected")
 
         while self._running:
-            ret, frame = cap.read()
-            if not ret:
+            try:
+                ret, frame = cap.read()
+                if not ret or frame is None:
+                    self.status_changed.emit("Mất frame từ camera, đang chờ lại...")
+                    QtCore.QThread.msleep(50)
+                    continue
+
+                frame_count += 1
+                output_frame = frame.copy()
+                plate_text = ""
+
+                h, w = frame.shape[:2]
+
+                # ROI ví dụ: chỉ lấy vùng giữa ảnh, bỏ mép trên chứa timestamp
+                x1 = int(w * 0.15)
+                y1 = int(h * 0.20)
+                x2 = int(w * 0.85)
+                y2 = int(h * 0.90)
+
+                roi = frame[y1:y2, x1:x2].copy()
+
+                # Vẽ khung ROI lên ảnh hiển thị
+                cv2.rectangle(output_frame, (x1, y1), (x2, y2), (0, 255, 255), 2)
+
+                if frame_count % DETECT_EVERY_N_FRAMES == 0:
+                    try:
+                        results = model(roi, verbose=False, conf=0.4)
+
+                        # Nếu muốn hiển thị box detect đúng vị trí trên frame gốc
+                        annotated_roi = results[0].plot()
+                        output_frame[y1:y2, x1:x2] = annotated_roi
+
+                        # OCR tạm trên ROI, không OCR toàn frame nữa
+                        plate_text = DetectService.segment_image(roi).strip()
+
+                    except Exception as e:
+                        self.error_occurred.emit(f"Lỗi detect/OCR: {e}")
+
+                rgb_frame = cv2.cvtColor(output_frame, cv2.COLOR_BGR2RGB)
+                hh, ww, ch = rgb_frame.shape
+                qimage = QtGui.QImage(
+                    rgb_frame.data,
+                    ww,
+                    hh,
+                    ch * ww,
+                    QtGui.QImage.Format.Format_RGB888
+                ).copy()
+
+                self._latest_frame = output_frame.copy()
+                self.frame_ready.emit(qimage)
+
+                if plate_text:
+                    self.detection_ready.emit(plate_text)
+
+                QtCore.QThread.msleep(10)
+
+            except Exception as e:
+                self.error_occurred.emit(f"Lỗi camera thread: {e}")
                 QtCore.QThread.msleep(100)
-                continue
-
-            results = model(frame)
-            annotated = results[0].plot()
-            plate_text = DetectService.segment_image(annotated).strip()
-
-            rgb_frame = cv2.cvtColor(annotated, cv2.COLOR_BGR2RGB)
-            height, width, channel = rgb_frame.shape
-            bytes_per_line = 3 * width
-            qimage = QtGui.QImage(rgb_frame.data, width, height, bytes_per_line, QtGui.QImage.Format.Format_RGB888)
-            self._latest_frame = annotated
-            self.frame_ready.emit(qimage)
-
-            if plate_text:
-                self.detection_ready.emit(plate_text)
-
-            QtCore.QThread.msleep(200)
 
         cap.release()
+        self.status_changed.emit("Camera stopped")        
+        self._running = True
+        frame_count = 0
+
+        try:
+            self.status_changed.emit("Loading detection model...")
+            model = get_model()
+        except Exception as e:
+            self.error_occurred.emit(f"Không tải được model: {e}")
+            return
+
+        cap = self._build_capture()
+
+        if not cap.isOpened():
+            self.error_occurred.emit(f"Không mở được camera source: {self.camera_source}")
+            return
+
+        self.status_changed.emit("Camera connected")
+
+        while self._running:
+            try:
+                ret, frame = cap.read()
+                if not ret or frame is None:
+                    self.status_changed.emit("Mất frame từ camera, đang chờ lại...")
+                    QtCore.QThread.msleep(50)
+                    continue
+
+                frame_count += 1
+                output_frame = frame.copy()
+                plate_text = ""
+
+                # Chỉ detect mỗi N frame để giảm tải
+                if frame_count % DETECT_EVERY_N_FRAMES == 0:
+                    try:
+                        results = model(frame, verbose=False, conf=0.4)
+                        output_frame = results[0].plot()
+
+                        # Giữ logic cũ của bạn.
+                        # Sau này nên OCR trên vùng crop biển số thay vì ảnh annotated.
+                        plate_text = DetectService.segment_image(output_frame).strip()
+                    except Exception as e:
+                        self.error_occurred.emit(f"Lỗi detect/OCR: {e}")
+
+                rgb_frame = cv2.cvtColor(output_frame, cv2.COLOR_BGR2RGB)
+                h, w, ch = rgb_frame.shape
+                bytes_per_line = ch * w
+
+                # copy() rất quan trọng để tránh crash do vùng nhớ numpy bị giải phóng/ghi đè
+                qimage = QtGui.QImage(
+                    rgb_frame.data,
+                    w,
+                    h,
+                    bytes_per_line,
+                    QtGui.QImage.Format.Format_RGB888
+                ).copy()
+
+                self._latest_frame = output_frame.copy()
+                self.frame_ready.emit(qimage)
+
+                if plate_text:
+                    self.detection_ready.emit(plate_text)
+
+                QtCore.QThread.msleep(10)
+
+            except Exception as e:
+                self.error_occurred.emit(f"Lỗi camera thread: {e}")
+                QtCore.QThread.msleep(100)
+
+        cap.release()
+        self.status_changed.emit("Camera stopped")
 
     def stop(self):
         self._running = False
-        self.wait()
+        self.wait(3000)
 
-    def snapshot(self) -> cv2.Mat | None:
-        return self._latest_frame
+    def snapshot(self):
+        return self._latest_frame.copy() if self._latest_frame is not None else None
+
+
+class LookupWorker(QtCore.QThread):
+    lookup_finished = QtCore.pyqtSignal(str, object)
+    lookup_status = QtCore.pyqtSignal(str)
+
+    def __init__(self, backend_host: str, parent=None):
+        super().__init__(parent)
+        self.backend_host = backend_host.rstrip("/")
+        self._running = False
+        self._queue = queue.Queue()
+
+    def enqueue_plate(self, plate: str):
+        self._queue.put(plate)
+
+    def run(self):
+        self._running = True
+        self.lookup_status.emit("Lookup worker started")
+
+        while self._running:
+            try:
+                plate = self._queue.get(timeout=0.2)
+            except queue.Empty:
+                continue
+
+            if plate is None:
+                break
+
+            info = self.lookup_plate_info(plate)
+            self.lookup_finished.emit(plate, info)
+
+        self.lookup_status.emit("Lookup worker stopped")
+
+    def lookup_plate_info(self, plate: str):
+        normalized = plate.strip().upper()
+
+        for attempt in range(MAX_LOOKUP_ATTEMPTS):
+            try:
+                response = requests.get(
+                    f"{self.backend_host}/api/v1/vehicles/lookup",
+                    params={"license_plate": normalized},
+                    timeout=5
+                )
+                if response.status_code == 200:
+                    return response.json()
+            except requests.RequestException:
+                time.sleep(0.15)
+
+        return None
+
+    def stop(self):
+        self._running = False
+        self._queue.put(None)
+        self.wait(3000)
 
 
 class HomePageWidget(QtWidgets.QWidget):
@@ -67,95 +259,180 @@ class HomePageWidget(QtWidgets.QWidget):
     def __init__(self, parent=None):
         super().__init__(parent)
         layout = QtWidgets.QVBoxLayout(self)
-        
-        info_frame = QtWidgets.QFrame()
-        info_frame.setStyleSheet("border-radius:18px; padding:18px;")
-        info_layout = QtWidgets.QHBoxLayout(info_frame)
-        info_left = QtWidgets.QFormLayout()
-        info_left.addRow("Operator:", QtWidgets.QLabel("Nguyễn Văn A"))
-        info_left.addRow("User ID:", QtWidgets.QLabel("SEC-204"))
-        info_right = QtWidgets.QFormLayout()
-        self.license_label = QtWidgets.QLabel("N/A")
-        self.vehicle_type_label = QtWidgets.QLabel("Unknown")
-        info_right.addRow("License:", self.license_label)
-        info_right.addRow("Vehicle Type:", self.vehicle_type_label)
-        info_layout.addLayout(info_left)
-        info_layout.addLayout(info_right)
-        layout.addWidget(info_frame)
+        layout.setSpacing(12)
+        layout.setContentsMargins(12, 12, 12, 12)
 
-        self.toggle_btn = QtWidgets.QPushButton("Toggle Camera")
+        header_frame = QtWidgets.QFrame()
+        header_frame.setStyleSheet("background-color:#0f172a; border-radius:14px; padding:14px;")
+        header_layout = QtWidgets.QHBoxLayout(header_frame)
+        header_layout.addWidget(self._styled_label("BẢNG ĐIỀU KHIỂN BẢO VỆ", color="#f8fafc", size=22, bold=True))
+        header_layout.addStretch()
+        self.toggle_btn = QtWidgets.QPushButton("Camera bật")
         self.toggle_btn.setCheckable(True)
         self.toggle_btn.setChecked(True)
         self.toggle_btn.setMinimumHeight(40)
-        self.toggle_btn.setStyleSheet("font-weight:600; padding:6px 16px;")
-        self.toggle_btn.toggled.connect(self.toggle_camera_signal.emit)
-        layout.addWidget(self.toggle_btn)
+        self.toggle_btn.setStyleSheet("font-weight:600; padding:8px 18px; border-radius:10px; background-color:#14b8a6; color:white;")
+        self.toggle_btn.toggled.connect(self._handle_toggle)
+        header_layout.addWidget(self.toggle_btn)
+        layout.addWidget(header_frame)
 
-        self.status_label = QtWidgets.QLabel("Waiting for new plate...")
-        self.status_label.setStyleSheet("color:#0f172a; font-weight:600;")
-        layout.addWidget(self.status_label)
+        body_frame = QtWidgets.QFrame()
+        body_layout = QtWidgets.QHBoxLayout(body_frame)
+        body_layout.setSpacing(12)
 
-        feed_frame = QtWidgets.QFrame()
-        feed_frame.setStyleSheet("border-radius:18px; padding:12px;")
-        feed_layout = QtWidgets.QHBoxLayout(feed_frame)
+        left_column = QtWidgets.QVBoxLayout()
+        left_column.setSpacing(12)
 
-        self.video_label = QtWidgets.QLabel("Camera feed")
-        self.video_label.setAlignment(QtCore.Qt.AlignmentFlag.AlignCenter)
-        self.video_label.setFixedHeight(320)
-        feed_layout.addWidget(self.video_label, 2)
+        operator_frame = QtWidgets.QFrame()
+        operator_frame.setStyleSheet("background-color:#1f2937; border-radius:12px; padding:16px;")
+        operator_layout = QtWidgets.QFormLayout(operator_frame)
+        operator_layout.setHorizontalSpacing(20)
+        operator_layout.setVerticalSpacing(10)
+        operator_layout.addRow("Nhân viên:", QtWidgets.QLabel("Nguyễn Văn A"))
+        operator_layout.addRow("Mã bảo vệ:", QtWidgets.QLabel("SEC-204"))
+        camera_source_label = QtWidgets.QLabel(settings.CAMERA_RTSP_URL or "Chưa cấu hình RTSP")
+        operator_layout.addRow("Camera RTSP:", camera_source_label)
+        left_column.addWidget(operator_frame)
 
-        log_frame = QtWidgets.QFrame()
-        log_frame.setStyleSheet("border-radius:14px; padding:10px;")
-        log_layout = QtWidgets.QVBoxLayout(log_frame)
-        label = QtWidgets.QLabel("Latest detection")
-        label.setStyleSheet("font-weight:600;")
-        log_layout.addWidget(label)
-        self.last_plate = QtWidgets.QLabel("-")
-        self.last_plate.setStyleSheet("font-size:20px; font-weight:700; color:#ef4444;")
-        log_layout.addWidget(self.last_plate)
-        self.last_time = QtWidgets.QLabel("-")
-        log_layout.addWidget(self.last_time)
-        self.detection_history = QtWidgets.QListWidget()
-        self.detection_history.setStyleSheet("border:none; padding:4px;")
-        log_layout.addWidget(self.detection_history)
-        feed_layout.addWidget(log_frame, 1)
-
-        layout.addWidget(feed_frame)
+        detection_frame = QtWidgets.QFrame()
+        detection_frame.setStyleSheet("background-color:#111b2b; border-radius:12px; padding:16px;")
+        detection_layout = QtWidgets.QFormLayout(detection_frame)
+        detection_layout.setHorizontalSpacing(20)
+        detection_layout.setVerticalSpacing(10)
+        self.license_label = QtWidgets.QLabel("-")
+        self.vehicle_type_label = QtWidgets.QLabel("-")
+        self.match_status_label = QtWidgets.QLabel("Chưa có dữ liệu")
+        self.match_status_label.setStyleSheet("color:#34d399; font-weight:600;")
+        detection_layout.addRow("Biển số:", self.license_label)
+        detection_layout.addRow("Loại xe:", self.vehicle_type_label)
+        detection_layout.addRow("Trạng thái:", self.match_status_label)
+        left_column.addWidget(detection_frame)
 
         stats_frame = QtWidgets.QFrame()
-        stats_frame.setStyleSheet("border-radius:16px; padding:14px;")
+        stats_frame.setStyleSheet("background-color:#1f2937; border-radius:12px; padding:16px;")
         stats_layout = QtWidgets.QHBoxLayout(stats_frame)
-        stats_layout.addWidget(QtWidgets.QLabel("Active plan: None"))
+        active_plan_label = QtWidgets.QLabel("Kế hoạch đang hoạt động: Không")
+        active_plan_label.setStyleSheet("color:#f8fafc; font-weight:600;")
+        stats_layout.addWidget(active_plan_label)
         stats_layout.addStretch()
-        self.register_btn = QtWidgets.QPushButton("Register new plan")
-        self.register_btn.setMinimumHeight(40)
-        self.register_btn.setStyleSheet("font-weight:600; padding:6px 16px;")
+        self.register_btn = QtWidgets.QPushButton("Đăng ký ca trực mới")
+        self.register_btn.setMinimumHeight(36)
+        self.register_btn.setStyleSheet("font-weight:600; padding:6px 16px; background-color:#2563eb; color:white; border-radius:10px;")
         stats_layout.addWidget(self.register_btn)
-        layout.addWidget(stats_frame)
+        left_column.addWidget(stats_frame)
+
+        body_layout.addLayout(left_column, 1)
+
+        side_layout = QtWidgets.QHBoxLayout()
+        feed_frame = QtWidgets.QFrame()
+        feed_frame.setStyleSheet("border-radius:18px; padding:12px; background-color:#0f172a;")
+        feed_layout = QtWidgets.QHBoxLayout(feed_frame)
+        self.video_label = QtWidgets.QLabel("Camera đang kết nối...")
+        self.video_label.setAlignment(QtCore.Qt.AlignmentFlag.AlignCenter)
+        self.video_label.setMinimumHeight(320)
+        self.video_label.setStyleSheet("background:#0f172a; color:white; border-radius:12px;")
+        feed_layout.addWidget(self.video_label, 2)
+
+        detection_log_frame = QtWidgets.QFrame()
+        detection_log_frame.setStyleSheet("background-color:#1f2740; border-radius:12px; padding:16px;")
+        detection_log_layout = QtWidgets.QVBoxLayout(detection_log_frame)
+        self.detection_label = self._styled_label("Tiến trình phát hiện", color="#f8fafc", size=16, bold=True)
+        detection_log_layout.addWidget(self.detection_label)
+        self.last_plate = QtWidgets.QLabel("-")
+        self.last_plate.setStyleSheet("font-size:20px; font-weight:700; color:#f97316;")
+        detection_log_layout.addWidget(self.last_plate)
+        self.last_time = QtWidgets.QLabel("-")
+        detection_log_layout.addWidget(self.last_time)
+        self.detection_history = QtWidgets.QListWidget()
+        self.detection_history.setStyleSheet("border:none; padding:4px; background-color:transparent;")
+        detection_log_layout.addWidget(self.detection_history)
+        self.status_label = QtWidgets.QLabel("Đang chờ camera...")
+        self.status_label.setStyleSheet("font-weight:600; color:#f8fafc; margin-top:8px;")
+        detection_log_layout.addWidget(self.status_label)
+
+        side_layout.addWidget(feed_frame, 2)
+        side_layout.addWidget(detection_log_frame, 1)
+        body_layout.addLayout(side_layout, 2)
+
+        layout.addWidget(body_frame)
+
+    def _styled_label(self, text: str, color: str = "#f8fafc", size: int = 14, bold: bool = False) -> QtWidgets.QLabel:
+        label = QtWidgets.QLabel(text)
+        style = f"color:{color}; font-size:{size}px;"
+        if bold:
+            style += " font-weight:700;"
+        label.setStyleSheet(style)
+        return label
+
+    def _handle_toggle(self, enabled: bool) -> None:
+        self.toggle_btn.setText("Camera bật" if enabled else "Camera tắt")
+        self.toggle_camera_signal.emit(enabled)
 
     def update_detection_info(self, plate: str, info: dict | None = None) -> None:
-        self.last_plate.setText(plate)
+        normalized = plate.strip()
+        if not normalized:
+            return
         now = datetime.now().strftime("%H:%M:%S")
+        self.last_plate.setText(normalized)
         self.last_time.setText(now)
-        item = QtWidgets.QListWidgetItem(f"{now} - {plate}")
+        item = QtWidgets.QListWidgetItem(f"{now} - {normalized}")
         self.detection_history.insertItem(0, item)
         self.detection_history.setCurrentRow(0)
-        if info:
-            self.license_label.setText(info.get("license_plate", plate))
-            self.vehicle_type_label.setText(info.get("vehicle_type", "Unknown"))
-            self.status_label.setText(f"Matched: {info.get('user_full_name')} ({info.get('user_code')})")
-        else:
-            self.license_label.setText(plate)
-            self.vehicle_type_label.setText("Unknown")
-            self.status_label.setText("Guest detection - no match in database")
 
-    def set_frame(self, image: QtGui.QImage) -> None:
-        pixmap = QtGui.QPixmap.fromImage(image).scaled(self.video_label.size(), QtCore.Qt.AspectRatioMode.KeepAspectRatio)
+        if info:
+            self.license_label.setText(info.get("license_plate", normalized))
+            self.vehicle_type_label.setText(info.get("vehicle_type", "Không xác định"))
+            user_name = info.get("user_full_name", "Khách")
+            vehicle_type = info.get("vehicle_type", "Không xác định")
+            self.match_status_label.setText(f"Đã đối chiếu: {user_name} ({vehicle_type})")
+            self.match_status_label.setStyleSheet("color:#34d399; font-weight:600;")
+        else:
+            self.license_label.setText(normalized)
+            self.vehicle_type_label.setText("Chưa rõ loại")
+            self.match_status_label.setText("Khách hoặc không có dữ liệu")
+            self.match_status_label.setStyleSheet("color:#facc15; font-weight:600;")
+
+    def set_frame(self, frame: QtGui.QImage) -> None:
+        if frame is None:
+            self.video_label.clear()
+            self.video_label.setText("Camera đang kết nối...")
+            return
+        pixmap = QtGui.QPixmap.fromImage(frame)
+        size = self.video_label.size()
+        if size.width() > 0 and size.height() > 0:
+            pixmap = pixmap.scaled(
+                size,
+                QtCore.Qt.AspectRatioMode.KeepAspectRatio,
+                QtCore.Qt.TransformationMode.SmoothTransformation,
+            )
         self.video_label.setPixmap(pixmap)
 
+    def set_status(self, text: str) -> None:
+        self.status_label.setText(text or "Đang chờ camera...")
+
+
 class SecurityConsole(QtWidgets.QMainWindow):
+    def __init__(self):
+        super().__init__()
+        self.setWindowTitle("Parking Security Console")
+        self.resize(1380, 880)
+
+        self.home_page = HomePageWidget()
+        self.worker = None
+        self.lookup_worker = None
+
+        self.last_lookup_plate = None
+        self.last_lookup_time = 0.0
+        self.pending_lookup_plates = set()
+
+        self.setCentralWidget(self.build_ui())
+
+        self.start_lookup_worker()
+        self.start_worker()
+
     def build_ui(self) -> QtWidgets.QWidget:
         self.home_page.toggle_camera_signal.connect(self.toggle_camera)
+
         container = QtWidgets.QWidget()
         layout = QtWidgets.QHBoxLayout(container)
         layout.setSpacing(0)
@@ -163,34 +440,43 @@ class SecurityConsole(QtWidgets.QMainWindow):
         content_frame = QtWidgets.QFrame()
         content_layout = QtWidgets.QVBoxLayout(content_frame)
         content_layout.setSpacing(12)
+
         header = QtWidgets.QFrame()
         header.setStyleSheet("border-radius:14px; padding:12px;")
         header_layout = QtWidgets.QHBoxLayout(header)
         header_layout.addWidget(QtWidgets.QLabel("Operator console"))
         header_layout.addStretch()
         header_layout.addWidget(QtWidgets.QLabel("Nguyễn Văn A"))
+
         content_layout.addWidget(header)
         content_layout.addWidget(self.home_page)
 
         layout.addWidget(content_frame)
         return container
 
-    def __init__(self):
-        super().__init__()
-        self.setWindowTitle("Parking Security Console")
-        self.resize(1380, 880)
-        self.home_page = HomePageWidget()
+    def _camera_source(self):
+        return settings.CAMERA_RTSP_URL or 0
 
-        self.worker = None
-        self.stop_worker()
+    def start_lookup_worker(self) -> None:
+        self.stop_lookup_worker()
+        self.lookup_worker = LookupWorker(settings.BACKEND_HOST)
+        self.lookup_worker.lookup_finished.connect(self.on_lookup_finished)
+        self.lookup_worker.lookup_status.connect(self.home_page.set_status)
+        self.lookup_worker.start()
 
-        self.setCentralWidget(self.build_ui())
+    def stop_lookup_worker(self) -> None:
+        if self.lookup_worker:
+            self.lookup_worker.stop()
+            self.lookup_worker = None
 
     def start_worker(self) -> None:
         self.stop_worker()
-        self.worker = CameraWorker()
+
+        self.worker = CameraWorker(camera_source=self._camera_source())
         self.worker.frame_ready.connect(self.home_page_frame)
         self.worker.detection_ready.connect(self.record_detection)
+        self.worker.status_changed.connect(self.home_page.set_status)
+        self.worker.error_occurred.connect(self.on_camera_error)
         self.worker.start()
 
     def stop_worker(self) -> None:
@@ -203,28 +489,52 @@ class SecurityConsole(QtWidgets.QMainWindow):
             self.start_worker()
         else:
             self.stop_worker()
-
-
-    def lookup_plate_info(self, plate: str) -> dict | None:
-        normalized = plate.strip().upper()
-        for attempt in range(MAX_LOOKUP_ATTEMPTS):
-            try:
-                response = requests.get(f"{settings.BACKEND_HOST}/api/v1/vehicles/lookup", params={"license_plate": normalized}, timeout=5)
-                if response.status_code == 200:
-                    return response.json()
-            except requests.RequestException:
-                time.sleep(0.15)
-        return None
+            self.home_page.set_status("Camera paused")
 
     def home_page_frame(self, image: QtGui.QImage) -> None:
         self.home_page.set_frame(image)
 
+    def on_camera_error(self, message: str) -> None:
+        self.home_page.set_status(message)
+        print(message)
+
+    def should_lookup(self, plate: str) -> bool:
+        normalized = plate.strip().upper()
+        now = time.time()
+
+        if not normalized:
+            return False
+
+        if normalized in self.pending_lookup_plates:
+            return False
+
+        if normalized == self.last_lookup_plate and (now - self.last_lookup_time) < LOOKUP_DEBOUNCE_SECONDS:
+            return False
+
+        self.last_lookup_plate = normalized
+        self.last_lookup_time = now
+        return True
+
     def record_detection(self, plate: str) -> None:
-        info = self.lookup_plate_info(plate)
-        self.home_page.update_detection_info(plate, info)
+        normalized = plate.strip().upper()
+        if not normalized:
+            return
+
+        # Cập nhật UI trước cho mượt
+        self.home_page.update_detection_info(normalized, None)
+
+        if self.lookup_worker and self.should_lookup(normalized):
+            self.pending_lookup_plates.add(normalized)
+            self.lookup_worker.enqueue_plate(normalized)
+
+    def on_lookup_finished(self, plate: str, info: dict | None) -> None:
+        normalized = plate.strip().upper()
+        self.pending_lookup_plates.discard(normalized)
+        self.home_page.update_detection_info(normalized, info)
 
     def closeEvent(self, event: QtGui.QCloseEvent) -> None:
-        self.worker.stop()
+        self.stop_worker()
+        self.stop_lookup_worker()
         super().closeEvent(event)
 
 

@@ -2,19 +2,18 @@
 import React from 'react';
 import ReactDOM from 'react-dom/client';
 import App from './App.tsx';
-import { CssBaseline } from '@mui/material';
-import "./i18n";
+import { CssBaseline, ThemeProvider } from '@mui/material';
+import './i18n';
 import { QueryProvider } from './providers/queryProvider.tsx';
-// import { ThemeProvider } from '@mui/material/styles';
-// import theme from './theme';
+import theme from './theme';
 
 ReactDOM.createRoot(document.getElementById('root')!).render(
   <React.StrictMode>
-    <CssBaseline />
-    <QueryProvider>
-      {/* <ThemeProvider theme={theme}> */}
+    <ThemeProvider theme={theme}>
+      <CssBaseline />
+      <QueryProvider>
         <App />
-      {/* </ThemeProvider> */}
-    </QueryProvider>
+      </QueryProvider>
+    </ThemeProvider>
   </React.StrictMode>,
 );

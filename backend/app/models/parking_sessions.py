@@ -49,3 +49,9 @@ class ParkingSessionUpdate(SQLModel):
     status: Optional[ParkingSessionStatus] = None
     user_type: Optional[UserType] = None
     total_amount: Optional[int] = None
+
+
+class ParkingSessionQRCheckIn(SQLModel):
+    vehicle_id: uuid.UUID
+    user_code: str
+    qr_secret: str

@@ -3,6 +3,7 @@ from sqlalchemy.ext.asyncio import AsyncSession
 from app.models.responses import DeleteResponse
 from app.models.subscriptions import (
     UserSubscriptionCreate,
+    UserSubscriptionDetail,
     UserSubscriptionRead,
     UserSubscriptionUpdate,
 )
@@ -23,6 +24,21 @@ class SubscriptionController:
     @staticmethod
     async def get_all_subscriptions_ctrl(db: AsyncSession) -> list[UserSubscriptionRead]:
         return await subscriptionService.get_all_subscriptions(db)
+
+    @staticmethod
+    async def get_subscriptions_by_user_ctrl(user_code: str, db: AsyncSession) -> list[UserSubscriptionRead]:
+        subscriptions = await subscriptionService.get_subscriptions_by_user_code(user_code, db)
+        return subscriptions
+
+    @staticmethod
+    async def get_user_subscriptions_by_user_ctrl(
+        user_code: str, db: AsyncSession
+    ) -> list[UserSubscriptionDetail]:
+        return await subscriptionService.get_user_subscriptions_with_details(user_code, db)
+
+    @staticmethod
+    async def get_all_subscription_details_ctrl(db: AsyncSession) -> list[UserSubscriptionDetail]:
+        return await subscriptionService.get_all_subscriptions_with_details(db)
 
     @staticmethod
     async def update_subscription_ctrl(

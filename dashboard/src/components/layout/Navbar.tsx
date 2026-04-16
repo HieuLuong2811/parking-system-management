@@ -27,7 +27,7 @@ import LastPageIcon from '@mui/icons-material/LastPage';
 import { resourceConfigs } from '../../config/resources';
 import { languageOptions } from '../../ultis/flags';
 import { COLLAPSED_SIDEBAR_WIDTH, EXPANDED_SIDEBAR_WIDTH } from '../../constant/config';
-import { useAuth } from '../../contexts/authContext';
+import { useAuth } from '../../contexts/useAuth';
 
 const notificationTemplates = [
   {
@@ -123,13 +123,6 @@ export const Navbar: React.FC<{
     closeLanguageMenu();
   };
 
-  let pageTitle = t('pageTitle.home');
-  if (resourceLabel) {
-    pageTitle = resourceLabel;
-  } else if (location.pathname === '/settings') {
-    pageTitle = t('pageTitle.settings');
-  }
-
   return (
     <AppBar
       position="fixed"
@@ -157,17 +150,13 @@ export const Navbar: React.FC<{
             </Tooltip>
           )}
           <Box sx={{ flexGrow: 1, overflow: 'hidden' }}>
-            <Typography variant="h6" color="text.primary" noWrap sx={{ display: 'flex', alignItems: 'center' }}>
-              {pageTitle}
-            </Typography>
             <Breadcrumbs
-              separator="›"
               aria-label="breadcrumb"
               sx={{ mt: 0.5, fontSize: 13, color: 'text.secondary', overflow: 'hidden' }}
             >
               {crumbs.map((crumb, index) =>
                 index === crumbs.length - 1 ? (
-                  <Typography key={crumb.label + index} variant="body2">
+                  <Typography key={crumb.label + index} fontSize={15} fontWeight={600}>
                     {crumb.label}
                   </Typography>
                 ) : (
@@ -177,7 +166,7 @@ export const Navbar: React.FC<{
                     to={crumb.path}
                     color="inherit"
                     underline="hover"
-                    variant="body2"
+                    fontSize={15}
                   >
                     {crumb.label}
                   </Link>

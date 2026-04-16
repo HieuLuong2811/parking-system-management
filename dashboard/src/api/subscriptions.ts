@@ -7,25 +7,15 @@ import type {
   PaymentPlanRecord,
   SubscriptionPlanRecord,
   SubscriptionSearchRow,
+  UserSubscriptionDetailRecord,
   UserSubscriptionRecord,
   VehicleRecord,
 } from './types';
-import {
-  mockPaymentPlans,
-  mockSubscriptionPlans,
-  mockUserSubscriptions,
-  mockUsers,
-  mockVehicles,
-} from '../mocks/mockSubscriptions';
-import { REACT_APP_USE_MOCK_SUBSCRIPTIONS } from '../constant/config';
 
 export type SubscriptionSearchFilters = {
   query?: string;
   status?: string;
 };
-
-const useMockData = REACT_APP_USE_MOCK_SUBSCRIPTIONS;
-const resolveMock = <T>(value: T) => Promise.resolve(value);
 
 const fetchSubscriptions = () => httpGet<UserSubscriptionRecord[]>('/subscriptions');
 const fetchUsers = () => httpGet<AdminUser[]>('/users');
@@ -36,27 +26,27 @@ const fetchSubscriptionPlans = () => httpGet<SubscriptionPlanRecord[]>('/subscri
 export const useSubscriptionSearch = (filters: SubscriptionSearchFilters = {}) => {
   const subscriptionsQuery = useQuery({
     queryKey: ['admin', 'subscriptions'],
-    queryFn: useMockData ? () => resolveMock(mockUserSubscriptions) : fetchSubscriptions,
+    queryFn: fetchSubscriptions,
     staleTime: 1000 * 60,
   });
-  const usersQuery = useQuery({
+  const usersQuery = useQuery<AdminUser[]>({
     queryKey: ['admin', 'users'],
-    queryFn: useMockData ? () => resolveMock(mockUsers) : fetchUsers,
+    queryFn: fetchUsers,
     staleTime: 1000 * 60,
   });
   const vehiclesQuery = useQuery({
     queryKey: ['admin', 'vehicles'],
-    queryFn: useMockData ? () => resolveMock(mockVehicles) : fetchVehicles,
+    queryFn: fetchVehicles,
     staleTime: 1000 * 60,
   });
   const paymentPlansQuery = useQuery({
     queryKey: ['admin', 'paymentPlans'],
-    queryFn: useMockData ? () => resolveMock(mockPaymentPlans) : fetchPaymentPlans,
+    queryFn: fetchPaymentPlans,
     staleTime: 1000 * 60,
   });
   const subscriptionPlansQuery = useQuery({
     queryKey: ['admin', 'subscriptionPlans'],
-    queryFn: useMockData ? () => resolveMock(mockSubscriptionPlans) : fetchSubscriptionPlans,
+    queryFn: fetchSubscriptionPlans,
     staleTime: 1000 * 60,
   });
 
@@ -123,5 +113,21 @@ export const useSubscriptionSearch = (filters: SubscriptionSearchFilters = {}) =
       paymentPlansQuery.refetch(),
       subscriptionPlansQuery.refetch(),
     ]),
+  };
+};
+
+const fetchSubscriptionDetails = () => httpGet<UserSubscriptionDetailRecord[]>('/subscriptions/details');
+
+export const useSubscriptionDetails = () => {
+  const query = useQuery({
+    queryKey: ['admin', 'subscriptionDetails'],
+    queryFn: fetchSubscriptionDetails,
+    staleTime: 1000 * 60,
+  });
+  return {
+    data: query.data ?? [],
+    isLoading: query.isLoading,
+    isError: query.isError,
+    refetch: query.refetch,
   };
 };

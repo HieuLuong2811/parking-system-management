@@ -3,7 +3,7 @@ import { Navigate, Outlet } from 'react-router-dom';
 import { Box, CircularProgress, Typography } from '@mui/material';
 
 import { VITE_LOGIN_URL } from '../../constant/config';
-import { useAuth } from '../../contexts/authContext';
+import { useAuth } from '../../contexts/useAuth';
 
 const bypassAuth = import.meta.env.VITE_BYPASS_AUTH === 'true';
 

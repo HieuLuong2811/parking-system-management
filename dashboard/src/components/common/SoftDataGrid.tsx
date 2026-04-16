@@ -35,6 +35,7 @@ interface SoftDataGridProps<RowType extends Record<string, unknown>> {
   maxHeight?: string | number;
   onSort?: (field: string, direction: SortDirection) => void;
   sortConfig?: SortConfig;
+  emptyMessage?: string;
 }
 
 const defaultMaxHeight = 420;
@@ -48,6 +49,7 @@ export const SoftDataGrid = <RowType extends Record<string, unknown> = Record<st
   maxHeight = defaultMaxHeight,
   onSort,
   sortConfig,
+  emptyMessage = 'No records found',
 }: SoftDataGridProps<RowType>) => {
   const theme = useTheme();
   const computedRows = rows ?? [];
@@ -118,7 +120,7 @@ export const SoftDataGrid = <RowType extends Record<string, unknown> = Record<st
       >
         <Table stickyHeader>
           <TableHead>
-            <TableRow>
+            <TableRow sx={{ backgroundColor: "rgba(23, 119, 240, 0.12)"}}>
               {columns.map((column) => (
                 <TableCell
                   key={column.field}
@@ -134,7 +136,7 @@ export const SoftDataGrid = <RowType extends Record<string, unknown> = Record<st
                     textOverflow: 'ellipsis',
                     overflow: 'hidden',
                     borderRight: '1px solid rgba(15, 23, 42, 0.08)',
-                    backgroundColor: 'rgba(23, 119, 240, 0.12)',
+                    backgroundColor: '#c8ceff',
                     px: 2,
                   }}
                 >
@@ -173,7 +175,7 @@ export const SoftDataGrid = <RowType extends Record<string, unknown> = Record<st
               ))}
             </TableRow>
           </TableHead>
-          <TableBody sx={{ backgroundColor: theme.palette.background.default }}>
+          <TableBody sx={{ backgroundColor: theme.palette.background.default, borderCollapse: 'collapse' }}>
             {loading && computedRows.length === 0
               ? skeletonRows.map((_, index) => (
                   <TableRow
@@ -192,7 +194,6 @@ export const SoftDataGrid = <RowType extends Record<string, unknown> = Record<st
                         key={column.field}
                         align={column.align ?? 'left'}
                         sx={{
-                          borderBottom: 'none',
                           py: 2,
                           px: 2,
                           maxWidth: column.width ?? 300,
@@ -212,7 +213,7 @@ export const SoftDataGrid = <RowType extends Record<string, unknown> = Record<st
                   <TableRow>
                     <TableCell colSpan={columns.length} align="center" sx={{ py: 6 }}>
                       <Typography variant="body2" color="text.secondary">
-                        No records found
+                        {emptyMessage}
                       </Typography>
                     </TableCell>
                   </TableRow>

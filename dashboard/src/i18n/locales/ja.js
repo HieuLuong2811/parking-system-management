@@ -8,6 +8,40 @@ const ja = {
         resources: "リソース",
         settings: "設定",
       },
+      actions: {
+        createButton: "ユーザーを作成",
+        createDialogTitle: "ユーザーを作成",
+        editDialogTitle: "ユーザーを編集",
+        saveButton: "保存",
+        created: "ユーザー {{user}} を作成しました。",
+        updated: "ユーザー {{user}} を更新しました。",
+        deleted: "ユーザー {{user}} を削除しました。",
+        error: "保存できませんでした。",
+        deleteConfirm: "ユーザー {{user}} を削除しますか？",
+      },
+      columns: {
+        userCode: "ユーザーコード",
+        fullName: "氏名",
+        email: "メール",
+        phoneNumber: "電話番号",
+        active: "状態",
+        role: "ロール",
+        actions: "操作",
+        status: {
+          active: "有効",
+          inactive: "削除済み",
+        },
+      },
+      filters: {
+        role: "ロール",
+        allRoles: "すべてのロール",
+      },
+      form: {
+        userCode: "ユーザーコード",
+        fullName: "氏名",
+        email: "メール",
+        phoneNumber: "電話番号",
+      },
     },
     pageTitle: {
       home: "駐車場管理システム - ハンイェン工科教育大学",
@@ -102,9 +136,27 @@ const ja = {
           error: "インポートに失敗しました。{{message}}",
         },
       },
+
     },
     vehiclesPage: {
       title: "車両",
+      description: "システムに登録された車両を管理します。",
+      searchPlaceholder: "id・コード・ナンバーで検索",
+      empty: "車両がありません。",
+      columns: {
+        id: "車両ID",
+        userCode: "ユーザーコード",
+        type: "種類",
+        licensePlate: "ナンバー",
+        qrCode: "QRコード",
+        status: "状態",
+        createdAt: "作成日時",
+        updatedAt: "更新日時",
+      },
+      status: {
+        active: "有効",
+        deleted: "削除済み",
+      },
     },
     rolesPage: {
       title: "ロール",
@@ -120,6 +172,50 @@ const ja = {
     },
     subscriptionsPage: {
       title: "ユーザーサブスクリプション",
+      description: "システムで処理されたすべてのサブスクリプションを表示します。",
+      searchPlaceholder: "ユーザー、プラン、または学期で検索",
+      filters: {
+        status: "状態",
+      },
+      columns: {
+        user: "ユーザー",
+        plan: "プラン",
+        paymentPlan: "支払いプラン",
+        term: "学期",
+        period: "期間",
+        amount: "金額",
+        paid: "支払い済み",
+        vehicle: "車両",
+        status: "状態",
+        actions: "アクション",
+      },
+      empty: "サブスクリプションがありません。",
+      error: "サブスクリプションを読み込めません。",
+
+    },
+    subscriptionPlansPage: {
+      columns: {
+        planName: "プラン名",
+        pricePerDay: "1日あたりの駐車料金",
+        description: "プランの説明",
+        createdAt: "作成日時",
+        updatedAt: "更新日時",
+        actions: "アクション",
+      }
+    },
+    subscriptionInvoicesPage: {
+      title: "サブスクリプション請求書",
+      noSubscription: "サブスクリプションIDがありません。",
+      error: "請求書を読み込めません。",
+      empty: "このサブスクリプションの請求書はまだ生成されていません。",
+      selectInvoice: "リストから請求書を選択してプレビューしてください。",
+      invoiceIdLabel: "請求書ID",
+      payerTitle: "支払者",
+      recipientTitle: "受取人",
+      amountDueLabel: "支払金額",
+      common: {
+        back: "戻る"
+      }
     },
     billingEventLogsPage: {
       title: "請求イベント",

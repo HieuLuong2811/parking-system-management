@@ -1,15 +1,11 @@
 import os
-from pathlib import Path
-from typing import Set
-
-from ultralytics import YOLO
 import cv2
 import numpy as np
-import json
-import asyncio
 import pytesseract
 
-connected_clients: Set = set()
+from pathlib import Path
+from ultralytics import YOLO
+
 
 MODEL_ENV = "DETECT_MODEL_PATH"
 DEFAULT_MODEL = (
@@ -23,139 +19,146 @@ DEFAULT_MODEL = (
 )
 
 model_path = Path(os.getenv(MODEL_ENV, str(DEFAULT_MODEL)))
+_model = None
 
-if not model_path.exists():
-    raise FileNotFoundError(
-        f"YOLO weight file not found at {model_path}. "
-        f"Set {MODEL_ENV} to a valid path if you stored it elsewhere."
-    )
 
-model = YOLO(str(model_path))
-class DetectService():
+def get_model():
+    global _model
 
-    def segment_image(plate):
-        # # Chuyen anh bien so ve gray
-        # plate = cv2.cvtColor(plate, cv2.COLOR_RGB2GRAY)
+    if _model is None:
+        if not model_path.exists():
+            raise FileNotFoundError(f"Không tìm thấy model tại: {model_path}")
 
-        # # # Ap dung threshold de phan tach so va nen
-        # ret, threshold = cv2.threshold(plate, 255, 255, cv2.THRESH_BINARY + cv2.THRESH_OTSU)
+        _model = YOLO(str(model_path))
 
-        text = pytesseract.image_to_string(plate, lang="eng", config="--psm 7")
-        # text = fine_tune(text)
-        return text
+    return _model
+
+
+class DetectService:
+    @staticmethod
+    def segment_image(plate_img) -> str:
+        gray = cv2.cvtColor(plate_img, cv2.COLOR_BGR2GRAY)
+        gray = cv2.bilateralFilter(gray, 11, 17, 17)
+        _, thresh = cv2.threshold(gray, 0, 255, cv2.THRESH_BINARY + cv2.THRESH_OTSU)
+
+        text = pytesseract.image_to_string(
+            thresh,
+            lang="eng",
+            config="--psm 7 -c tessedit_char_whitelist=ABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789"
+        )
+        return "".join(ch for ch in text if ch.isalnum())
 
     @staticmethod
-    def detect_plate_from_bytes(image_bytes: bytes) -> np.ndarray:
-        image = np.array(bytearray(image_bytes), dtype=np.uint8)
-        image = cv2.imdecode(image, -1)
+    def detect_from_image_bytes(image_bytes: bytes):
+        model = get_model()
 
-        results = model(image)
-        # results = ""
-        annotated_image = results[0].plot()
+        image = np.frombuffer(image_bytes, np.uint8)
+        frame = cv2.imdecode(image, cv2.IMREAD_COLOR)
 
-        text = DetectService.segment_image(annotated_image)
+        if frame is None:
+            raise ValueError("Không đọc được ảnh đầu vào")
 
-        return text
+        results = model(frame, conf=0.4)
+        annotated = frame.copy()
+        plates = []
+
+        if len(results) > 0:
+            boxes = results[0].boxes
+            if boxes is not None and len(boxes) > 0:
+                for box in boxes:
+                    x1, y1, x2, y2 = map(int, box.xyxy[0].tolist())
+
+                    x1 = max(0, x1)
+                    y1 = max(0, y1)
+                    x2 = min(frame.shape[1], x2)
+                    y2 = min(frame.shape[0], y2)
+
+                    plate_crop = frame[y1:y2, x1:x2]
+                    if plate_crop.size == 0:
+                        continue
+
+                    plate_text = DetectService.segment_image(plate_crop)
+
+                    cv2.rectangle(annotated, (x1, y1), (x2, y2), (0, 255, 0), 2)
+
+                    label = plate_text if plate_text else "plate"
+                    cv2.putText(
+                        annotated,
+                        label,
+                        (x1, max(20, y1 - 10)),
+                        cv2.FONT_HERSHEY_SIMPLEX,
+                        0.8,
+                        (0, 255, 0),
+                        2
+                    )
+
+                    plates.append({
+                        "text": plate_text,
+                        "bbox": [x1, y1, x2, y2]
+                    })
+
+        ok, buffer = cv2.imencode(".jpg", annotated)
+        if not ok:
+            raise ValueError("Không encode được ảnh kết quả")
+
+        return {
+            "plates": plates,
+            "message": "success"
+        }
 
     @staticmethod
-    def detect_video(video_path: str, output_path: str = 'results.mp4'):
-        cap = cv2.VideoCapture(video_path)
-        fps = int(cap.get(cv2.CAP_PROP_FPS))
-        width = int(cap.get(cv2.CAP_PROP_FRAME_WIDTH))
-        height = int(cap.get(cv2.CAP_PROP_FRAME_HEIGHT))
-
-        out = cv2.VideoWriter(output_path, cv2.VideoWriter_fourcc(*'mp4v'), fps, (width, height))
-
-        while cap.isOpened():
-            ret, frame = cap.read()
-            if not ret:
-                break
-
-            results = model(frame)
-            # results = ""
-
-            annotated_frame = results[0].plot()
-
-            out.write(annotated_frame)
-
-        cap.release()
-        out.release()
-        print("Video saved to", output_path)
-        return output_path
-
-    @staticmethod
-    async def detect_from_camera(camera_index=1):
+    def generate_stream(camera_index: int = 0):
+        model = get_model()
         cap = cv2.VideoCapture(camera_index)
-        if not cap.isOpened:
-            raise Exception("Failed to open camera")
 
-        while True:
-            ret, frame = cap.read()
-            if not ret:
-                await asyncio.sleep(0.1)
-                continue
-
-            results = model(frame)
-            # results = ""
-
-            annotated_frame = results[0].plot()
-
-            cv2.imshow('Object Detection', annotated_frame)
-
-            if cv2.waitKey(1) & 0xFF == ord('q'):
-                break
-
-        cap.release()
-        cv2.destroyAllWindows()
-
-    @staticmethod
-    def generate_frames():
-        cap = cv2.VideoCapture(0)
-        prev_objects = set()
+        if not cap.isOpened():
+            raise RuntimeError("Không mở được webcam")
 
         while True:
             success, frame = cap.read()
             if not success:
                 break
 
-            results = model(frame)
-            # results = ""
+            results = model(frame, conf=0.4)
+            annotated = frame.copy()
 
-            labels = {results[0].names[int(c)] for c in results[0].boxes.cls}
-            new_objects = labels - prev_objects
+            if len(results) > 0:
+                boxes = results[0].boxes
+                if boxes is not None and len(boxes) > 0:
+                    for box in boxes:
+                        x1, y1, x2, y2 = map(int, box.xyxy[0].tolist())
 
-            if new_objects:
-                event = {
-                    "type": "object_detected",
-                    "objects": list(new_objects)
-                }
-                try:
-                    loop = asyncio.get_running_loop()
-                except RuntimeError:
-                    loop = asyncio.new_event_loop()
-                    asyncio.set_event_loop(loop)
+                        x1 = max(0, x1)
+                        y1 = max(0, y1)
+                        x2 = min(frame.shape[1], x2)
+                        y2 = min(frame.shape[0], y2)
 
-                for ws in list(connected_clients):
-                    loop.create_task(ws.send_text(json.dumps(event)))
+                        plate_crop = frame[y1:y2, x1:x2]
+                        if plate_crop.size == 0:
+                            continue
 
-            prev_objects = labels
+                        plate_text = DetectService.segment_image(plate_crop)
 
-            annotated_frame = results[0].plot()
-            _, buffer = cv2.imencode('.jpg', annotated_frame)
+                        cv2.rectangle(annotated, (x1, y1), (x2, y2), (0, 255, 0), 2)
+                        cv2.putText(
+                            annotated,
+                            plate_text if plate_text else "plate",
+                            (x1, max(20, y1 - 10)),
+                            cv2.FONT_HERSHEY_SIMPLEX,
+                            0.8,
+                            (0, 255, 0),
+                            2
+                        )
+
+            ret, buffer = cv2.imencode(".jpg", annotated)
+            if not ret:
+                continue
+
             frame_bytes = buffer.tobytes()
 
             yield (
-                b'--frame\r\n'
-                b'Content-Type: image/jpeg\r\n\r\n' + frame_bytes + b'\r\n'
+                b"--frame\r\n"
+                b"Content-Type: image/jpeg\r\n\r\n" + frame_bytes + b"\r\n"
             )
 
         cap.release()
-
-    @staticmethod
-    async def register_client(ws):
-        connected_clients.add(ws)
-
-    @staticmethod
-    async def unregister_client(ws):
-        connected_clients.remove(ws)
-

@@ -5,7 +5,6 @@ from typing import Any, Optional
 import uuid
 
 from sqlalchemy import Column as SAColumn, Enum, Integer, String
-from sqlalchemy.dialects.postgresql import JSONB
 from sqlmodel import Field, SQLModel
 
 from app.enums.parking import InvoiceStatus, PaymentMethod
@@ -13,7 +12,7 @@ from app.enums.parking import InvoiceStatus, PaymentMethod
 
 class InvoiceBase(SQLModel):
     user_code: str = Field(foreign_key="users.user_code", max_length=50)
-    subscription_id: uuid.UUID = Field(foreign_key="user_subscriptions.id")
+    subscription_id: uuid.UUID | None = Field(default=None, foreign_key="user_subscriptions.id")
     amount: int = Field(sa_column=SAColumn(Integer, nullable=False))
     payment_method: PaymentMethod = Field(
         sa_column=SAColumn(Enum(PaymentMethod, name="payment_method_enum", create_type=False), nullable=False)
@@ -21,16 +20,12 @@ class InvoiceBase(SQLModel):
     status: InvoiceStatus = Field(
         sa_column=SAColumn(Enum(InvoiceStatus, name="invoice_status_enum", create_type=False), nullable=False)
     )
-    metadata_: Optional[dict[str, Any]] = Field(
-        default=None,
-        alias="metadata",
-        sa_column=SAColumn("metadata", JSONB, nullable=True),
-    )
     stripe_invoice_id: Optional[str] = Field(
         default=None,
         max_length=255,
         sa_column=SAColumn(String(255), nullable=True),
     )
+
 
 class Invoice(InvoiceBase, table=True):
     __tablename__ = "invoices"
@@ -39,7 +34,7 @@ class Invoice(InvoiceBase, table=True):
 
 
 class InvoiceCreate(InvoiceBase):
-    pass
+    metadata_payload: Optional[dict[str, Any]] = Field(default=None, alias="metadata")
 
 
 class InvoiceRead(InvoiceBase):
@@ -48,8 +43,8 @@ class InvoiceRead(InvoiceBase):
 
 
 class InvoiceUpdate(SQLModel):
+    subscription_id: Optional[uuid.UUID] = None
     total_amount: Optional[int] = None
     payment_method: Optional[PaymentMethod] = None
     status: Optional[InvoiceStatus] = None
-    metadata_: Optional[dict[str, Any]] = Field(default=None, alias="metadata")
     stripe_invoice_id: Optional[str] = None

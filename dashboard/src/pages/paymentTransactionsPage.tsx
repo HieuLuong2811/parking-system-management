@@ -3,7 +3,7 @@ import type { GridColDef } from '@mui/x-data-grid';
 import { ResourceTableLayout } from '../components/resource/resourceTableLayout';
 import { usePaymentTransactions } from '../api/paymentTransactions';
 import type { PaymentTransactionRecord } from '../api/types';
-import { formatTimestamp } from '../ultis/format';
+import { formatDateTime } from '../ultis/format';
 
 const columns: GridColDef<PaymentTransactionRecord>[] = [
   { field: 'id', headerName: 'Transaction ID', width: 220, sortable: true },
@@ -38,7 +38,7 @@ const columns: GridColDef<PaymentTransactionRecord>[] = [
     headerName: 'Created at',
     width: 200,
     sortable: true,
-    valueGetter: (value, row) => formatTimestamp(row.created_at),
+    valueGetter: (_value, row) => formatDateTime(row.created_at),
   },
 ];
 

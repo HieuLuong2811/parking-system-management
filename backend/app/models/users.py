@@ -1,9 +1,11 @@
 from __future__ import annotations
 
 from datetime import datetime
+import uuid
 from typing import Optional
 
-from sqlalchemy import Column as SAColumn, Boolean, String, Text
+from app.models.roles import RolesRead
+from sqlalchemy import Column as SAColumn, String, Text
 from sqlmodel import Field, SQLModel
 
 from .mixins import SoftDeleteMixin, TimestampMixin
@@ -18,7 +20,6 @@ class UsersBase(SQLModel):
         sa_column=SAColumn(String(10), nullable=True),
     )
     language_use: Optional[str] = Field(default="en", max_length=10)
-    is_active: bool = Field(default=True, sa_column=SAColumn(Boolean, nullable=False))
     stripe_customer_id: Optional[str] = Field(
         default=None,
         max_length=255,
@@ -43,13 +44,22 @@ class UsersRead(UsersBase):
     created_at: datetime
     updated_at: datetime
 
+class RoleSummary(SQLModel):
+    id: uuid.UUID
+    role_code: str
+
+
+class UserWithRoles(SQLModel):
+    user: UsersRead
+    roles: list[RoleSummary]
+
 
 class UsersUpdate(SQLModel):
     full_name: Optional[str] = Field(default=None, max_length=255)
     email: Optional[str] = Field(default=None, max_length=255)
     phone_number: Optional[str] = Field(default=None, max_length=10)
+    stripe_customer_id: Optional[str] = Field(default=None, max_length=255)
     language_use: Optional[str] = Field(default=None, max_length=10)
     password: Optional[str] = Field(default=None, min_length=6)
-    is_active: Optional[bool] = Field(default=None)
     deleted_at: Optional[datetime] = Field(default=None)
     stripe_customer_id: Optional[str] = Field(default=None, max_length=255)

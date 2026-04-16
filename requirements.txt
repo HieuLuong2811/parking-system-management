@@ -28,3 +28,5 @@ holidays
 httpx
 PyQt6
 
+passlib
+setuptools

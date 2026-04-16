@@ -33,3 +33,7 @@ body {
 .css-5ue55j-MuiPaper-root {
   --Paper-shadow: 0px !important
 }
+.MuiTable-root,
+.css-tzl6pa-MuiTable-root {
+  border-collapse: collapse !important;
+}

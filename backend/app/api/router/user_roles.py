@@ -16,8 +16,6 @@ async def create_user(
 @router.get("/", response_model=list[UserRolesRead])
 async def get_all_users(db: AsyncSession = Depends(get_db)):
     userRoles = await UserRolesController.get_all_user_roles_ctrl(db)
-    if not userRoles:
-        raise HTTPException(status_code=404, detail="No user roles found")
     return userRoles
 
 

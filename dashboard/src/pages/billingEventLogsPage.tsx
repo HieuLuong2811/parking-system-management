@@ -3,7 +3,7 @@ import type { GridColDef } from '@mui/x-data-grid';
 import { ResourceTableLayout } from '../components/resource/resourceTableLayout';
 import { useBillingEvents } from '../api/billingEvents';
 import type { BillingEventLogRecord } from '../api/types';
-import { formatTimestamp } from '../ultis/format';
+import { formatDateTime } from '../ultis/format';
 
 const renderMeta = (value: Record<string, unknown> | null | undefined) => {
   if (!value) return '-';
@@ -31,7 +31,7 @@ const columns: GridColDef<BillingEventLogRecord>[] = [
     headerName: 'Created at',
     width: 200,
     sortable: true,
-    valueGetter: (value, row) => formatTimestamp(row.created_at),
+    valueGetter: (__value, row) => formatDateTime(row.created_at),
   },
 ];
 

@@ -14,8 +14,6 @@ async def create_role(role_in: RolesCreate, db: AsyncSession = Depends(get_db)):
 @router.get("/", response_model=list[RolesRead])
 async def get_all_roles(db: AsyncSession = Depends(get_db)):
     roles = await RoleController.get_all_roles_ctrl(db)
-    if not roles:
-        raise HTTPException(status_code=404, detail="No roles found")
     return roles
 
 @router.patch("/{id}", response_model=RolesRead)

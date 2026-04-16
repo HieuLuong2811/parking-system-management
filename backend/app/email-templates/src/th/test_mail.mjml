@@ -1,0 +1,17 @@
+<mjml>
+  <mj-body>
+    <mj-section>
+      <mj-column>
+        <mj-text font-size="20px" font-weight="bold">
+          อีเมลทดสอบระบบ
+        </mj-text>
+        <mj-text>
+          สวัสดี {{user_name}},
+        </mj-text>
+        <mj-text>
+          นี่คืออีเมลทดสอบสำหรับบัญชี {{user_code}}
+        </mj-text>
+      </mj-column>
+    </mj-section>
+  </mj-body>
+</mjml>

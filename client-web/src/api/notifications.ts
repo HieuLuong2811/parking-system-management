@@ -4,7 +4,7 @@ import { clientHttp, requestWithContext, Notification } from './clientApi';
 
 const fetchNotifications = async (): Promise<Notification[]> => {
   return requestWithContext(
-    clientHttp.get<Notification[]>('/notifications'),
+    clientHttp.get<Notification[]>('/notifications/me'),
     'Load notifications'
   );
 };

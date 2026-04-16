@@ -21,8 +21,6 @@ async def create_transaction(payload: PaymentTransactionCreate, db: AsyncSession
 @router.get("/", response_model=list[PaymentTransactionRead])
 async def list_transactions(db: AsyncSession = Depends(get_db)):
     transactions = await PaymentTransactionController.get_all_transactions_ctrl(db)
-    if not transactions:
-        raise HTTPException(status_code=404, detail="No transactions found")
     return transactions
 
 

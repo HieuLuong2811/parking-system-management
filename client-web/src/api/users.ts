@@ -27,6 +27,12 @@ const createUser = async (payload: UserCreatePayload): Promise<UserInfo> => {
   );
 };
 
+type UpdateUserVariables = {
+  userCode: string;
+  payload: UserUpdatePayload;
+  skipInvalidate?: boolean;
+};
+
 const updateUser = async (userCode: string, payload: UserUpdatePayload): Promise<UserInfo> => {
   return requestWithContext(
     clientHttp.patch<UserInfo>(`/users/${userCode}`, payload),
@@ -47,10 +53,11 @@ export const useCreateUser = () => {
 export const useUpdateUser = () => {
   const queryClient = useQueryClient();
   return useMutation({
-    mutationFn: ({ userCode, payload }: { userCode: string; payload: UserUpdatePayload }) =>
-      updateUser(userCode, payload),
-    onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ['users'] });
+    mutationFn: ({ userCode, payload }: UpdateUserVariables) => updateUser(userCode, payload),
+    onSuccess: (_data, variables) => {
+      if (!variables?.skipInvalidate) {
+        queryClient.invalidateQueries({ queryKey: ['users'] });
+      }
     },
   });
 };

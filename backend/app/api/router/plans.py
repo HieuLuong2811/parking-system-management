@@ -1,12 +1,13 @@
-from fastapi import APIRouter, Depends, HTTPException
+from fastapi import APIRouter, Depends
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.api.controller.plans import PlanController
+from app.authen.current_user import AuthUser, required_roles
 from app.db.session import get_db
 from app.models.plans import SubscriptionPlanCreate, SubscriptionPlanRead, SubscriptionPlanUpdate
 from app.models.responses import DeleteResponse
 
-router = APIRouter(prefix="/plans", tags=["subscription_plans"])
+router = APIRouter(prefix="/subscription_plans", tags=["subscription_plans"])
 
 
 @router.post("/", response_model=SubscriptionPlanRead)
@@ -15,10 +16,20 @@ async def create_plan(plan_in: SubscriptionPlanCreate, db: AsyncSession = Depend
 
 
 @router.get("/", response_model=list[SubscriptionPlanRead])
-async def list_plans(db: AsyncSession = Depends(get_db)):
+async def list_plans(
+    db: AsyncSession = Depends(get_db),
+    current_user: AuthUser = Depends(required_roles("ADMIN")),
+):
     plans = await PlanController.get_all_plans_ctrl(db)
-    if not plans:
-        raise HTTPException(status_code=404, detail="No plans found")
+    return plans
+
+
+@router.get("/me", response_model=list[SubscriptionPlanRead])
+async def list_my_plans(
+    db: AsyncSession = Depends(get_db),
+    current_user: AuthUser = Depends(required_roles("USER", "ADMIN")),
+):
+    plans = await PlanController.get_all_plans_ctrl(db)
     return plans
 
 

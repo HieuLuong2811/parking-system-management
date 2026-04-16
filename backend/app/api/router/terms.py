@@ -17,8 +17,6 @@ async def create_term(term_in: AcademicTermCreate, db: AsyncSession = Depends(ge
 @router.get("/", response_model=list[AcademicTermRead])
 async def list_terms(db: AsyncSession = Depends(get_db)):
     terms = await TermController.get_all_terms_ctrl(db)
-    if not terms:
-        raise HTTPException(status_code=404, detail="No academic terms found")
     return terms
 
 
