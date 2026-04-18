@@ -2,8 +2,8 @@ import React, { useState } from 'react';
 import { Box, Toolbar } from '@mui/material';
 import { Outlet } from 'react-router-dom';
 import { COLLAPSED_SIDEBAR_WIDTH, EXPANDED_SIDEBAR_WIDTH } from '../../constant/config';
-import { Navbar } from './navbar';
-import { Sidebar } from './sidebar';
+import { Navbar } from './Navbar';
+import { Sidebar } from './Sidebar';
 
 export const Layout: React.FC = () => {
   const [mobileOpen, setMobileOpen] = useState(false);

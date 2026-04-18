@@ -1,10 +1,10 @@
 import { BrowserRouter, Routes, Route } from 'react-router-dom';
 import { HomePage } from '../pages/HomePage';
 import { RequireAdmin } from '../components/auth/RequireAdmin';
-import { Layout } from '../components/layout/layout';
+import { Layout } from '../components/layout/Layout';
 import { AccessDeniedPage } from '../pages/accessDeniedPage';
 import { UsersPage } from '../pages/usersPage';
-import { SettingsPage } from '../pages/settingsPage';
+import { SettingsPage } from '../pages/SettingsPage';
 import { NotFoundPage } from '../pages/notFoundPage';
 import { InvoicesPage } from '../pages/invoicesPage';
 import { VehiclesPage } from '../pages/vehiclesPage';
