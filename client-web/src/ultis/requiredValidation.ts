@@ -1,4 +1,4 @@
-﻿import i18n from '../i18n';
+import i18n from '../i18n';
 
 export function getRequiredFields(form: HTMLFormElement) {
   return Array.from(

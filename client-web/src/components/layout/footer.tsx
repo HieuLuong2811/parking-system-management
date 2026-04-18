@@ -1,4 +1,4 @@
-﻿import { Box, Link, Typography } from '@mui/material';
+import { Box, Link, Typography } from '@mui/material';
 import { AccessTime, Call, LocationOn } from '@mui/icons-material';
 
 const branches = [
@@ -27,7 +27,7 @@ const Footer = () => {
 
           {/* LEFT */}
           <Box className="footer-left">
-            <img src="/Logo.svg" className="footer-logo" />
+            <img src="/Logo.svg" className="footer-logo" alt="UTEHY logo" />
             <Typography className="footer-desc">
               Hệ thống quản lý gửi xe cho sinh viên
             </Typography>

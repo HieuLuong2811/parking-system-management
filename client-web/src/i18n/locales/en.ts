@@ -1,4 +1,4 @@
-﻿const en = {
+const en = {
   brand: {
     name: 'Hung Yen University of Technology and Education',
   },

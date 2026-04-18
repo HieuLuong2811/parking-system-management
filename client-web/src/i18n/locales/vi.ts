@@ -1,4 +1,4 @@
-﻿const vi = {
+const vi = {
   announcement: {
     name: 'Hệ thống đăng ký gửi xe cho sinh viên Trường Đại học Sư phạm Kỹ thuật Hưng Yên',
   },
