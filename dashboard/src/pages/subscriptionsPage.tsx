@@ -19,7 +19,7 @@ import { useTranslation } from 'react-i18next';
 
 import { SoftDataGrid } from '../components/common/SoftDataGrid';
 import { DrawerUserSubscription } from '../components/users/DrawerUserSubscription';
-import { useSubscriptionDetails, useSubscriptionSearch } from '../api/subscriptions';
+import { useSubscriptionDetails } from '../api/subscriptions';
 import type {  UserSubscriptionDetailRecord } from '../api/types';
 import { formatCurrency, formatDateTime } from '../ultis/format';
 import type { GridColDef } from '@mui/x-data-grid';
@@ -45,8 +45,6 @@ export const SubscriptionsPage: React.FC = () => {
   const navigate = useNavigate();
 
   const { data: subscriptionDetails = [], isLoading, isError } = useSubscriptionDetails();
-
-  const { data: subscriptionRows = [], isLoading: isSubscriptionsLoading } = useSubscriptionSearch();
 
   const normalizedQuery = useMemo(() => searchTerm.trim().toLowerCase(), [searchTerm]);
 
