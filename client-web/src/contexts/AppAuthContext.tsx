@@ -1,4 +1,4 @@
-import { Box, CircularProgress, Typography } from '@mui/material';
+import { Box, Typography } from '@mui/material';
 import { createContext, useCallback, useEffect, useMemo, useState } from 'react';
 
 import AuthRequiredNotice from '../components/common/AuthRequiredNotice';

@@ -6,7 +6,6 @@ import HomePage from "./pages/HomePage";
 import SessionPage from "./pages/SessionPage";
 import VehiclePage from "./pages/VehiclePage";
 import PlanPage from "./pages/PlanPage";
-import CheckoutPage from "./pages/CheckoutPage";
 import ClientLayout from "./components/layout/ClientLayout";
 import ProfilePage from "./pages/profilePage";
 import InvoicesPage from "./pages/InvoicesPage";
