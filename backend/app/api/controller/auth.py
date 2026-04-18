@@ -56,7 +56,22 @@ class AuthController:
 
     @staticmethod
     async def logout_ctrl(response: Response) -> dict[str, str]:
-        response.delete_cookie("access_token", path="/")
+        # Ensure the access token cookie is removed across common attribute combinations.
+        # Some browsers/proxies can behave inconsistently if the deletion cookie doesn't
+        # include the same attributes used when setting it (Secure/SameSite).
+        response.delete_cookie(key="access_token", path="/")
+        response.delete_cookie(key="access_token", path="/", samesite="none", secure=True)
+        response.delete_cookie(key="access_token", path="/", samesite="lax")
+        response.set_cookie(
+            key="access_token",
+            value="",
+            httponly=True,
+            samesite="None",
+            secure=True,
+            path="/",
+            max_age=0,
+            expires=0,
+        )
         return {"detail": "logged out"}
 
     @staticmethod
