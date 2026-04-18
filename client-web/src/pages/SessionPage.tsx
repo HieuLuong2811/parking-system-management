@@ -84,7 +84,7 @@ export default function SessionPage() {
       }
       return true;
     });
-  }, [fromDate, query, sessions, toDate]);
+  }, [fromDate, toDate, debouncedQuery, sessions]);
 
   const pageSize = 5;
   const pagedSessions = filtered.slice((page - 1) * pageSize, page * pageSize);

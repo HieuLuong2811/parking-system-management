@@ -32,6 +32,7 @@ export default function Navbar() {
 
   const { user, logout, patchUser } = useAppAuth();
   const userName = user?.full_name ?? t('nav.userName', { defaultValue: 'User' });
+  const userRole = user?.user_code ?? t('nav.userRole', { defaultValue: 'User' });
   const { mutateAsync: updateUserLanguage } = useUpdateUser();
 
   const handleLanguageToggle = () => {
@@ -125,10 +126,10 @@ return (
 
     <Box className="primary-navbar compact">
       <Box className="navbar-inner">
-        <Stack direction="row" alignItems="center" justifyContent="space-between">
+        <Stack className='navbar-content' direction="row" alignItems="center" justifyContent="space-between">
           <Link component={RouterLink} className="navbar-logo-block" to="/" underline="none">
             <Box component="img" src="/Logo.svg" alt="school logo" className="navbar-logo" />
-            <Typography variant="h6" className="navbar-title">Parking System</Typography>
+            <Typography variant="h6" className="navbar-title">Parking System UTEHY</Typography>
           </Link>
 
           <Box className="navbar-links">
@@ -189,16 +190,18 @@ return (
             </Box>
 
             <Box ref={profileDropdown.containerRef} className="dropdown-container">
-              <Button
-                className="user-select"
-                onClick={handleProfileToggle}
-                variant="text"
-                endIcon={<ArrowDropDownIcon fontSize="small" />}
-                sx={{ color: '#0f172a' }}
-                disabled={isLanguageChanging}
-              >
-                {userName}
-              </Button>
+            <Button
+              className="user-select"
+              onClick={handleProfileToggle}
+              variant="text"
+              endIcon={<ArrowDropDownIcon fontSize="small" />}
+              disabled={isLanguageChanging}
+            >
+              <span className="user-select-content">
+                <span className="user-select-name">{userName}</span>
+                <span className="user-select-role">{userRole}</span>
+              </span>
+            </Button>
 
               {profileDropdown.open && (
                 <Box className="dropdown-panel dropdown-panel--profile">

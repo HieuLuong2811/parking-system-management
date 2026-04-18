@@ -1,15 +1,31 @@
 import { useQuery } from '@tanstack/react-query';
 
 import { httpGet } from './httpClient';
-import type { PaymentTransactionRecord } from './types';
+import type { PaginatedResponse, PaymentTransactionRecord } from './types';
 
-const fetchPaymentTransactions = () => httpGet<PaymentTransactionRecord[]>('/payment_transactions');
+export type PaymentTransactionFilters = {
+  search?: string;
+  page?: number;
+  limit?: number;
+};
 
-export const usePaymentTransactions = () => {
+const fetchPaymentTransactions = (filters: PaymentTransactionFilters = {}) => {
+  const params = new URLSearchParams();
+  if (filters.search) params.append('search', filters.search);
+  if (filters.page) params.append('page', String(filters.page));
+  if (filters.limit) params.append('limit', String(filters.limit));
+  const query = params.toString();
+  return httpGet<PaginatedResponse<PaymentTransactionRecord>>(
+    `/payment_transactions${query ? `?${query}` : ''}`
+  );
+};
+
+export const usePaymentTransactions = (filters: PaymentTransactionFilters = {}) => {
   return useQuery({
-    queryKey: ['admin', 'paymentTransactions'],
-    queryFn: fetchPaymentTransactions,
+    queryKey: ['admin', 'paymentTransactions', filters],
+    queryFn: () => fetchPaymentTransactions(filters),
     staleTime: 1000 * 60,
     retry: false,
+    placeholderData: (previousData) => previousData,
   });
 };

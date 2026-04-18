@@ -6,6 +6,7 @@ from app.models.payment_transactions import (
     PaymentTransactionRead,
     PaymentTransactionUpdate,
 )
+from app.utils.pagination import PaginatedResponse
 from app.service.payment_transactions import paymentTransactionService
 
 
@@ -21,8 +22,14 @@ class PaymentTransactionController:
         return await paymentTransactionService.get_transaction(transaction_id, db)
 
     @staticmethod
-    async def get_all_transactions_ctrl(db: AsyncSession) -> list[PaymentTransactionRead]:
-        return await paymentTransactionService.get_all_transactions(db)
+    async def get_transactions_ctrl(
+        db: AsyncSession,
+        *,
+        search: str | None = None,
+        page: int = 1,
+        limit: int = 20,
+    ) -> PaginatedResponse[PaymentTransactionRead]:
+        return await paymentTransactionService.get_transactions(db, search=search, page=page, limit=limit)
 
     @staticmethod
     async def update_transaction_ctrl(

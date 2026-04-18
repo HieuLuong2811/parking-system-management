@@ -1,4 +1,4 @@
-import { supportedLanguages } from '../utils/language';
+import { supportedLanguages } from '../ultis/language';
 
 type Language = (typeof supportedLanguages)[number];
 type TranslationMap = Record<string, string>;

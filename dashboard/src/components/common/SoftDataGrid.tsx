@@ -116,9 +116,9 @@ export const SoftDataGrid = <RowType extends Record<string, unknown> = Record<st
         },
       ]}
     >
-      <TableContainer component={Box} sx={[{ maxHeight, overflowY: 'auto', border: '1px solid rgba(15, 23, 42, 0.08)' }]}
+      <TableContainer component={Box} sx={[{ maxHeight, overflowY: 'auto',}]}
       >
-        <Table stickyHeader>
+        <Table stickyHeader sx={{ borderCollapse: 'collapse', border: '1px solid #dcdcdc'}}>
           <TableHead>
             <TableRow sx={{ backgroundColor: "rgba(23, 119, 240, 0.12)"}}>
               {columns.map((column) => (
@@ -135,8 +135,8 @@ export const SoftDataGrid = <RowType extends Record<string, unknown> = Record<st
                     whiteSpace: 'nowrap',
                     textOverflow: 'ellipsis',
                     overflow: 'hidden',
-                    borderRight: '1px solid rgba(15, 23, 42, 0.08)',
                     backgroundColor: '#c8ceff',
+                    borderRight: '1px solid #dcdcdc',
                     px: 2,
                   }}
                 >

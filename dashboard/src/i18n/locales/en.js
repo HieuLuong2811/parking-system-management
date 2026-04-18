@@ -201,7 +201,7 @@ const en = {
         optionLabel: "{{role}}",
       },
       subscriptionDrawer: {
-        title: "Subscription",
+        title: "Latest parking package",
         subtitle: "Latest subscription information for the selected user.",
         selectUser: "Select a user to preview their most recent subscription.",
         loading: "Loading subscription data…",
@@ -233,7 +233,7 @@ const en = {
         actions: "Actions",
         status: {
           active: "Active",
-          inactive: "Deleted",
+          inactive: "Inactive",
         },
       },
       filters: {

@@ -2,6 +2,7 @@ import { useMemo } from 'react';
 import { useQuery } from '@tanstack/react-query';
 
 import { httpGet } from './httpClient';
+import { fetchAllPaginated } from './paginated';
 import type {
   AdminUser,
   PaymentPlanRecord,
@@ -9,6 +10,7 @@ import type {
   SubscriptionSearchRow,
   UserSubscriptionDetailRecord,
   UserSubscriptionRecord,
+  UserWithRoles,
   VehicleRecord,
 } from './types';
 
@@ -18,8 +20,8 @@ export type SubscriptionSearchFilters = {
 };
 
 const fetchSubscriptions = () => httpGet<UserSubscriptionRecord[]>('/subscriptions');
-const fetchUsers = () => httpGet<AdminUser[]>('/users');
-const fetchVehicles = () => httpGet<VehicleRecord[]>('/vehicles');
+const fetchUsers = () => fetchAllPaginated<UserWithRoles>('/users');
+const fetchVehicles = () => fetchAllPaginated<VehicleRecord>('/vehicles');
 const fetchPaymentPlans = () => httpGet<PaymentPlanRecord[]>('/payment_plans');
 const fetchSubscriptionPlans = () => httpGet<SubscriptionPlanRecord[]>('/subscription_plans');
 
@@ -29,7 +31,7 @@ export const useSubscriptionSearch = (filters: SubscriptionSearchFilters = {}) =
     queryFn: fetchSubscriptions,
     staleTime: 1000 * 60,
   });
-  const usersQuery = useQuery<AdminUser[]>({
+  const usersQuery = useQuery<UserWithRoles[]>({
     queryKey: ['admin', 'users'],
     queryFn: fetchUsers,
     staleTime: 1000 * 60,
@@ -51,19 +53,35 @@ export const useSubscriptionSearch = (filters: SubscriptionSearchFilters = {}) =
   });
 
   const baseRows = useMemo<UserSubscriptionRecord[]>(() => (subscriptionsQuery.data as UserSubscriptionRecord[]) ?? [], [subscriptionsQuery.data]);
-  const users = useMemo<AdminUser[]>(() => (usersQuery.data as AdminUser[]) ?? [], [usersQuery.data]);
   const vehicles = useMemo<VehicleRecord[]>(() => (vehiclesQuery.data as VehicleRecord[]) ?? [], [vehiclesQuery.data]);
   const paymentPlans = useMemo<PaymentPlanRecord[]>(() => (paymentPlansQuery.data as PaymentPlanRecord[]) ?? [], [paymentPlansQuery.data]);
   const subscriptionPlans = useMemo<SubscriptionPlanRecord[]>(() => (subscriptionPlansQuery.data as SubscriptionPlanRecord[]) ?? [], [subscriptionPlansQuery.data]);
 
+  const users = useMemo<AdminUser[]>(() => {
+    if (!usersQuery.data || !Array.isArray(usersQuery.data)) {
+      return [];
+    }
+    return usersQuery.data
+      .map((item) => item?.user)
+      .filter((user): user is AdminUser => !!user);
+  }, [usersQuery.data]);
+
   const joined = useMemo<SubscriptionSearchRow[]>(() => {
-    return baseRows.map((row) => ({
-      ...row,
-      user: users.find((user) => user.user_code === row.user_code),
-      vehicle: vehicles.find((vehicle) => vehicle.id === row.vehicle_id),
-      payment_plan: paymentPlans.find((plan) => plan.id === row.payment_plan_id),
-      plan: subscriptionPlans.find((plan) => plan.id === row.sub_plan_id),
-    })) as SubscriptionSearchRow[];
+
+    return baseRows.map((row) => {
+      const foundUser = users.find((user) => 
+        String(user.user_code) === String(row.user_code)
+      );
+      console.log("🚀 ~ useSubscriptionSearch ~ foundUser:", foundUser)
+
+      return {
+        ...row,
+        user: foundUser,
+        vehicle: vehicles.find((v) => v.id === row.vehicle_id),
+        payment_plan: paymentPlans.find((p) => p.id === row.payment_plan_id),
+        plan: subscriptionPlans.find((p) => p.id === row.sub_plan_id),
+      };
+    });
   }, [baseRows, users, vehicles, paymentPlans, subscriptionPlans]);
 
   const filtered = useMemo(() => {

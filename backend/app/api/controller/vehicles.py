@@ -2,6 +2,7 @@ from datetime import datetime, timezone
 from fastapi import HTTPException, status
 from sqlalchemy.ext.asyncio import AsyncSession
 
+from app.utils.pagination import PaginatedResponse
 from app.models.responses import (
     DeleteResponse,
     ParkingSessionInfo,
@@ -24,8 +25,21 @@ class VehicleController:
         return await vehicleService.get_vehicle(vehicle_id, db)
 
     @staticmethod
-    async def get_all_vehicles_ctrl(db: AsyncSession) -> list[VehicleRead]:
-        return await vehicleService.get_all_vehicles(db)
+    async def get_vehicles_ctrl(
+        db: AsyncSession,
+        *,
+        search: str | None = None,
+        is_deleted: bool | None = None,
+        page: int = 1,
+        limit: int = 20,
+    ) -> PaginatedResponse[VehicleRead]:
+        return await vehicleService.get_vehicles(
+            db,
+            search=search,
+            is_deleted=is_deleted,
+            page=page,
+            limit=limit,
+        )
 
     @staticmethod
     async def get_vehicles_by_user_ctrl(user_code: str, db: AsyncSession) -> list[VehicleRead]:

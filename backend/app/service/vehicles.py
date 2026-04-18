@@ -5,8 +5,10 @@ import secrets
 from app.models.vehicles import Vehicle, VehicleCreate, VehicleUpdate
 from app.models.users import Users
 from app.service.base import CRUDService
+from app.utils.pagination import PaginatedResponse
+from app.utils.pagination_db import paginate_scalars
 from fastapi import HTTPException, status
-from sqlalchemy import select
+from sqlalchemy import String, func, or_, select
 from sqlalchemy.ext.asyncio import AsyncSession
 
 
@@ -45,6 +47,45 @@ class vehicleService:
         statement = select(Vehicle).where(Vehicle.deleted_at.is_(None))
         result = await db.execute(statement)
         return result.scalars().all()
+
+    @staticmethod
+    async def get_vehicles(
+        db: AsyncSession,
+        *,
+        search: str | None = None,
+        is_deleted: bool | None = None,
+        page: int = 1,
+        limit: int = 20,
+    ) -> PaginatedResponse[Vehicle]:
+        statement = select(Vehicle).order_by(Vehicle.created_at.desc())
+
+        if is_deleted is not None:
+            if is_deleted:
+                statement = statement.where(Vehicle.deleted_at.is_not(None))
+            else:
+                statement = statement.where(Vehicle.deleted_at.is_(None))
+
+        if search:
+            trimmed = search.strip()
+            if trimmed:
+                like = f"%{trimmed.lower()}%"
+                statement = statement.where(
+                    or_(
+                        func.lower(func.coalesce(Vehicle.user_code, "")).ilike(like),
+                        func.lower(func.coalesce(Vehicle.license_plate, "")).ilike(like),
+                        func.lower(func.cast(Vehicle.id, String)).ilike(like),
+                        func.lower(func.cast(Vehicle.vehicle_type, String)).ilike(like),
+                    )
+                )
+
+        items, total, total_pages = await paginate_scalars(db, statement, page=page, limit=limit)
+        return {
+            "data": items,
+            "total": total,
+            "page": page,
+            "limit": limit,
+            "total_pages": total_pages,
+        }
 
     @staticmethod
     async def get_vehicles_by_user_code(user_code: str, db: AsyncSession) -> list[Vehicle]:

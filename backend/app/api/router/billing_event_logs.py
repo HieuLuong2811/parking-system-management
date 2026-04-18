@@ -1,4 +1,4 @@
-from fastapi import APIRouter, Depends, HTTPException
+from fastapi import APIRouter, Depends, HTTPException, Query
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.api.controller.billing_event_logs import BillingEventLogController
@@ -9,6 +9,7 @@ from app.models.billing_event_logs import (
     BillingEventLogUpdate,
 )
 from app.models.responses import DeleteResponse
+from app.utils.pagination import PaginatedResponse
 
 router = APIRouter(prefix="/billing_event_logs", tags=["billing_event_logs"])
 
@@ -18,10 +19,14 @@ async def create_log(payload: BillingEventLogCreate, db: AsyncSession = Depends(
     return await BillingEventLogController.create_log_ctrl(payload, db)
 
 
-@router.get("/", response_model=list[BillingEventLogRead])
-async def list_logs(db: AsyncSession = Depends(get_db)):
-    logs = await BillingEventLogController.get_all_logs_ctrl(db)
-    return logs
+@router.get("/", response_model=PaginatedResponse[BillingEventLogRead])
+async def list_logs(
+    search: str | None = None,
+    page: int = Query(1, ge=1, description="Page number"),
+    limit: int = Query(20, ge=1, le=100, description="Number of items per page"),
+    db: AsyncSession = Depends(get_db),
+):
+    return await BillingEventLogController.get_logs_ctrl(db, search=search, page=page, limit=limit)
 
 
 @router.get("/{log_id}", response_model=BillingEventLogRead)

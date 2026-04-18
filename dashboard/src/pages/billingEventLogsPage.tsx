@@ -1,8 +1,9 @@
 import React, { useMemo, useState } from 'react';
+import { TablePagination } from '@mui/material';
 import type { GridColDef } from '@mui/x-data-grid';
 import { ResourceTableLayout } from '../components/resource/resourceTableLayout';
 import { useBillingEvents } from '../api/billingEvents';
-import type { BillingEventLogRecord } from '../api/types';
+import type { BillingEventLogRecord, PaginatedResponse } from '../api/types';
 import { formatDateTime } from '../ultis/format';
 
 const renderMeta = (value: Record<string, unknown> | null | undefined) => {
@@ -37,7 +38,22 @@ const columns: GridColDef<BillingEventLogRecord>[] = [
 
 export const BillingEventLogsPage: React.FC = () => {
   const [searchTerm, setSearchTerm] = useState('');
-  const { data = [], isLoading, isError, error } = useBillingEvents();
+  const [page, setPage] = useState(0);
+  const [rowsPerPage, setRowsPerPage] = useState(20);
+
+  const { data: paginated, isLoading, isError, error } = useBillingEvents({
+    search: searchTerm || undefined,
+    page: page + 1,
+    limit: rowsPerPage,
+  }) as unknown as {
+    data: PaginatedResponse<BillingEventLogRecord> | undefined;
+    isLoading: boolean;
+    isError: boolean;
+    error: unknown;
+  };
+
+  const rows = useMemo(() => paginated?.data ?? [], [paginated]);
+  const total = paginated?.total ?? 0;
 
   const searchKeys = useMemo(
     () => (row: BillingEventLogRecord) => [row.id, row.user_code, row.subscription_id, row.event_type],
@@ -49,16 +65,33 @@ export const BillingEventLogsPage: React.FC = () => {
       title="Billing events"
       description="Theo dõi các sự kiện thanh toán."
       columns={columns}
-      rows={data}
+      rows={rows}
       loading={isLoading}
       error={isError ? error : undefined}
       searchTerm={searchTerm}
-      onSearchChange={setSearchTerm}
+      onSearchChange={(value) => {
+        setSearchTerm(value);
+        setPage(0);
+      }}
       searchPlaceholder="Search by event or user"
       searchKeys={searchKeys}
       emptyMessage="No billing events yet."
       getRowId={(row) => row.id}
       maxHeight={520}
+      footer={
+        <TablePagination
+          component="div"
+          count={total}
+          page={page}
+          onPageChange={(_event, newPage) => setPage(newPage)}
+          rowsPerPage={rowsPerPage}
+          onRowsPerPageChange={(event) => {
+            setRowsPerPage(parseInt(event.target.value, 10));
+            setPage(0);
+          }}
+          rowsPerPageOptions={[10, 20, 50, 100]}
+        />
+      }
     />
   );
 };

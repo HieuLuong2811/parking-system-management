@@ -1,8 +1,9 @@
 import React, { useMemo, useState } from 'react';
+import { TablePagination } from '@mui/material';
 import type { GridColDef } from '@mui/x-data-grid';
 import { ResourceTableLayout } from '../components/resource/resourceTableLayout';
 import { usePaymentTransactions } from '../api/paymentTransactions';
-import type { PaymentTransactionRecord } from '../api/types';
+import type { PaginatedResponse, PaymentTransactionRecord } from '../api/types';
 import { formatDateTime } from '../ultis/format';
 
 const columns: GridColDef<PaymentTransactionRecord>[] = [
@@ -44,7 +45,22 @@ const columns: GridColDef<PaymentTransactionRecord>[] = [
 
 export const PaymentTransactionsPage: React.FC = () => {
   const [searchTerm, setSearchTerm] = useState('');
-  const { data = [], isLoading, isError, error } = usePaymentTransactions();
+  const [page, setPage] = useState(0);
+  const [rowsPerPage, setRowsPerPage] = useState(20);
+
+  const { data: paginated, isLoading, isError, error } = usePaymentTransactions({
+    search: searchTerm || undefined,
+    page: page + 1,
+    limit: rowsPerPage,
+  }) as unknown as {
+    data: PaginatedResponse<PaymentTransactionRecord> | undefined;
+    isLoading: boolean;
+    isError: boolean;
+    error: unknown;
+  };
+
+  const rows = useMemo(() => paginated?.data ?? [], [paginated]);
+  const total = paginated?.total ?? 0;
 
   const searchKeys = useMemo(
     () => (row: PaymentTransactionRecord) => [row.id, row.invoice_id, row.transaction_code, row.status],
@@ -56,16 +72,33 @@ export const PaymentTransactionsPage: React.FC = () => {
       title="Payment transactions"
       description="History of payment attempts for invoices."
       columns={columns}
-      rows={data}
+      rows={rows}
       loading={isLoading}
       error={isError ? error : undefined}
       searchTerm={searchTerm}
-      onSearchChange={setSearchTerm}
+      onSearchChange={(value) => {
+        setSearchTerm(value);
+        setPage(0);
+      }}
       searchPlaceholder="Search by invoice or code"
       searchKeys={searchKeys}
       emptyMessage="No payment transactions yet."
       getRowId={(row) => row.id}
       maxHeight={520}
+      footer={
+        <TablePagination
+          component="div"
+          count={total}
+          page={page}
+          onPageChange={(_event, newPage) => setPage(newPage)}
+          rowsPerPage={rowsPerPage}
+          onRowsPerPageChange={(event) => {
+            setRowsPerPage(parseInt(event.target.value, 10));
+            setPage(0);
+          }}
+          rowsPerPageOptions={[10, 20, 50, 100]}
+        />
+      }
     />
   );
 };

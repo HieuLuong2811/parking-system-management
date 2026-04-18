@@ -1,11 +1,13 @@
 from __future__ import annotations
 
 from datetime import datetime
+import math
 import re
 from typing import List
 
 from app.models.roles import Roles, RolesCreate
 from app.scripts.seeds import DEFAULT_USERS, DEFAULT_ROLES
+from app.utils.pagination import PaginatedResponse
 from fastapi import HTTPException, status
 from sqlalchemy.exc import IntegrityError
 from sqlalchemy import func, or_, select
@@ -14,7 +16,7 @@ from sqlalchemy.ext.asyncio import AsyncSession
 from app.core.security import hash_password
 from app.models.auth import UserImportEntry
 from app.models.user_roles import UserRoles, UserRolesCreate
-from app.models.users import Users, UsersCreate, UsersUpdate, RoleSummary
+from app.models.users import UserWithRoles, Users, UsersCreate, UsersUpdate, RoleSummary
 from app.service.base import CRUDService
 from app.service.roles import roleService
 from app.service.user_roles import userRolesService
@@ -147,11 +149,14 @@ class userService:
         phone: str | None = None,
         role: str | None = None,
         is_deleted: bool | None = None,
-    ) -> list[Users]:
+        page: int = 1,
+        limit: int = 5,
+    ) -> PaginatedResponse[UserWithRoles]:
         statement = (
             select(Users, Roles)
             .join(UserRoles, UserRoles.user_code == Users.user_code)
             .join(Roles, Roles.id == UserRoles.role_id)
+            .order_by(Users.user_code)
         )
 
         filters = []
@@ -183,6 +188,11 @@ class userService:
 
         if filters:
             statement = statement.where(*filters)
+        
+        count_stmt = select(func.count()).select_from(statement.subquery())
+        total_count = await db.scalar(count_stmt)
+        offset = (page - 1) * limit
+        statement = statement.offset(offset).limit(limit)
 
         result = await db.execute(statement)
         rows = result.all()
@@ -193,7 +203,16 @@ class userService:
                 users_dict[user.user_code] = {"user": user, "roles": []}
             users_dict[user.user_code]["roles"].append(RoleSummary(id=role.id, role_code=role.role_code))
 
-        return list(users_dict.values())
+        users_list = list(users_dict.values())
+        total_pages = math.ceil(total_count / limit) or 0
+        
+        return {
+            "data": users_list,
+            "total": total_count,
+            "page": page,
+            "limit": limit,
+            "total_pages": total_pages
+        }
     
     @staticmethod
     async def update_user(user_code: str, user_in: UsersUpdate, db: AsyncSession) -> Users:

@@ -12,22 +12,14 @@ import {
 import OpenInNewIcon from '@mui/icons-material/OpenInNew';
 import { useTranslation } from 'react-i18next';
 
-import type { AdminUser, SubscriptionSearchRow } from '../../api/types';
-
-const currencyFormatter = new Intl.NumberFormat('vi-VN', {
-  style: 'currency',
-  currency: 'VND',
-});
-
-const formatCurrency = (value?: number) => (value === undefined ? '—' : currencyFormatter.format(value));
-
-const formatDate = (value?: string) => (value ? new Date(value).toLocaleDateString() : '—');
+import type { UserSubscriptionDetailRecord, SubscriptionSearchRow } from '../../api/types';
+import { formatCurrency, formatDateTime } from '../../ultis/format';
 
 interface DrawerUserSubscriptionProps {
-  selectedUser: AdminUser | null;
+  selectedUser: UserSubscriptionDetailRecord | null;
   subscriptionRows: SubscriptionSearchRow[];
   isLoading: boolean;
-  onViewSubscriptions: () => void;
+  onViewSubscriptions: (subscription_id: string) => void;
 }
 
 export const DrawerUserSubscription: React.FC<DrawerUserSubscriptionProps> = ({
@@ -51,9 +43,9 @@ export const DrawerUserSubscription: React.FC<DrawerUserSubscriptionProps> = ({
     <Box sx={{ height: '100%', display: 'flex', flexDirection: 'column', gap: 2 }}>
       <Box>
         <Typography variant="h6">{t('usersPage.subscriptionDrawer.title')}</Typography>
-        <Typography variant="body2" color="text.secondary">
+        {/* <Typography variant="body2" color="text.secondary">
           {selectedUser ? selectedUser.full_name : t('usersPage.subscriptionDrawer.subtitle')}
-        </Typography>
+        </Typography> */}
       </Box>
       <Paper variant="outlined" sx={{ flexGrow: 1, p: 2, borderRadius: 2 }}>
         {selectedUser ? (
@@ -93,7 +85,7 @@ export const DrawerUserSubscription: React.FC<DrawerUserSubscriptionProps> = ({
                   {t('usersPage.subscriptionDrawer.duration')}
                 </Typography>
                 <Typography variant="body2">
-                  {formatDate(latestSubscription.start_date)} — {formatDate(latestSubscription.end_date)}
+                  {formatDateTime(latestSubscription.start_date)} — {formatDateTime(latestSubscription.end_date)}
                 </Typography>
               </Stack>
               <Divider />
@@ -132,7 +124,7 @@ export const DrawerUserSubscription: React.FC<DrawerUserSubscriptionProps> = ({
                   {t('usersPage.subscriptionDrawer.updated')}
                 </Typography>
                 <Typography variant="body2">
-                  {formatDate(latestSubscription.updated_at)}
+                  {formatDateTime(latestSubscription.updated_at)}
                 </Typography>
               </Stack>
             </Stack>
@@ -151,7 +143,7 @@ export const DrawerUserSubscription: React.FC<DrawerUserSubscriptionProps> = ({
         variant="contained"
         fullWidth
         endIcon={<OpenInNewIcon />}
-        onClick={onViewSubscriptions}
+        onClick={() => onViewSubscriptions(latestSubscription?.id ?? '')}
       >
         {t('usersPage.subscriptionDrawer.viewAll')}
       </Button>

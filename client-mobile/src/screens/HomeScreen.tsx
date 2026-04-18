@@ -1,24 +1,20 @@
 import React from 'react';
 import { StyleSheet, Text, View } from 'react-native';
-import { SafeAreaView } from 'react-native-safe-area-context';
+
+import ScreenShell from '../component/ScreenShell';
 
 export default function HomeScreen() {
   return (
-    <SafeAreaView style={styles.container}>
+    <ScreenShell>
       <View style={styles.card}>
         <Text style={styles.title}>Parking System</Text>
         <Text style={styles.desc}>Trang chủ mobile cho hệ thống gửi xe sinh viên.</Text>
       </View>
-    </SafeAreaView>
+    </ScreenShell>
   );
 }
 
 const styles = StyleSheet.create({
-  container: {
-    flex: 1,
-    backgroundColor: '#f5f7fb',
-    padding: 16,
-  },
   card: {
     backgroundColor: '#fff',
     borderRadius: 20,
@@ -35,3 +31,4 @@ const styles = StyleSheet.create({
     color: '#6b7280',
   },
 });
+

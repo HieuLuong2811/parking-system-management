@@ -6,6 +6,7 @@ from app.models.billing_event_logs import (
     BillingEventLogRead,
     BillingEventLogUpdate,
 )
+from app.utils.pagination import PaginatedResponse
 from app.service.billing_event_logs import billingEventLogService
 
 
@@ -19,8 +20,14 @@ class BillingEventLogController:
         return await billingEventLogService.get_log(log_id, db)
 
     @staticmethod
-    async def get_all_logs_ctrl(db: AsyncSession) -> list[BillingEventLogRead]:
-        return await billingEventLogService.get_all_logs(db)
+    async def get_logs_ctrl(
+        db: AsyncSession,
+        *,
+        search: str | None = None,
+        page: int = 1,
+        limit: int = 20,
+    ) -> PaginatedResponse[BillingEventLogRead]:
+        return await billingEventLogService.get_logs(db, search=search, page=page, limit=limit)
 
     @staticmethod
     async def update_log_ctrl(log_id: str, payload: BillingEventLogUpdate, db: AsyncSession) -> BillingEventLogRead:

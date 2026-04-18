@@ -1,7 +1,7 @@
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 
 import { httpDelete, httpGet, httpPatch, httpPost } from './httpClient';
-import type { AdminUser, UserWithRoles } from './types';
+import type { AdminUser, PaginatedResponse, UserWithRoles } from './types';
 
 export type UserCreatePayload = {
   user_code: string;
@@ -23,6 +23,8 @@ export type UserListFilters = {
   phone?: string;
   role?: string;
   is_deleted?: boolean;
+  page?: number;
+  limit?: number;
 };
 
 const fetchUsers = (filters: UserListFilters = {}) => {
@@ -31,16 +33,18 @@ const fetchUsers = (filters: UserListFilters = {}) => {
   if (filters.phone) params.append('phone', filters.phone);
   if (filters.role) params.append('role', filters.role);
   if (filters.is_deleted !== undefined) params.append('is_deleted', String(filters.is_deleted));
+  if (filters.page) params.append('page', String(filters.page));
+  if (filters.limit) params.append('limit', String(filters.limit));
   const query = params.toString();
-  return httpGet<UserWithRoles[]>(`/users${query ? `?${query}` : ''}`);
+  return httpGet<PaginatedResponse<UserWithRoles>>(`/users${query ? `?${query}` : ''}`);
 };
 
 export const useFetchUsers = (filters: UserListFilters = {}) => {
   return useQuery({
     queryKey: ['admin', 'users', filters],
     queryFn: () => fetchUsers(filters),
-    staleTime: 1000 * 60,
-    retry: false,
+    staleTime: 1000 * 30,
+    placeholderData: (previousData) => previousData,
   });
 };
 

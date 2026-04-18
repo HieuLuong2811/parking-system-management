@@ -1,10 +1,12 @@
-from sqlalchemy import select
+from sqlalchemy import String, func, or_, select
 
 from app.models.billing_event_logs import (
     BillingEventLog,
     BillingEventLogCreate,
     BillingEventLogUpdate,
 )
+from app.utils.pagination import PaginatedResponse
+from app.utils.pagination_db import paginate_scalars
 from app.service.base import CRUDService
 from sqlalchemy.ext.asyncio import AsyncSession
 
@@ -23,6 +25,37 @@ class billingEventLogService:
     @staticmethod
     async def get_all_logs(db: AsyncSession) -> list[BillingEventLog]:
         return await billingEventLogService.crud.get_all(db)
+
+    @staticmethod
+    async def get_logs(
+        db: AsyncSession,
+        *,
+        search: str | None = None,
+        page: int = 1,
+        limit: int = 20,
+    ) -> PaginatedResponse[BillingEventLog]:
+        statement = select(BillingEventLog).order_by(BillingEventLog.created_at.desc())
+
+        if search:
+            trimmed = search.strip()
+            if trimmed:
+                like = f"%{trimmed.lower()}%"
+                statement = statement.where(
+                    or_(
+                        func.lower(BillingEventLog.user_code).ilike(like),
+                        func.lower(BillingEventLog.event_type).ilike(like),
+                        func.lower(func.cast(BillingEventLog.subscription_id, String)).ilike(like),
+                    )
+                )
+
+        items, total, total_pages = await paginate_scalars(db, statement, page=page, limit=limit)
+        return {
+            "data": items,
+            "total": total,
+            "page": page,
+            "limit": limit,
+            "total_pages": total_pages,
+        }
 
     @staticmethod
     async def update_log(log_id: str, payload: BillingEventLogUpdate, db: AsyncSession) -> BillingEventLog:

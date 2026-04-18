@@ -1,4 +1,4 @@
-from fastapi import APIRouter, Depends, HTTPException
+from fastapi import APIRouter, Depends, HTTPException, Query
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.api.controller.payment_transactions import PaymentTransactionController
@@ -9,6 +9,7 @@ from app.models.payment_transactions import (
     PaymentTransactionRead,
     PaymentTransactionUpdate,
 )
+from app.utils.pagination import PaginatedResponse
 
 router = APIRouter(prefix="/payment_transactions", tags=["payment_transactions"])
 
@@ -18,10 +19,14 @@ async def create_transaction(payload: PaymentTransactionCreate, db: AsyncSession
     return await PaymentTransactionController.create_transaction_ctrl(payload, db)
 
 
-@router.get("/", response_model=list[PaymentTransactionRead])
-async def list_transactions(db: AsyncSession = Depends(get_db)):
-    transactions = await PaymentTransactionController.get_all_transactions_ctrl(db)
-    return transactions
+@router.get("/", response_model=PaginatedResponse[PaymentTransactionRead])
+async def list_transactions(
+    search: str | None = None,
+    page: int = Query(1, ge=1, description="Page number"),
+    limit: int = Query(20, ge=1, le=100, description="Number of items per page"),
+    db: AsyncSession = Depends(get_db),
+):
+    return await PaymentTransactionController.get_transactions_ctrl(db, search=search, page=page, limit=limit)
 
 
 @router.get("/{transaction_id}", response_model=PaymentTransactionRead)

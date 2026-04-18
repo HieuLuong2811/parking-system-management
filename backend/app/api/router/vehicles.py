@@ -1,4 +1,4 @@
-from fastapi import APIRouter, Depends
+from fastapi import APIRouter, Depends, Query
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.api.controller.vehicles import VehicleController
@@ -6,6 +6,7 @@ from app.authen.current_user import AuthUser, required_roles
 from app.db.session import get_db
 from app.models.responses import DeleteResponse, VehicleLookupResponse
 from app.models.vehicles import VehicleCreate, VehicleRead, VehicleUpdate, VehicleQRVerify
+from app.utils.pagination import PaginatedResponse
 
 router = APIRouter(prefix="/vehicles", tags=["vehicles"])
 
@@ -15,12 +16,22 @@ async def create_vehicle(payload: VehicleCreate, db: AsyncSession = Depends(get_
     return await VehicleController.create_vehicle_ctrl(payload, db)
 
 
-@router.get("/", response_model=list[VehicleRead])
+@router.get("/", response_model=PaginatedResponse[VehicleRead])
 async def list_vehicles(
+    search: str | None = None,
+    is_deleted: bool | None = None,
+    page: int = Query(1, ge=1, description="Page number"),
+    limit: int = Query(20, ge=1, le=100, description="Number of items per page"),
     db: AsyncSession = Depends(get_db),
     current_user: AuthUser = Depends(required_roles("ADMIN")),
 ):
-    return await VehicleController.get_all_vehicles_ctrl(db)
+    return await VehicleController.get_vehicles_ctrl(
+        db=db,
+        search=search,
+        is_deleted=is_deleted,
+        page=page,
+        limit=limit,
+    )
 
 
 @router.get("/me", response_model=list[VehicleRead])

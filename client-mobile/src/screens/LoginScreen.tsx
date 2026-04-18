@@ -16,15 +16,19 @@ import type { NativeStackScreenProps } from '@react-navigation/native-stack';
 import type { AuthStackParamList } from '../navigation/AuthStack';
 import { languageOptions } from '../constant/languageOptions';
 import FormInput from '../component/FormInput';
+import { useAuth } from '../auth/AuthContext';
 
 type Props = NativeStackScreenProps<AuthStackParamList, 'Login'>;
 
 export default function LoginScreen({ navigation }: Props) {
   const { t, i18n } = useTranslation();
+  const { signIn } = useAuth();
   const [userCode, setUserCode] = useState('');
   const [password, setPassword] = useState('');
   const [userCodeError, setUserCodeError] = useState('');
   const [passwordError, setPasswordError] = useState('');
+  const [submitError, setSubmitError] = useState('');
+  const [submitting, setSubmitting] = useState(false);
   const [languageOpen, setLanguageOpen] = useState(false);
   
   const currentLanguage = useMemo(
@@ -37,10 +41,9 @@ export default function LoginScreen({ navigation }: Props) {
     await i18n.changeLanguage(code);
   };
 
-  const filed_required = t('auth.fieldRequired');
-
   const handleLogin = async () => {
     let hasError = false;
+    setSubmitError('');
 
     if (!userCode.trim()) {
       setUserCodeError(t('auth.fieldRequired'));
@@ -60,7 +63,24 @@ export default function LoginScreen({ navigation }: Props) {
       return;
     }
 
-    console.log(userCode, password);
+    setSubmitting(true);
+    try {
+      await signIn({ user_code: userCode.trim(), password });
+    } catch (err: any) {
+      const rawMessage =
+        err?.response?.data?.detail || err?.response?.data?.message || err?.message || 'Login failed';
+
+      if (String(rawMessage).toLowerCase().includes('network')) {
+        setSubmitError(
+          'Network error: không gọi được API. Nếu chạy trên điện thoại/Android emulator, đừng dùng localhost; hãy dùng IP máy (vd 192.168.x.x) hoặc 10.0.2.2 (Android emulator).'
+        );
+        return;
+      }
+
+      setSubmitError(String(rawMessage));
+    } finally {
+      setSubmitting(false);
+    }
   };
 
   const handleUserCodeChange = (value: string) => {
@@ -68,12 +88,18 @@ export default function LoginScreen({ navigation }: Props) {
     if (userCodeError) {
       setUserCodeError('');
     }
+    if (submitError) {
+      setSubmitError('');
+    }
   };
 
   const handlePasswordChange = (value: string) => {
     setPassword(value);
     if (passwordError) {
       setPasswordError('');
+    }
+    if (submitError) {
+      setSubmitError('');
     }
   };
 
@@ -146,8 +172,17 @@ export default function LoginScreen({ navigation }: Props) {
             />
           </View>
 
-          <TouchableOpacity style={styles.loginButton} onPress={handleLogin} activeOpacity={0.85}>
-            <Text style={styles.loginButtonText}>{t('auth.loginButton')}</Text>
+          {!!submitError && <Text style={styles.submitError}>{submitError}</Text>}
+
+          <TouchableOpacity
+            style={[styles.loginButton, submitting && styles.loginButtonDisabled]}
+            onPress={handleLogin}
+            activeOpacity={0.85}
+            disabled={submitting}
+          >
+            <Text style={styles.loginButtonText}>
+              {submitting ? t('auth.loginButton') + '...' : t('auth.loginButton')}
+            </Text>
           </TouchableOpacity>
 
           <TouchableOpacity onPress={() => navigation.navigate('ForgotPassword')} activeOpacity={0.8}>
@@ -283,6 +318,12 @@ const styles = StyleSheet.create({
     color: 'red',
     fontSize: 12,
   },
+  submitError: {
+    color: '#dc2626',
+    fontSize: 13,
+    fontWeight: '600',
+    marginBottom: 12,
+  },
   forgotPassword: {
     fontSize: 14,
     fontWeight: '600',
@@ -297,6 +338,9 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     justifyContent: 'center',
     marginBottom: 20,
+  },
+  loginButtonDisabled: {
+    opacity: 0.7,
   },
   loginButtonText: {
     fontSize: 16,

@@ -83,15 +83,15 @@ const vi = {
     },
     usersPage: {
       title: "Quản lý người dùng",
-      importButton: "Import danh sách {{role}}",
+      importButton: "Nhập danh sách {{role}}",
       importProcessing: "Đang xử lý...",
-      importSuccess: "Đã import {{count}} người dùng cho {{role}}.",
+      importSuccess: "Đã Nhập {{count}} người dùng cho {{role}}.",
       importErrorNoData: "Không tìm thấy dữ liệu hợp lệ trong tệp.",
       importHint:
         "Tệp XLSX phải có cột user_code, full_name và email; các cột khác sẽ bị bỏ qua.",
       importModal: {
-        title: "Import danh sách sinh viên / giảng viên",
-        description: "Chọn file Excel để xem trước dữ liệu trước khi tạo tài khoản.",
+        title: "Nhập danh sách sinh viên / giảng viên",
+        description: "Chọn tệp Excel để xem trước dữ liệu trước khi tạo tài khoản.",
         searchPlaceholder: "Tìm theo mã, tên hoặc email",
         statusLabel: "Trạng thái bản ghi",
         statusOptions: {
@@ -117,7 +117,7 @@ const vi = {
         pagination: "Hàng mỗi trang",
         footer: {
           cancel: "Hủy",
-          import: "Import user",
+          import: "Nhập user",
         },
         errors: {
           missingUserCode: "Thiếu mã người dùng",
@@ -132,6 +132,20 @@ const vi = {
           success: "Tạo {{count}} người dùng, bỏ qua {{skipped}} dòng lỗi.",
           error: "Import thất bại. {{message}}",
         },
+      },
+      actions: {
+        subtitle: "Xem, tạo và cập nhật tài khoản với toàn quyền kiểm soát.",
+        rows: "người dùng",
+        filtered: "Kết quả đã lọc",
+        createButton: "Tạo người dùng",
+        createDialogTitle: "Tạo người dùng",
+        editDialogTitle: "Chỉnh sửa người dùng",
+        saveButton: "Lưu thay đổi",
+        created: "Đã tạo người dùng {{user}}.",
+        updated: "Đã cập nhật người dùng {{user}}.",
+        deleted: "Đã xóa người dùng {{user}}.",
+        error: "Không thể lưu thay đổi.",
+        deleteConfirm: "Xóa người dùng {{user}}? Hành động này không thể hoàn tác.",
       },
       roleSelector: {
         label: "Gán vai trò",
@@ -149,12 +163,12 @@ const vi = {
         optionLabel: "{{role}}",
       },
       subscriptionDrawer: {
-        title: "Đăng ký gần nhất",
-        subtitle: "Thông tin đăng ký gần nhất của người dùng đang chọn.",
+        title: "Gói gửi xe đăng ký gần nhất",
+        subtitle: "Thông tin gói gửi xe đăng ký gần nhất của người dùng đang chọn.",
         selectUser: "Chọn người dùng để xem đăng ký của họ.",
-        loading: "Đang tải dữ liệu đăng ký…",
+        loading: "Đang tải dữ liệu…",
         current: "Đăng ký hiện tại",
-        noSubscription: "Chưa có đăng ký nào cho người dùng này.",
+        noSubscription: "Người dùng này chưa đăng ký gói gửi xe nào.",
         noPaymentPlan: "Chưa có gói thanh toán",
         duration: "Thời hạn",
         total: "Tổng số tiền",
@@ -178,10 +192,10 @@ const vi = {
         role: "Vai trò",
         createdAt: "Tạo lúc",
         updatedAt: "Cập nhật lúc",
-        actions: "Actions",
+        actions: "Chức năng",
         status: {
           active: "Đang hoạt động",
-          inactive: "Đã xoá",
+          inactive: "Không hoạt động",
         },
       },
       filters: {
@@ -207,12 +221,12 @@ const vi = {
       columns: {
         id: "Mã phương tiện",
         userCode: "Mã người dùng",
-        type: "Loại",
+        type: "Loại phương tiện",
         licensePlate: "Biển số",
-        qrCode: "QR code",
+        qrCode: "Mã QR",
         status: "Trạng thái",
-        createdAt: "Tạo lúc",
-        updatedAt: "Cập nhật lúc",
+        createdAt: "Thời điểm tạo",
+        updatedAt: "Thời điểm cập nhật",
       },
       status: {
         active: "Đang hoạt động",
@@ -242,7 +256,7 @@ const vi = {
       },
     },
     subscriptionsPage: {
-      title: "Đăng ký người dùng",
+      title: "Đăng ký gửi xe",
       description: "Tổng quan các gói đăng ký đã triển khai trong hệ thống.",
       searchPlaceholder: "Tìm theo người dùng, gói, hoặc học kỳ",
       filters: {
@@ -339,7 +353,7 @@ const vi = {
         userRoles: "Vai trò người dùng",
         terms: "Học kỳ",
         plans: "Gói đăng ký",
-        subscriptions: "Đăng ký người dùng",
+        subscriptions: "Đăng ký gói gửi xe",
         parkingSessions: "Phiên gửi xe",
         invoices: "Hóa đơn",
         paymentTransactions: "Giao dịch thanh toán",

@@ -24,7 +24,7 @@ import {
   getStoredLanguage,
   supportedLanguages,
   setStoredLanguage,
-} from "../utils/language";
+} from "../ultis/language";
 import { loginTranslations } from "../translations/login";
 import { RuleTranslations } from "../translations/rule";
 import { FormInput } from "../components/FormInput";

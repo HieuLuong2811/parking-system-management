@@ -20,9 +20,10 @@ import { useTranslation } from 'react-i18next';
 import { SoftDataGrid } from '../components/common/SoftDataGrid';
 import { DrawerUserSubscription } from '../components/users/DrawerUserSubscription';
 import { useSubscriptionDetails, useSubscriptionSearch } from '../api/subscriptions';
-import type { AdminUser, UserSubscriptionDetailRecord } from '../api/types';
+import type {  UserSubscriptionDetailRecord } from '../api/types';
 import { formatCurrency, formatDateTime } from '../ultis/format';
 import type { GridColDef } from '@mui/x-data-grid';
+import { useNavigate } from 'react-router-dom';
 
 const statusOptions = ['ALL', 'ACTIVE', 'EXPIRED', 'SUSPENDED'] as const;
 
@@ -40,14 +41,12 @@ export const SubscriptionsPage: React.FC = () => {
   const [searchTerm, setSearchTerm] = useState('');
   const [statusFilter, setStatusFilter] = useState<typeof statusOptions[number]>('ALL');
   const [drawerOpen, setDrawerOpen] = useState(false);
-  const [selectedUser, setSelectedUser] = useState<AdminUser | null>(null);
+  const [selectedUser, setSelectedUser] = useState<UserSubscriptionDetailRecord | null>(null);
+  const navigate = useNavigate();
 
   const { data: subscriptionDetails = [], isLoading, isError } = useSubscriptionDetails();
-  const {
-    data: subscriptionSearchRows = [],
-    raw: subscriptionSearchRaw = [],
-    isLoading: isSearchLoading,
-  } = useSubscriptionSearch();
+
+  const { data: subscriptionRows = [], isLoading: isSubscriptionsLoading } = useSubscriptionSearch();
 
   const normalizedQuery = useMemo(() => searchTerm.trim().toLowerCase(), [searchTerm]);
 
@@ -73,23 +72,7 @@ export const SubscriptionsPage: React.FC = () => {
     });
   }, [subscriptionDetails, normalizedQuery, statusFilter]);
 
-  const userMap = useMemo(() => {
-    const map = new Map<string, AdminUser>();
-    subscriptionSearchRaw.forEach((row) => {
-    console.log('row.user_code', row.user_code);
-    console.log('row.user', row.user);
-
-    if (row.user) {
-      map.set(String(row.user_code), row.user);
-    }
-  });
-
-  console.log('subscriptionSearchRaw', subscriptionSearchRaw);
-  console.log('userMap entries', Array.from(map.entries()));
-    return map;
-  }, [subscriptionSearchRaw]);
-
-  const openDrawerForUser = useCallback((user: AdminUser) => {
+  const openDrawerForUser = useCallback((user: UserSubscriptionDetailRecord) => {
     setSelectedUser(user);
     setDrawerOpen(true);
   }, []);
@@ -99,9 +82,12 @@ export const SubscriptionsPage: React.FC = () => {
     setSelectedUser(null);
   }, []);
 
-  const handleViewSubscriptions = useCallback(() => {
+  const handleViewSubscriptions = useCallback((subscription_id: string) => {
     closeDrawer();
-  }, [closeDrawer]);
+    if (subscription_id) {
+      navigate('/subscriptions/' + subscription_id + '/invoices');
+    }
+  }, [closeDrawer, navigate]);
 
   const columns = useMemo<GridColDef<UserSubscriptionDetailRecord>[]>(() => {
     return [
@@ -111,15 +97,9 @@ export const SubscriptionsPage: React.FC = () => {
         minWidth: 160,
         flex: 1,
         renderCell: (params) => {
-          const user = userMap.get(params.row.user_code);
           return (
             <Stack spacing={0.5}>
               <Typography variant="subtitle2">{params.value}</Typography>
-              {user?.full_name && (
-                <Typography variant="body2" color="text.secondary">
-                  {user.full_name}
-                </Typography>
-              )}
             </Stack>
           );
         },
@@ -197,24 +177,17 @@ export const SubscriptionsPage: React.FC = () => {
         headerName: t('subscriptionsPage.columns.actions', 'Actions'),
         minWidth: 120,
         sortable: false,
-        renderCell: (params) => {
-          const user = userMap.get(params.row.user_code);
-          console.log('user', user);
-          console.log('row user_code', params.row.user_code);
-          console.log('userMap key', Array.from(userMap.keys()));
-          return (
-            <IconButton
+        renderCell: (params) => (
+           <IconButton
               size="small"
-              onClick={() => user && openDrawerForUser(user)}
-              disabled={!user}
+              onClick={() => openDrawerForUser(params.row as UserSubscriptionDetailRecord)}
             >
               <FormatListBulletedIcon fontSize="small" />
             </IconButton>
-          );
-        },
+        ),
       },
     ];
-  }, [t, userMap, openDrawerForUser]);
+  }, [t, openDrawerForUser]);
 
   const handleClearFilters = () => {
     setSearchTerm('');
@@ -290,8 +263,8 @@ export const SubscriptionsPage: React.FC = () => {
         >
           <DrawerUserSubscription
             selectedUser={selectedUser}
-            subscriptionRows={subscriptionSearchRows}
-            isLoading={isSearchLoading}
+            subscriptionRows={subscriptionRows || []}
+            isLoading={isSubscriptionsLoading}
             onViewSubscriptions={handleViewSubscriptions}
           />
         </Box>

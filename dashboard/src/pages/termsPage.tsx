@@ -8,17 +8,13 @@ import { useTranslation } from 'react-i18next';
 
 import { AcademicTermModal, type AcademicTermFormPayload } from '../components/modals/AcademicTermModal';
 import { ResourceTableLayout } from '../components/resource/resourceTableLayout';
-import { createNotification } from '../api/notifications';
 import {
   useAdminAcademicTerms,
   useCreateAcademicTerm,
   useDeleteAcademicTerm,
   useUpdateAcademicTerm,
 } from '../api/terms';
-import { useFetchUsers } from '../api/users';
-import { useSubscriptionSearch } from '../api/subscriptions';
 import type { AcademicTermRecord } from '../api/types';
-import { useAuth } from '../contexts/useAuth';
 import { formatDateTime } from '../ultis/format';
 
 type ToastSeverity = 'success' | 'error';
@@ -35,45 +31,10 @@ export const TermsPage: React.FC = () => {
   const [toast, setToast] = useState<{ message: string; severity: ToastSeverity } | null>(null);
 
   const { data: terms = [], isLoading, isError, error } = useAdminAcademicTerms();
-  const { data: usersWithRoles = [] } = useFetchUsers();
-  const { raw: subscriptionRows = [] } = useSubscriptionSearch();
-  const { user: currentUser } = useAuth();
-
-  const termUsage = useMemo(() => new Set(subscriptionRows.map((item) => item.term_id)), [subscriptionRows]);
-  const userCodes = useMemo(() => usersWithRoles.map((record) => record.user.user_code).filter(Boolean), [usersWithRoles]);
-
-  const notifyAllUsers = useCallback(
-    async (title: string, content: string) => {
-      if (!userCodes.length) {
-        return;
-      }
-      const actorId = currentUser?.user_code ?? 'system';
-      try {
-        await Promise.all(
-          userCodes.map((receiver_id) =>
-            createNotification({
-              actor_id: actorId,
-              receiver_id,
-              title,
-              content,
-            })
-          )
-        );
-      } catch (notifyError) {
-        console.error('Failed to send notifications', notifyError);
-      }
-    },
-    [currentUser?.user_code, userCodes]
-  );
 
   const { mutateAsync: createTermAsync } = useCreateAcademicTerm();
   const { mutateAsync: updateTermAsync } = useUpdateAcademicTerm();
   const { mutateAsync: deleteTermAsync } = useDeleteAcademicTerm();
-
-  const isTermUsed = useCallback(
-    (termId: string) => termUsage.has(termId),
-    [termUsage]
-  );
 
   const handleOpenNew = useCallback(() => {
     setEditingTerm(null);
@@ -97,12 +58,6 @@ export const TermsPage: React.FC = () => {
         if (editingTerm) {
           await updateTermAsync({ id: editingTerm.id, payload });
           setToast({ severity: 'success', message: 'Academic term updated.' });
-          if (isTermUsed(editingTerm.id) && payload.term_name !== editingTerm.term_name) {
-            await notifyAllUsers(
-              'Academic term renamed',
-              `The term "${editingTerm.term_name}" has been renamed to "${payload.term_name}".`
-            );
-          }
         } else {
           await createTermAsync(payload);
           setToast({ severity: 'success', message: 'Academic term created.' });
@@ -117,15 +72,11 @@ export const TermsPage: React.FC = () => {
         setIsSaving(false);
       }
     },
-    [createTermAsync, editingTerm, handleCloseModal, isTermUsed, notifyAllUsers, updateTermAsync]
+    [createTermAsync, editingTerm, handleCloseModal, updateTermAsync]
   );
 
   const handleDeleteTerm = useCallback(
     async (term: AcademicTermRecord) => {
-      if (isTermUsed(term.id)) {
-        setToast({ severity: 'error', message: 'Cannot delete a term that is still in use.' });
-        return;
-      }
       const confirmed = window.confirm('Are you sure you want to delete this academic term?');
       if (!confirmed) {
         return;
@@ -140,7 +91,7 @@ export const TermsPage: React.FC = () => {
         });
       }
     },
-    [deleteTermAsync, isTermUsed]
+    [deleteTermAsync]
   );
 
   const columns = useMemo<GridColDef<AcademicTermRecord>[]>(() => {
@@ -166,7 +117,6 @@ export const TermsPage: React.FC = () => {
         width: 150,
         renderCell: (params) => {
           const term = params.row as AcademicTermRecord;
-          const disabled = isTermUsed(term.id);
           return (
             <Box sx={{ display: 'flex', gap: 0.5 }}>
               <Tooltip title="Edit term">
@@ -174,19 +124,19 @@ export const TermsPage: React.FC = () => {
                   <EditIcon fontSize="small" />
                 </IconButton>
               </Tooltip>
-              <Tooltip title={disabled ? 'Term is in use' : 'Delete term'}>
+              {/* <Tooltip title={disabled ? 'Term is in use' : 'Delete term'}> */}
                 <span>
-                  <IconButton size="small" onClick={() => handleDeleteTerm(term)} disabled={disabled} aria-label="delete">
+                  <IconButton size="small" onClick={() => handleDeleteTerm(term)} aria-label="delete">
                     <DeleteIcon fontSize="small" />
                   </IconButton>
                 </span>
-              </Tooltip>
+              {/* </Tooltip> */}
             </Box>
           );
         },
       },
     ];
-  }, [handleDeleteTerm, handleStartEdit, isTermUsed]);
+  }, [handleDeleteTerm, handleStartEdit]);
 
   const searchKeys = useMemo(
     () => (row: AcademicTermRecord) => [row.id, row.term_name, row.start_date, row.end_date],
@@ -229,7 +179,7 @@ export const TermsPage: React.FC = () => {
         onSubmit={handleSubmitTerm}
         initialValue={editingTerm}
         submitting={isSaving}
-        disableDates={Boolean(editingTerm && isTermUsed(editingTerm.id))}
+        // disableDates={Boolean(editingTerm && isTermUsed(editingTerm.id))}
       />
 
       <Snackbar

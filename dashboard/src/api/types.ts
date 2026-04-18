@@ -160,3 +160,11 @@ export type BillingEventLogRecord = {
   meta_data?: Record<string, unknown> | null;
   created_at: string;
 };
+
+export type PaginatedResponse<T = unknown> = {
+  data: T[];
+  total: number;
+  page: number;
+  limit: number;
+  total_pages: number;
+};

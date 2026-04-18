@@ -2,7 +2,8 @@ import { useMemo } from 'react';
 import { useQuery } from '@tanstack/react-query';
 
 import { httpGet } from './httpClient';
-import type { AdminUser, InvoiceAdminRecord, InvoiceSearchRow } from './types';
+import { fetchAllPaginated } from './paginated';
+import type { AdminUser, InvoiceAdminRecord, InvoiceSearchRow, UserWithRoles } from './types';
 
 export type InvoiceSearchFilters = {
   query?: string;
@@ -11,7 +12,10 @@ export type InvoiceSearchFilters = {
 };
 
 const fetchInvoices = () => httpGet<InvoiceAdminRecord[]>('/invoices');
-const fetchUsers = () => httpGet<AdminUser[]>('/users');
+const fetchUsers = async () => {
+  const usersWithRoles = await fetchAllPaginated<UserWithRoles>('/users');
+  return usersWithRoles.map((item) => item.user).filter(Boolean) as AdminUser[];
+};
 
 export const useInvoiceSearch = (filters: InvoiceSearchFilters = {}) => {
   const invoicesQuery = useQuery({

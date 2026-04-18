@@ -245,7 +245,7 @@ export const ImportUsersDialog: React.FC<ImportUsersDialogProps> = ({
   };
 
   return (
-    <Dialog open={open} fullWidth maxWidth="lg" onClose={onClose}>
+    <Dialog open={open} fullWidth maxWidth="lg">
       <DialogTitle>{t('usersPage.importModal.title', { role: roleLabel })}</DialogTitle>
       <DialogContent dividers sx={{ display: 'flex', flexDirection: 'column', gap: 2 }}>
         <Snackbar open={Boolean(loadError)} autoHideDuration={6000} onClose={() => setLoadError('')} anchorOrigin={{ vertical: 'top', horizontal: 'right' }}>

@@ -1,4 +1,4 @@
-import { joinUrl } from "../utils/url";
+import { joinUrl } from "../ultis/url";
 
 const defaultDashboard = import.meta.env.VITE_DASHBOARD_URL;
 const defaultApi = import.meta.env.VITE_API_URL;

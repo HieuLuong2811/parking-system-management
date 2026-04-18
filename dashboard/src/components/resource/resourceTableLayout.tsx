@@ -26,6 +26,7 @@ interface ResourceTableLayoutProps<RowType extends Record<string, unknown>> {
   emptyMessage?: string;
   maxHeight?: number | string;
   getRowId?: RowIdentifier<RowType>;
+  footer?: React.ReactNode;
 }
 
 export const ResourceTableLayout = <RowType extends Record<string, unknown>>({
@@ -46,6 +47,7 @@ export const ResourceTableLayout = <RowType extends Record<string, unknown>>({
   emptyMessage = 'No records found',
   maxHeight = 460,
   getRowId,
+  footer,
 }: ResourceTableLayoutProps<RowType>) => {
   const normalizedSearch = searchTerm.trim().toLowerCase();
 
@@ -133,6 +135,8 @@ export const ResourceTableLayout = <RowType extends Record<string, unknown>>({
           emptyMessage={emptyMessage}
         />
       </Box>
+
+      {footer && <Box sx={{ mt: 1 }}>{footer}</Box>}
     </Box>
   );
 };

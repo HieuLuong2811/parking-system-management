@@ -1,4 +1,5 @@
-from fastapi import APIRouter, Depends, HTTPException
+from app.utils.pagination import PaginatedResponse
+from fastapi import APIRouter, Depends, HTTPException, Query
 from sqlalchemy.ext.asyncio import AsyncSession
 from app.db.session import get_db
 from app.models.auth import UserBulkImportRequest
@@ -30,12 +31,14 @@ async def import_users(
     return await UserController.import_users_ctrl(role_code, payload, db)
 
 
-@router.get("/", response_model=list[UserWithRoles])
+@router.get("/", response_model=PaginatedResponse[UserWithRoles])
 async def get_all_users(
     search: str | None = None,
     phone: str | None = None,
     role: str | None = None,
     is_deleted: bool | None = None,
+    page: int = Query(1, ge=1, description='Page number'),
+    limit: int = Query(5, ge=1, le=100, description='Number of items per page'),
     db: AsyncSession = Depends(get_db),
 ):
     users = await UserController.get_all_users_ctrl(
@@ -44,6 +47,8 @@ async def get_all_users(
         phone=phone,
         role=role,
         is_deleted=is_deleted,
+        page=page,
+        limit=limit
     )
     return users
 

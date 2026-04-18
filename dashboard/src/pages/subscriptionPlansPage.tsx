@@ -8,17 +8,13 @@ import { useTranslation } from 'react-i18next';
 
 import { ResourceTableLayout } from '../components/resource/resourceTableLayout';
 import { SubscriptionPlanModal, type SubscriptionPlanFormPayload } from '../components/modals/SubscriptionPlanModal';
-import { createNotification } from '../api/notifications';
 import {
   useAdminSubscriptionPlans,
   useCreateSubscriptionPlan,
   useDeleteSubscriptionPlan,
   useUpdateSubscriptionPlan,
 } from '../api/subscriptionPlans';
-import { useFetchUsers } from '../api/users';
-import { useSubscriptionSearch } from '../api/subscriptions';
 import type { SubscriptionPlanRecord } from '../api/types';
-import { useAuth } from '../contexts/useAuth';
 import { formatCurrency, formatDateTime } from '../ultis/format';
 
 type ToastSeverity = 'success' | 'error';
@@ -35,45 +31,10 @@ export const SubscriptionPlansPage: React.FC = () => {
   const { t } = useTranslation();
 
   const { data: plans = [], isLoading, isError, error } = useAdminSubscriptionPlans();
-  const { data: usersWithRoles = [] } = useFetchUsers();
-  const { raw: subscriptionRows = [] } = useSubscriptionSearch();
-  const { user: currentUser } = useAuth();
-
-  const planUsage = useMemo(() => new Set(subscriptionRows.map((item) => item.sub_plan_id)), [subscriptionRows]);
-  const userCodes = useMemo(() => usersWithRoles.map((record) => record.user.user_code).filter(Boolean), [usersWithRoles]);
-
-  const notifyAllUsers = useCallback(
-    async (title: string, content: string) => {
-      if (!userCodes.length) {
-        return;
-      }
-      const actorId = currentUser?.user_code ?? 'system';
-      try {
-        await Promise.all(
-          userCodes.map((receiver_id) =>
-            createNotification({
-              actor_id: actorId,
-              receiver_id,
-              title,
-              content,
-            })
-          )
-        );
-      } catch (notifyError) {
-        console.error('Failed to send notifications', notifyError);
-      }
-    },
-    [currentUser?.user_code, userCodes]
-  );
 
   const { mutateAsync: createPlanAsync } = useCreateSubscriptionPlan();
   const { mutateAsync: updatePlanAsync } = useUpdateSubscriptionPlan();
   const { mutateAsync: deletePlanAsync } = useDeleteSubscriptionPlan();
-
-  const isPlanUsed = useCallback(
-    (planId: string) => planUsage.has(planId),
-    [planUsage]
-  );
 
   const handleOpenNew = useCallback(() => {
     setEditingPlan(null);
@@ -97,12 +58,6 @@ export const SubscriptionPlansPage: React.FC = () => {
         if (editingPlan) {
           await updatePlanAsync({ id: editingPlan.id, payload });
           setToast({ severity: 'success', message: t('subscriptionPlansPage.toast.updated') });
-          if (isPlanUsed(editingPlan.id) && payload.plan_name !== editingPlan.plan_name) {
-            await notifyAllUsers(
-              'Subscription plan renamed',
-              `The plan "${editingPlan.plan_name}" is now called "${payload.plan_name}".`
-            );
-          }
         } else {
           await createPlanAsync(payload);
           setToast({ severity: 'success', message: t('subscriptionPlansPage.toast.created') });
@@ -117,15 +72,11 @@ export const SubscriptionPlansPage: React.FC = () => {
         setIsSaving(false);
       }
     },
-    [createPlanAsync, editingPlan, handleCloseModal, isPlanUsed, notifyAllUsers, updatePlanAsync, t]
+    [createPlanAsync, editingPlan, handleCloseModal, updatePlanAsync, t]
   );
 
   const handleDeletePlan = useCallback(
     async (plan: SubscriptionPlanRecord) => {
-      if (isPlanUsed(plan.id)) {
-        setToast({ severity: 'error', message: t('subscriptionPlansPage.toast.deleteLocked') });
-        return;
-      }
       const confirmed = window.confirm(t('subscriptionPlansPage.toast.deleteConfirm'));
       if (!confirmed) {
         return;
@@ -140,7 +91,7 @@ export const SubscriptionPlansPage: React.FC = () => {
         });
       }
     },
-    [deletePlanAsync, isPlanUsed, t]
+    [deletePlanAsync, t]
   );
 
   const columns = useMemo<GridColDef<SubscriptionPlanRecord>[]>(() => {
@@ -177,7 +128,6 @@ export const SubscriptionPlansPage: React.FC = () => {
         width: 150,
         renderCell: (params) => {
           const plan = params.row as SubscriptionPlanRecord;
-          const disabled = isPlanUsed(plan.id);
           return (
             <Box sx={{ display: 'flex', gap: 0.5 }}>
               <Tooltip title={t('subscriptionPlansPage.tooltips.edit')}>
@@ -185,19 +135,19 @@ export const SubscriptionPlansPage: React.FC = () => {
                   <EditIcon fontSize="small" />
                 </IconButton>
               </Tooltip>
-              <Tooltip title={disabled ? t('subscriptionPlansPage.tooltips.locked') : t('subscriptionPlansPage.tooltips.delete')}>
+              {/* <Tooltip title={disabled ? t('subscriptionPlansPage.tooltips.locked') : t('subscriptionPlansPage.tooltips.delete')}> */}
                 <span>
-                  <IconButton size="small" onClick={() => handleDeletePlan(plan)} disabled={disabled} aria-label="delete">
+                  <IconButton size="small" onClick={() => handleDeletePlan(plan)} aria-label="delete">
                     <DeleteIcon fontSize="small" />
                   </IconButton>
                 </span>
-              </Tooltip>
+              {/* </Tooltip> */}
             </Box>
           );
         },
       },
     ];
-  }, [handleDeletePlan, handleStartEdit, isPlanUsed, t]);
+  }, [handleDeletePlan, handleStartEdit, t]);
 
   const searchKeys = useMemo(
     () => (row: SubscriptionPlanRecord) => [row.id, row.plan_name],
@@ -240,7 +190,7 @@ export const SubscriptionPlansPage: React.FC = () => {
         onSubmit={handleSubmitPlan}
         initialValue={editingPlan}
         submitting={isSaving}
-        disablePriceField={Boolean(editingPlan && isPlanUsed(editingPlan.id))}
+        // disablePriceField={Boolean(editingPlan && isPlanUsed(editingPlan.id))}
       />
 
       <Snackbar

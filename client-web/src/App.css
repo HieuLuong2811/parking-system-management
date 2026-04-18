@@ -2,6 +2,14 @@
   color-scheme: light;
   font-family: 'Inter', 'Segoe UI', system-ui, sans-serif;
   background-color: #eef2f7;
+  --ps-color-bg: #eeeff0;
+  --ps-color-surface: #ffffff;
+  --ps-color-ink: #0f172a;
+  --ps-color-forest: #0c2b1d;
+  --ps-color-muted: #475569;
+  --ps-color-border: rgba(15, 23, 52, 0.15);
+  --ps-color-brand: #1846ff;
+  --ps-color-danger: #ef4444;
 }
 
 * {
@@ -28,14 +36,14 @@ body,
 #root {
   margin: 0;
   min-height: 100vh;
-  background: #eeeff0;
+  background: var(--ps-color-bg);
 }
 
 .client-shell {
   min-height: 100vh;
   display: flex;
   flex-direction: column;
-  background-color: #eeeff0;
+  background-color: var(--ps-color-bg);
 }
 
 .primary-navbar {
@@ -46,13 +54,18 @@ body,
 }
 
 .primary-navbar.compact {
-  padding: 0.85rem 0;
   width: 100%;
 }
 
 .navbar-inner {
-  max-width: 1600px;
-  margin: 0 auto;
+  padding: 12px 24px;
+  width: 100%;
+}
+
+.navbar-content {
+  display: grid;
+  grid-template-columns: 1fr auto 1fr;
+  align-items: center;
 }
 
 .navbar-links {
@@ -65,17 +78,16 @@ body,
 
 .navbar-link {
   text-transform: none;
-  color: #0f172a;
+  color: var(--ps-color-ink);
   transition: color 0.2s;
 }
 
 .navbar-link:hover {
-  color: #1846ff;
+  color: var(--ps-color-brand);
 }
 
 .navbar-link--active {
-  color: #1846ff;
-  border-bottom: 2px solid #1846ff;
+  color: var(--ps-color-brand) !important;
 }
 
 .nav-actions {
@@ -99,7 +111,7 @@ body,
   font-weight: 700;
   font-size: 1.5rem;
   margin-left: 0.75rem;
-  color: #0c2b1d;
+  color: var(--ps-color-forest);
   text-transform: uppercase;
 }
 
@@ -116,7 +128,7 @@ body,
   display: flex;
   align-items: center;
   gap: 0.4rem;
-  border: 1px solid rgba(15, 23, 52, 0.15);
+  border: 1px solid var(--ps-color-border);
 }
 
 .language-select.compact {
@@ -173,8 +185,42 @@ body,
   text-transform: none;
   padding: 0.35rem 1rem;
   border-radius: 999px;
-  color: #0c2b1d;
+  color: var(--ps-color-forest);
+  max-width: 100%;
+}
+
+.MuiButton-root.user-select {
+  color: var(--ps-color-muted);
+}
+
+.user-select .MuiButton-endIcon {
+  margin-left: 8px;
+  align-self: center;
+}
+
+.user-select .user-select-content {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+  line-height: 1.2;
+  min-width: 0;
+}
+
+.user-select .user-select-name {
+  font-size: 1rem;
   font-weight: 600;
+}
+
+.user-select .user-select-role {
+  font-size: 0.875rem;
+  font-weight: 400;
+}
+
+.user-select .user-select-name,
+.user-select .user-select-role {
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
 }
 
 .profile-dashboard-shell {

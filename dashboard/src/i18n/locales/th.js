@@ -71,6 +71,9 @@ const th = {
           valid: "ถูกต้อง",
           invalid: "ไม่ถูกต้อง",
         },
+        selectFile: "เลือกไฟล์",
+        selectedFile: "ไฟล์ที่เลือก: {{name}}",
+        noRows: "ยังไม่มีข้อมูล. เลือกไฟล์เพื่อดูตัวอย่างแถว.",
         tableHeaders: {
           userCode: "รหัสผู้ใช้",
           fullName: "ชื่อ-สกุล",
@@ -79,11 +82,42 @@ const th = {
           status: "สถานะ",
           errors: "ข้อผิดพลาด",
         },
+        statusTags: {
+          valid: "พร้อมใช้งาน",
+          invalid: "ต้องตรวจสอบ",
+        },
+        pagination: "จำนวนแถวต่อหน้า",
+        footer: {
+          cancel: "ยกเลิก",
+          import: "นำเข้าผู้ใช้",
+        },
         errors: {
           missingUserCode: "ไม่มีรหัสผู้ใช้",
           missingEmail: "ไม่มีอีเมล",
           invalidEmail: "อีเมลไม่ถูกต้อง",
         },
+        warning: {
+          partial: "{{invalidCount}} แถวมีข้อผิดพลาดและจะถูกข้าม",
+        },
+        toast: {
+          noValidRows: "ไม่มีข้อมูลที่ถูกต้องสำหรับนำเข้า กรุณาตรวจสอบไฟล์",
+          success: "สร้างผู้ใช้ {{count}} ราย ข้าม {{skipped}} แถวที่ไม่ถูกต้อง",
+          error: "การนำเข้าล้มเหลว {{message}}",
+        },
+      },
+      actions: {
+        subtitle: "ตรวจสอบ สร้าง และแก้ไขบัญชีได้อย่างเต็มรูปแบบ",
+        rows: "ผู้ใช้",
+        filtered: "ผลลัพธ์ที่กรองแล้ว",
+        createButton: "สร้างผู้ใช้",
+        createDialogTitle: "สร้างผู้ใช้",
+        editDialogTitle: "แก้ไขผู้ใช้",
+        saveButton: "บันทึกการเปลี่ยนแปลง",
+        created: "สร้างผู้ใช้ {{user}} แล้ว",
+        updated: "อัปเดตผู้ใช้ {{user}} แล้ว",
+        deleted: "ลบผู้ใช้ {{user}} แล้ว",
+        error: "ไม่สามารถบันทึกการเปลี่ยนแปลงได้",
+        deleteConfirm: "ลบผู้ใช้ {{user}} ใช่หรือไม่ การกระทำนี้ไม่สามารถย้อนกลับได้",
       },
       roleSelector: {
         label: "กำหนดบทบาท",
@@ -101,7 +135,7 @@ const th = {
         optionLabel: "{{role}}",
       },
       subscriptionDrawer: {
-        title: "การสมัครล่าสุด",
+        title: "แพ็กเกจจอดรถล่าสุด",
         subtitle: "แสดงข้อมูลสมาชิกล่าสุดของผู้ใช้ที่เลือก",
         selectUser: "เลือกผู้ใช้เพื่อดูข้อมูลการสมัคร",
         loading: "กำลังโหลดข้อมูลการสมัคร…",
@@ -133,7 +167,7 @@ const th = {
         actions: "การดำเนินการ",
         status: {
           active: "กำลังใช้งาน",
-          inactive: "ถูกลบ",
+          inactive: "ไม่ใช้งาน",
         },
       },
       filters: {

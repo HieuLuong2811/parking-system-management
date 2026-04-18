@@ -85,7 +85,7 @@ class StripePaymentService:
                 user_code=user_code,
                 subscription_id=None,
                 amount=amount,
-                payment_method=PaymentMethod.SYSTEM,
+                payment_method=PaymentMethod.STRIPE,
                 status=InvoiceStatus.PENDING,
                 metadata=metadata,
             ),

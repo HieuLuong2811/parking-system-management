@@ -20,7 +20,6 @@ import {
   Typography,
 } from '@mui/material';
 import type { GridColDef } from '@mui/x-data-grid';
-import AddIcon from '@mui/icons-material/Add';
 import DeleteIcon from '@mui/icons-material/Delete';
 import EditIcon from '@mui/icons-material/Edit';
 import FormatListBulletedIcon from '@mui/icons-material/FormatListBulleted';
@@ -40,7 +39,7 @@ import {
   useFetchUsers,
   useUpdateUser,
 } from '../api/users';
-import type { AdminUser } from '../api/types';
+import type { AdminUser, PaginatedResponse, RoleSummary, UserSubscriptionDetailRecord, UserWithRoles } from '../api/types';
 import { useSubscriptionSearch } from '../api/subscriptions';
 import { useAdminRoles } from '../api/roles';
 import { defaultUserFormValues } from '../constant/userForm';
@@ -50,8 +49,6 @@ type ToastState = {
   severity: 'success' | 'error';
   message: string;
 } | null;
-
-type Anchor = 'top' | 'left' | 'bottom' | 'right';
 
 export const UsersPage: React.FC = () => {
   const { t } = useTranslation();
@@ -76,13 +73,8 @@ export const UsersPage: React.FC = () => {
   const buildRequiredError = (field: RequiredUserFormField) =>
     t('validation.requiredField', { field: fieldLabels[field] });
 
-  const [state, setState] = useState<Record<Anchor, boolean>>({
-    top: false,
-    left: false,
-    bottom: false,
-    right: false,
-  });
-  const [selectedUser, setSelectedUser] = useState<AdminUser | null>(null);
+  const [drawerOpen, setDrawerOpen] = useState(false);
+  const [selectedUser, setSelectedUser] = useState<UserSubscriptionDetailRecord | null>(null);
   const [formState, setFormState] = useState<{ open: boolean; mode: UserFormMode; values: UserFormValues }>({
     open: false,
     mode: 'create',
@@ -97,6 +89,10 @@ export const UsersPage: React.FC = () => {
   const [phoneFilter, setPhoneFilter] = useState('');
   const [roleFilter, setRoleFilter] = useState('');
   const [statusTab, setStatusTab] = useState<'active' | 'inactive'>('active');
+
+  const [page, setPage] = useState(0);
+  const [rowsPerPage, setRowsPerPage] = useState(5);
+
   const debouncedSearchTerm = useDebouncedValue(searchTerm, 450);
   const debouncedPhoneFilter = useDebouncedValue(phoneFilter, 450);
   const debouncedRoleFilter = useDebouncedValue(roleFilter, 450);
@@ -105,6 +101,7 @@ export const UsersPage: React.FC = () => {
     setSearchTerm('');
     setPhoneFilter('');
     setRoleFilter('');
+    setPage(0);
   }, []);
 
   const handleTabChange = useCallback((_: React.SyntheticEvent, value: 'active' | 'inactive') => {
@@ -117,62 +114,48 @@ export const UsersPage: React.FC = () => {
       phone: debouncedPhoneFilter || undefined,
       role: debouncedRoleFilter || undefined,
       is_deleted: statusTab === 'inactive',
+      page: page + 1,
+      limit: rowsPerPage,
     }),
-    [debouncedSearchTerm, debouncedPhoneFilter, debouncedRoleFilter, statusTab]
+    [debouncedSearchTerm, debouncedPhoneFilter, debouncedRoleFilter, statusTab, page, rowsPerPage]
   );
 
-  const { data: usersWithRoles = [], isLoading } = useFetchUsers(filters);
+  const { 
+    data: paginatedData, 
+    isLoading 
+  } = useFetchUsers(filters) as unknown as {data: PaginatedResponse<UserWithRoles>, isLoading: boolean};
+
+  const usersWithRoles = useMemo(() => 
+    paginatedData?.data ?? [],
+    [paginatedData]
+  )
+  const totalUsers = paginatedData?.total ?? 0;
+
   const { data: subscriptionRows = [], isLoading: isSubscriptionsLoading } = useSubscriptionSearch();
   const { data: availableRoles = [] } = useAdminRoles();
 
-  const users = useMemo(() => usersWithRoles.map(({ user, roles }) => ({ ...user, roles })), [usersWithRoles]);
+  const users = useMemo(() => 
+    usersWithRoles.map(({ user, roles } : {user: AdminUser, roles: RoleSummary[]}) => ({ ...user, roles })), 
+    [usersWithRoles]
+  );
 
-  const [page, setPage] = useState(0);
-  const [rowsPerPage, setRowsPerPage] = useState(5);
-  const [sortConfig, setSortConfig] = useState<{ field: string; direction: 'asc' | 'desc' } | null>(null);
+  // const [sortConfig, setSortConfig] = useState<{ field: string; direction: 'asc' | 'desc' } | null>(null);
 
-  const toggleDrawer = useCallback((anchor: Anchor, open: boolean) => (event: React.KeyboardEvent | React.MouseEvent) => {
-    if (event.type === 'keydown' && ((event as React.KeyboardEvent).key === 'Tab' || (event as React.KeyboardEvent).key === 'Shift')) {
-      return;
-    }
-    setState((prev) => ({ ...prev, [anchor]: open }));
-    if (!open) {
-      setSelectedUser(null);
-    }
+  const openSubscriptionsDrawer = useCallback((user: UserSubscriptionDetailRecord) => {
+    setSelectedUser(user);
+    setDrawerOpen(true);
   }, []);
 
-  const openSubscriptionsDrawer = useCallback((user: AdminUser) => {
-    setSelectedUser(user);
-    setState((prev) => ({ ...prev, right: true }));
+  const closeDrawer = useCallback(() => {
+    setDrawerOpen(false);
+    setSelectedUser(null);
   }, []);
 
   const handleViewSubscriptions = useCallback(() => {
-    setState((prev) => ({ ...prev, right: false }));
+    closeDrawer();
     setSelectedUser(null);
     navigate('/subscriptions');
-  }, [navigate]);
-
-  const sortedRows = useMemo(() => {
-    if (!sortConfig) return users;
-    const { field, direction } = sortConfig;
-    const getValue = (user: AdminUser) => {
-      if (field === 'status') {
-        return user.deleted_at ? '1' : '0';
-      }
-      return String((user as Record<string, unknown>)[field] ?? '').toLowerCase();
-    };
-    return [...users].sort((a, b) => {
-      const aValue = getValue(a);
-      const bValue = getValue(b);
-      if (aValue === bValue) return 0;
-      return direction === 'asc' ? aValue.localeCompare(bValue) : bValue.localeCompare(aValue);
-    });
-  }, [users, sortConfig]);
-
-  const paginatedRows = useMemo(() => {
-    const start = page * rowsPerPage;
-    return sortedRows.slice(start, start + rowsPerPage);
-  }, [sortedRows, page, rowsPerPage]);
+  }, [navigate, closeDrawer]);
 
   const openCreateForm = useCallback(() => {
     setEditingUser(null);
@@ -316,33 +299,33 @@ export const UsersPage: React.FC = () => {
         field: 'user_code',
         headerName: t('usersPage.columns.userCode'),
         minWidth: 170,
-        sortable: true,
+        sortable: false,
       },
       {
         field: 'full_name',
         headerName: t('usersPage.columns.fullName'),
         minWidth: 220,
         flex: 1,
-        sortable: true,
+        sortable: false,
       },
       {
         field: 'email',
         headerName: t('usersPage.columns.email'),
         minWidth: 220,
         flex: 1,
-        sortable: true,
+        sortable: false,
       },
       {
         field: 'phone_number',
         headerName: t('usersPage.columns.phoneNumber'),
         minWidth: 180,
-        sortable: true,
+        sortable: false,
       },
       {
         field: 'status',
         headerName: t('usersPage.columns.active'),
         minWidth: 140,
-        sortable: true,
+        sortable: false,
         valueGetter: (__value, row) => (row?.deleted_at == null ? 'deleted' : 'active'),
         renderCell: (params) => (
           <Chip
@@ -374,7 +357,7 @@ export const UsersPage: React.FC = () => {
         sortable: false,
         renderCell: (params) => (
           <Stack direction="row" spacing={1}>
-            <IconButton size="small" onClick={() => openSubscriptionsDrawer(params.row as AdminUser)}>
+            <IconButton size="small" onClick={() => openSubscriptionsDrawer(params.row as UserSubscriptionDetailRecord)}>
               <FormatListBulletedIcon fontSize="small" />
             </IconButton>
             <IconButton size="small" onClick={() => openEditForm(params.row as AdminUser)}>
@@ -390,10 +373,10 @@ export const UsersPage: React.FC = () => {
     [t, notifyRoleChange, openEditForm, handleDeleteUser, openSubscriptionsDrawer]
   );
 
-  const handleSort = (field: string, direction: 'asc' | 'desc') => {
-    setSortConfig({ field, direction });
-    setPage(0);
-  };
+  // const handleSort = (field: string, direction: 'asc' | 'desc') => {
+  //   setSortConfig({ field, direction });
+  //   setPage(0);
+  // };
 
   const openImportDialog = () => {
     setImportDialog({ roleCode: 'user', roleLabel: t('usersPage.importModal.title') });
@@ -472,13 +455,13 @@ export const UsersPage: React.FC = () => {
           <Button variant="outlined" onClick={openImportDialog}>
             {t('usersPage.importModal.title')}
           </Button>
-          <Button variant="contained" startIcon={<AddIcon />} onClick={openCreateForm}>
+          <Button variant="contained" onClick={openCreateForm}>
             {t('usersPage.actions.createButton')}
           </Button>
         </Stack>
       </Stack>
 
-      <Drawer anchor="right" open={state.right} onClose={toggleDrawer('right', false)}>
+      <Drawer anchor="right" open={drawerOpen} onClose={closeDrawer}>
         <Box
           sx={{
             width: { xs: 320, sm: 380 },
@@ -498,18 +481,18 @@ export const UsersPage: React.FC = () => {
         </Box>
       </Drawer>
 
-      <Paper elevation={0} sx={{ borderRadius: 2, border: '1px solid', borderColor: 'divider' }}>
+      <Paper elevation={0}>
         <SoftDataGrid
-          rows={paginatedRows}
+          rows={users}
           columns={columns}
           loading={isLoading}
           maxHeight={520}
-          onSort={handleSort}
-          sortConfig={sortConfig ?? undefined}
+          // onSort={handleSort}
+          // sortConfig={sortConfig ?? undefined}
         />
         <TablePagination
           component="div"
-          count={sortedRows.length}
+          count={totalUsers}
           page={page}
           onPageChange={(_, newPage) => setPage(newPage)}
           rowsPerPage={rowsPerPage}

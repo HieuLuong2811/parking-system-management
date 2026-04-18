@@ -1,3 +1,4 @@
+from app.utils.pagination import PaginatedResponse
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.models.auth import UserBulkImportRequest
@@ -14,13 +15,17 @@ class UserController:
         phone: str | None = None,
         role: str | None = None,
         is_deleted: bool | None = None,
-    ) -> list[UserWithRoles]:
+        page: str = 1,
+        limit: str = 5,
+    ) -> PaginatedResponse[UserWithRoles]:
         return await userService.get_users(
             db=db,
             search=search,
             phone=phone,
             role=role,
             is_deleted=is_deleted,
+            page=page,
+            limit=limit,
         )
 
     @staticmethod

@@ -1,15 +1,26 @@
 import React, { useMemo, useState } from 'react';
+import { TablePagination } from '@mui/material';
 import { type GridColDef } from '@mui/x-data-grid';
 import { useTranslation } from 'react-i18next';
 import { ResourceTableLayout } from '../components/resource/resourceTableLayout';
 import { useVehicles } from '../api/vehicles';
-import type { VehicleRecord } from '../api/types';
+import type { PaginatedResponse, VehicleRecord } from '../api/types';
 import { formatDateTime } from '../ultis/format';
 
 export const VehiclesPage: React.FC = () => {
   const [searchTerm, setSearchTerm] = useState('');
-  const { data = [], isLoading, isError, error } = useVehicles();
+  const [page, setPage] = useState(0);
+  const [rowsPerPage, setRowsPerPage] = useState(20);
+
+  const { data: paginated, isLoading, isError, error } = useVehicles({
+    search: searchTerm || undefined,
+    page: page + 1,
+    limit: rowsPerPage,
+  }) as unknown as { data: PaginatedResponse<VehicleRecord> | undefined; isLoading: boolean; isError: boolean; error: unknown };
   const { t } = useTranslation();
+
+  const rows = useMemo(() => paginated?.data ?? [], [paginated]);
+  const total = paginated?.total ?? 0;
 
   const columns = useMemo<GridColDef<VehicleRecord>[]>(
     () => [
@@ -67,16 +78,33 @@ export const VehiclesPage: React.FC = () => {
       title={t('vehiclesPage.title')}
       description={t('vehiclesPage.description')}
       columns={columns}
-      rows={data || []}
+      rows={rows}
       loading={isLoading}
       error={isError ? error : undefined}
       searchTerm={searchTerm}
-      onSearchChange={setSearchTerm}
+      onSearchChange={(value) => {
+        setSearchTerm(value);
+        setPage(0);
+      }}
       searchPlaceholder={t('vehiclesPage.searchPlaceholder')}
       searchKeys={searchKeys}
       emptyMessage={t('vehiclesPage.empty')}
       getRowId={(row) => row.id}
       maxHeight={420}
+      footer={
+        <TablePagination
+          component="div"
+          count={total}
+          page={page}
+          onPageChange={(_event, newPage) => setPage(newPage)}
+          rowsPerPage={rowsPerPage}
+          onRowsPerPageChange={(event) => {
+            setRowsPerPage(parseInt(event.target.value, 10));
+            setPage(0);
+          }}
+          rowsPerPageOptions={[10, 20, 50, 100]}
+        />
+      }
     />
   );
 };

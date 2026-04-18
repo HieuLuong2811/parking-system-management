@@ -27,14 +27,15 @@ import useDebouncedValue from '../hooks/useDebouncedValue';
 import useModal from '../hooks/useModal';
 import QRCode from 'qrcode';
 import { vehicles_tab } from '../constant/config';
+import type { GridColDef } from '@mui/x-data-grid';
 
-const vehicleColumns: { key: keyof VehicleInfo | 'actions'; labelKey: string }[] = [
-  { key: 'user_code', labelKey: 'vehicle.table.userCode' },
-  { key: 'vehicle_type', labelKey: 'vehicle.table.type' },
-  { key: 'license_plate', labelKey: 'vehicle.table.licensePlate' },
-  { key: 'qr_code', labelKey: 'vehicle.table.qrCode' },
-  { key: 'created_at', labelKey: 'vehicle.table.createdAt' },
-  { key: 'actions', labelKey: 'vehicle.table.actions' },
+const vehicleColumns: GridColDef[] = [
+  { field: 'user_code', headerName: 'User Code', width: 500 },
+  { field: 'vehicle_type', headerName: 'Vehicle Type', width: 200 },
+  { field: 'license_plate', headerName: 'License Plate', width: 200 },
+  { field: 'qr_code', headerName: 'QR Code', width: 200 },
+  { field: 'created_at', headerName: 'Created At', width: 250 },
+  { field: 'actions', headerName: 'Actions', width: 30 },
 ];
 
 interface QRCodeCellProps {
@@ -152,10 +153,10 @@ export default function VehiclePage() {
 
   const visibleColumbs = useMemo(() => {
     if (vehicleTab === vehicles_tab.withoutPlate) {
-      return vehicleColumns.filter((column) => column.key !== 'license_plate');
+      return vehicleColumns.filter((column) => column.field !== 'license_plate');
     }
     else if (vehicleTab === vehicles_tab.withPlate) {
-      return vehicleColumns.filter((column) => column.key !== 'qr_code');
+      return vehicleColumns.filter((column) => column.field !== 'qr_code');
     }
     return vehicleColumns;
   }, [vehicleTab]);
@@ -219,8 +220,8 @@ export default function VehiclePage() {
               <TableHead>
                 <TableRow>
                   {visibleColumbs.map((column) => (
-                    <TableCell key={String(column.key)} sx={{ fontWeight: 600 }}>
-                      {t(column.labelKey)}
+                    <TableCell key={String(column.field)} sx={{ fontWeight: 600 }}>
+                      {t(column.headerName?? column.field)}
                     </TableCell>
                   ))}
                 </TableRow>
@@ -240,9 +241,11 @@ export default function VehiclePage() {
                       {vehicleTab === vehicles_tab.withPlate && (
                         <TableCell>{vehicle.license_plate}</TableCell>
                       )}
-                      <TableCell>
-                        {vehicle.qr_code ? <QRCodeCell value={vehicle.qr_code} /> : '-'}
-                      </TableCell>
+                      {vehicleTab === vehicles_tab.withoutPlate ? (
+                        <TableCell>
+                          <QRCodeCell value={vehicle.qr_code || '-'} />
+                        </TableCell>
+                      ) : null}
                       <TableCell>
                         {new Date(vehicle.created_at).toLocaleString(undefined, {
                           year: 'numeric',
@@ -255,34 +258,38 @@ export default function VehiclePage() {
                           <Button size="small" variant="outlined" onClick={() => handleEdit(vehicle)}>
                             {t('vehicle.table.actionsMenu.edit')}
                           </Button>
-                          { vehicle.qr_code && (
-                            <Button variant='outlined' size='small' 
-                            onClick={() => {
-                              const qrImage = vehicle.qr_code || '-';
-                              QRCode.toDataURL(qrImage, {width: 200, margin: 1 })
-                                .then((qrImage) => {
-                                  const canvas = document.createElement('canvas');
-                                  const context = canvas.getContext('2d');
-                                  const img = new Image();
-                                  img.src = qrImage;
-                                  img.onload = () => {
-                                    canvas.width = img.width;
-                                    canvas.height = img.height;
-                                    context?.drawImage(img, 0, 0);
-
-                                    const link = document.createElement('a');
-                                    link.href = canvas.toDataURL('image/png');
-                                    link.download = `${vehicle.vehicle_type}_qr_code.png`;
-                                    link.click();
-                                  };
-                                })
-                                .catch((err) => {
-                                  console.error('Failed to generate QR code', err);
-                                })
-                            }}>
-                              Download QR code
-                            </Button>
-                          )}
+                          {
+                            vehicleTab === vehicles_tab.withoutPlate && (
+                              vehicle.qr_code && (
+                                <Button variant='outlined' size='small' 
+                                onClick={() => {
+                                  const qrImage = vehicle.qr_code || '-';
+                                  QRCode.toDataURL(qrImage, {width: 200, margin: 1 })
+                                    .then((qrImage) => {
+                                      const canvas = document.createElement('canvas');
+                                      const context = canvas.getContext('2d');
+                                      const img = new Image();
+                                      img.src = qrImage;
+                                      img.onload = () => {
+                                        canvas.width = img.width;
+                                        canvas.height = img.height;
+                                        context?.drawImage(img, 0, 0);
+    
+                                        const link = document.createElement('a');
+                                        link.href = canvas.toDataURL('image/png');
+                                        link.download = `${vehicle.vehicle_type}_qr_code.png`;
+                                        link.click();
+                                      };
+                                    })
+                                    .catch((err) => {
+                                      console.error('Failed to generate QR code', err);
+                                    })
+                                }}>
+                                  Download QR code
+                                </Button>
+                              )
+                            )
+                          }
                           <Button
                             size="small"
                             variant="contained"
