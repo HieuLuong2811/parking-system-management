@@ -9,13 +9,14 @@ import {
   TableContainer,
   TableHead,
   TableRow,
+  TablePagination,
   Typography,
   useTheme,
 } from '@mui/material';
 import ArrowDownwardIcon from '@mui/icons-material/ArrowDownward';
 import ArrowUpwardIcon from '@mui/icons-material/ArrowUpward';
 import SortIcon from '@mui/icons-material/Sort';
-import { useState } from 'react';
+import { useMemo, useState } from 'react';
 import type { GridColDef, GridRenderCellParams } from '@mui/x-data-grid';
 
 type RowIdentifier<RowType> = (row: RowType) => string | number;
@@ -36,6 +37,9 @@ interface SoftDataGridProps<RowType extends Record<string, unknown>> {
   onSort?: (field: string, direction: SortDirection) => void;
   sortConfig?: SortConfig;
   emptyMessage?: string;
+  pagination?: boolean;
+  initialPageSize?: number;
+  pageSizeOptions?: number[];
 }
 
 const defaultMaxHeight = 420;
@@ -50,12 +54,31 @@ export const SoftDataGrid = <RowType extends Record<string, unknown> = Record<st
   onSort,
   sortConfig,
   emptyMessage = 'No records found',
+  pagination = false,
+  initialPageSize = 10,
+  pageSizeOptions = [10, 25, 50, 100],
 }: SoftDataGridProps<RowType>) => {
   const theme = useTheme();
-  const computedRows = rows ?? [];
+  const computedRows = useMemo(() => rows ?? [], [rows]);
   const [internalSort, setInternalSort] = useState<SortConfig | null>(null);
+  const [page, setPage] = useState(0);
+  const [rowsPerPage, setRowsPerPage] = useState(initialPageSize);
 
   const activeSort = sortConfig ?? internalSort;
+  const maxPage = useMemo(() => {
+    if (!pagination) return 0;
+    return Math.max(0, Math.ceil(computedRows.length / rowsPerPage) - 1);
+  }, [computedRows.length, pagination, rowsPerPage]);
+  const safePage = useMemo(() => {
+    if (!pagination) return 0;
+    return Math.min(page, maxPage);
+  }, [maxPage, page, pagination]);
+
+  const paginatedRows = useMemo(() => {
+    if (!pagination) return computedRows;
+    const start = safePage * rowsPerPage;
+    return computedRows.slice(start, start + rowsPerPage);
+  }, [computedRows, pagination, rowsPerPage, safePage]);
 
   const renderCellContent = (column: GridColDef<RowType>, row: RowType) => {
     if (column.renderCell) {
@@ -116,8 +139,7 @@ export const SoftDataGrid = <RowType extends Record<string, unknown> = Record<st
         },
       ]}
     >
-      <TableContainer component={Box} sx={[{ maxHeight, overflowY: 'auto',}]}
-      >
+      <TableContainer component={Box} sx={[{ maxHeight, overflowY: 'auto' }]}>
         <Table stickyHeader sx={{ borderCollapse: 'collapse', border: '1px solid #dcdcdc'}}>
           <TableHead>
             <TableRow sx={{ backgroundColor: "rgba(23, 119, 240, 0.12)"}}>
@@ -218,7 +240,7 @@ export const SoftDataGrid = <RowType extends Record<string, unknown> = Record<st
                     </TableCell>
                   </TableRow>
                 )
-              : computedRows.map((row, index) => (
+              : paginatedRows.map((row, index) => (
                   <TableRow
                     key={deriveRowKey(row, index)}
                     sx={{
@@ -253,6 +275,22 @@ export const SoftDataGrid = <RowType extends Record<string, unknown> = Record<st
           </TableBody>
         </Table>
       </TableContainer>
+
+      {pagination && computedRows.length > 0 && (
+        <TablePagination
+          component="div"
+          count={computedRows.length}
+          page={safePage}
+          onPageChange={(_, nextPage) => setPage(nextPage)}
+          rowsPerPage={rowsPerPage}
+          onRowsPerPageChange={(event) => {
+            const nextSize = Number(event.target.value);
+            setRowsPerPage(Number.isFinite(nextSize) && nextSize > 0 ? nextSize : initialPageSize);
+            setPage(0);
+          }}
+          rowsPerPageOptions={pageSizeOptions}
+        />
+      )}
     </Paper>
   );
 };

@@ -116,7 +116,7 @@ const InvoiceTemplateRenderer: React.FC<InvoiceTemplateProps> = ({
           />
           <Box>
             <Typography variant="h6" sx={{ fontWeight: 700 }}>
-              UTEHY
+              Trường Đại học Sư phạm Kỹ thuật Hưng Yên
             </Typography>
             <Typography variant="body2">
               Hung Yen University of Technology and Education

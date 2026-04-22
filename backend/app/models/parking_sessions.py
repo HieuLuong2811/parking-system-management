@@ -7,7 +7,7 @@ import uuid
 from sqlalchemy import Column as SAColumn, Enum, Integer, String
 from sqlmodel import Field, SQLModel
 
-from app.enums.parking import ParkingSessionStatus, UserType
+from app.enums.parking import ParkingSessionStatus, UserType, VehicleType
 from .mixins import TimestampMixin
 
 
@@ -42,6 +42,12 @@ class ParkingSessionRead(ParkingSessionBase):
     id: uuid.UUID
     created_at: datetime
     updated_at: datetime
+
+
+class ParkingSessionAdminRead(ParkingSessionRead):
+    user_code: Optional[str] = None
+    user_full_name: Optional[str] = None
+    vehicle_type: Optional[VehicleType] = None
 
 
 class ParkingSessionUpdate(SQLModel):

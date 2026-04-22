@@ -4,16 +4,21 @@ from datetime import datetime
 from typing import Optional
 import uuid
 
-from sqlalchemy import Column as SAColumn, Integer, String, Text
+from sqlalchemy import Column as SAColumn, Enum, Integer, String, Text
 from sqlmodel import Field, SQLModel
 
+from app.enums.parking import SubscriptionPlanType
 from .mixins import SoftDeleteMixin, TimestampMixin
 
 
 class SubscriptionPlanBase(SQLModel):
-    plan_name: str = Field(max_length=255, nullable=False)
+    plans_type: SubscriptionPlanType = Field(
+        sa_column=SAColumn(
+            Enum(SubscriptionPlanType, name="subscription_plan_type_enum", create_type=False),
+            nullable=False,
+        )
+    )
     price_per_day: int = Field(sa_column=SAColumn(Integer, nullable=False))
-    description: Optional[str] = Field(default=None, sa_column=SAColumn(Text))
 
 
 class SubscriptionPlan(SubscriptionPlanBase, TimestampMixin, SoftDeleteMixin, table=True):
@@ -30,9 +35,9 @@ class SubscriptionPlanRead(SubscriptionPlanBase):
     deleted_at: Optional[datetime]
     created_at: datetime
     updated_at: datetime
+    is_in_use: bool = False
 
 
 class SubscriptionPlanUpdate(SQLModel):
-    plan_name: Optional[str] = Field(default=None, max_length=255)
+    plans_type: Optional[SubscriptionPlanType] = None
     price_per_day: Optional[int] = None
-    description: Optional[str] = None

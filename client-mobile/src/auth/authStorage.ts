@@ -5,6 +5,7 @@ export type AuthUser = {
   full_name: string;
   email: string;
   roles: string[];
+  language_use?: string | null;
 };
 
 export type StoredAuthSession = {
@@ -71,4 +72,3 @@ export async function clearStoredSession() {
 export function peekStoredSession() {
   return memorySession ?? null;
 }
-

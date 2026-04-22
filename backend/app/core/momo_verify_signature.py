@@ -1,9 +1,13 @@
-import hmac
-from app.core.config import settings
-import hashlib
+from __future__ import annotations
 
-@staticmethod
-def verify_signature(payload: dict) -> bool:
+import hashlib
+import hmac
+from typing import Any, Mapping
+
+from app.core.config import settings
+
+
+def verify_signature(payload: Mapping[str, Any]) -> bool:
     raw_signature = (
         f"accessKey={settings.MOMO_ACCESS_KEY}"
         f"&amount={payload.get('amount')}"
@@ -23,7 +27,7 @@ def verify_signature(payload: dict) -> bool:
     signature = hmac.new(
         settings.MOMO_SECRET_KEY.encode(),
         raw_signature.encode(),
-        hashlib.sha256
+        hashlib.sha256,
     ).hexdigest()
 
     return signature == payload.get("signature")

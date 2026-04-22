@@ -305,6 +305,8 @@ const th = {
   },
 
   invoices: {
+    loading: 'Loading...',
+    error: 'Error loading invoices.',
     sectionTitle: 'ใบแจ้งหนี้',
     headerTitle: 'ประวัติการเรียกเก็บเงิน',
     filters: {

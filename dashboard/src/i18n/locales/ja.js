@@ -43,6 +43,12 @@ const ja = {
         phoneNumber: "電話番号",
       },
     },
+    common: {
+      tooltips: {
+        user_code: "ユーザーコード",
+        full_name: "氏名",
+      },
+    },
     pageTitle: {
       home: "駐車場管理システム - ハンイェン工科教育大学",
       users: "ユーザー",
@@ -66,6 +72,7 @@ const ja = {
       refresh: "更新",
       cancel: "キャンセル",
       save: "保存",
+      clear: "クリア",
     },
     placeHolder: {
       search: "検索",
@@ -234,6 +241,11 @@ const ja = {
         active: "有効",
         deleted: "削除済み",
       },
+      vehicleTypes: {
+        motorbike: "モーターベイク",
+        electricBicycle: "エレクトリックバイク",
+        bicycle: "バイク",
+      },
     },
     rolesPage: {
       title: "ロール",
@@ -243,16 +255,43 @@ const ja = {
     },
     termsPage: {
       title: "学期",
+      description: "学期とその適用期間を定義します。",
+      searchTerm: {
+        name: "学期名で検索"
+      },
+      empty: "登録された学期がありません。",
+      fields: {
+        termName: "学期名",
+        startDate: "開始日",
+        endDate: "終了日",
+        createdAt: "作成日時",
+        actions: "操作",
+      },
+      buttons: {
+        add: "新しい学期を追加",
+      },
+      warnings: {
+        rename: "学期名を変更すると、現在この学期を使用しているすべてのユーザーに通知（メールも）されます。",
+      },
+      tooltips: {
+         edit: "学期を編集",
+         delete: "学期を削除",
+         inUse: "学期は使用中であり、削除することはできません",
+      },
     },
     plansPage: {
       title: "サブスクリプションプラン",
     },
     subscriptionsPage: {
-      title: "ユーザーサブスクリプション",
+      title: "ユーザー購読リスト",
       description: "システムで処理されたすべてのサブスクリプションを表示します。",
       searchPlaceholder: "ユーザー、プラン、または学期で検索",
       filters: {
         status: "状態",
+      },
+      periodLabels: {
+        from: "開始",
+        to: "終了",
       },
       columns: {
         user: "ユーザー",
@@ -271,6 +310,10 @@ const ja = {
 
     },
     subscriptionPlansPage: {
+      title: "サブスクリプションプラン",
+      description: "利用可能なサブスクリプションプランのリスト",
+      searchPlaceholder: "プラン名またはIDで検索",
+      empty: "まだプランが定義されていません。",
       columns: {
         planName: "プラン名",
         pricePerDay: "1日あたりの駐車料金",
@@ -278,6 +321,14 @@ const ja = {
         createdAt: "作成日時",
         updatedAt: "更新日時",
         actions: "アクション",
+      },
+      tooltips: {
+        locked: 'プランは使用中です',
+        delete: 'プランを削除',
+        edit: 'プランを編集',
+      },
+      button: {
+        add: "新しいプランを追加",
       }
     },
     subscriptionInvoicesPage: {
@@ -346,11 +397,32 @@ const ja = {
         userRoles: "ユーザーロール",
         terms: "学期",
         plans: "サブスクリプションプラン",
-        subscriptions: "ユーザーサブスクリプション",
+        subscriptions: "駐車パッケージに登録する",
         parkingSessions: "駐車セッション",
         invoices: "請求書",
-        paymentTransactions: "決済トランザクション",
+        paymentTransactions: "取引履歴",
         billingEventLogs: "請求イベント",
+      },
+    },
+    paymentTransactionsPage: {
+      description: "決済取引の履歴。",
+      searchLabel: "検索",
+      searchPlaceholder: "請求書、コード、ユーザーで検索",
+      empty: "取引はまだありません。",
+      columns: {
+        user: "ユーザー",
+        invoice: "請求書",
+        amount: "金額",
+        paymentMethod: "支払い方法",
+        attempt: "試行 #",
+        code: "コード",
+        status: "状態",
+        response: "応答メッセージ",
+        createdAt: "作成日時",
+      },
+      tooltips: {
+        invoice_id: "請求書ID",
+        invoice_createdAt: "請求書作成日時",
       },
     },
   },

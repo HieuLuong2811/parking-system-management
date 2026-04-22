@@ -37,8 +37,6 @@ async def get_payment_plans_with_pricing(plan_id: str, term_id: str, db: AsyncSe
             PaymentPlanPricingDetail(
                 payment_plan_id=payment_mode.payment_plan_id,
                 payment_type=payment_mode.payment_type,
-                plan_name=plan.plan_name,
-                description=plan.description,
                 discount_percent=payment_mode.discount_percent,
                 is_active=plan.is_active,
                 original_amount=payment_mode.original_amount,

@@ -19,7 +19,8 @@ export type UserUpdatePayload = {
 };
 
 export type UserListFilters = {
-  search?: string;
+  user_code?: string;
+  nameOrEmail?: string;
   phone?: string;
   role?: string;
   is_deleted?: boolean;
@@ -29,7 +30,8 @@ export type UserListFilters = {
 
 const fetchUsers = (filters: UserListFilters = {}) => {
   const params = new URLSearchParams();
-  if (filters.search) params.append('search', filters.search);
+  if (filters.user_code) params.append('user_code', filters.user_code);
+  if (filters.nameOrEmail) params.append('nameOrEmail', filters.nameOrEmail);
   if (filters.phone) params.append('phone', filters.phone);
   if (filters.role) params.append('role', filters.role);
   if (filters.is_deleted !== undefined) params.append('is_deleted', String(filters.is_deleted));

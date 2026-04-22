@@ -19,7 +19,6 @@ export interface StripePaymentIntentPayload {
 }
 
 export interface StripePaymentIntentResponse {
-  invoice_id: string;
   subscription_id: string;
   payment_intent_id: string;
   status: string;

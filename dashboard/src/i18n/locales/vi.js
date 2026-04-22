@@ -10,6 +10,12 @@ const vi = {
         settings: "Cài đặt",
       },
     },
+    common: {
+      tooltips: {
+        user_code: "Mã người dùng",
+        full_name: "Tên người dùng",
+      },
+    },
     pageTitle: {
       home: "Hệ thống quản lý bãi đỗ xe - Trường Đại học SPKT Hưng Yên",
       users: "Người dùng",
@@ -80,6 +86,11 @@ const vi = {
           invalidRange: "Ngày bắt đầu phải trước hoặc trùng ngày kết thúc.",
         },
       },
+      search: {
+        label: "Tìm kiếm phiên gửi xe theo mã phiên hoặc mã phương tiện",
+        userCode: "Tìm kiếm theo mã người dùng",
+        vehicleType: "Tìm kiếm theo loại phương tiện",
+      }
     },
     usersPage: {
       title: "Quản lý người dùng",
@@ -201,6 +212,9 @@ const vi = {
       filters: {
         role: "Vai trò",
         allRoles: "Tất cả vai trò",
+        userCode: "Tìm theo mã người dùng",
+        nameOrEmail: "Tìm theo tên hoặc email",
+        phoneNumber: "Tìm theo số điện thoại",
       },
       form: {
         userCode: "Mã người dùng",
@@ -232,6 +246,11 @@ const vi = {
         active: "Đang hoạt động",
         deleted: "Đã xoá",
       },
+      vehicleTypes: {
+        motorbike: "Xe máy",
+        electricBicycle: "Xe đạp điện",
+        bicycle: "Xe đạp",
+      },
     },
     rolesPage: {
       title: "Vai trò",
@@ -241,10 +260,28 @@ const vi = {
     },
     termsPage: {
       title: "Học kỳ",
+      description: "Định nghĩa học kỳ và thời gian áp dụng.",
+      searchTerm: {
+        name: "Tìm theo tên học kỳ"
+      },
+      empty: "Chưa có học kỳ nào được đăng ký.",
       fields: {
         termName: "Tên học kỳ",
         startDate: "Ngày bắt đầu",
         endDate: "Ngày kết thúc",
+        createdAt: "Ngày tạo",
+        actions: "Chức năng",
+      },
+      buttons: {
+        add: "Thêm học kỳ mới",
+      },
+      warnings: {
+        rename: "Nếu thay đổi tên học kỳ, hệ thống sẽ gửi thông báo (và email) đến tất cả người dùng đang sử dụng học kỳ này.",
+      },
+      tooltips: {
+         edit: "Chỉnh sửa học kỳ",
+         delete: "Xóa học kỳ",
+         inUse: "Học kỳ đang được sử dụng và không thể xóa",
       },
     },
     plansPage: {
@@ -262,6 +299,10 @@ const vi = {
       filters: {
         status: "Trạng thái",
       },
+      periodLabels: {
+        from: "Từ",
+        to: "Đến",      
+      },
       columns: {
         user: "Người dùng",
         plan: "Gói",
@@ -278,6 +319,10 @@ const vi = {
       error: "Không thể tải danh sách đăng ký.",
     },
     subscriptionPlansPage: {
+      title: "Gói đăng ký gửi xe",
+      description: "Danh sách các gói đăng ký gửi xe có sẵn.",
+      searchPlaceholder: "Tìm theo tên gói hoặc id",
+      empty: "Chưa có gói nào được định nghĩa.",
       columns: {
         planName: "Tên gói",
         pricePerDay: "Giá gửi xe / ngày",
@@ -286,6 +331,14 @@ const vi = {
         updatedAt: "Thời gian cập nhật",
         actions: "Hành động",
       },
+      tooltips: {
+        locked: 'Gói đang được sử dụng',
+        delete: 'Xóa gói',
+        edit: 'Chỉnh sửa gói',
+      },
+      button: {
+        add: "Thêm gói gửi xe mới",
+      }
     },
     subscriptionInvoicesPage: {
       title: "Hóa đơn đăng ký",
@@ -356,8 +409,29 @@ const vi = {
         subscriptions: "Đăng ký gói gửi xe",
         parkingSessions: "Phiên gửi xe",
         invoices: "Hóa đơn",
-        paymentTransactions: "Giao dịch thanh toán",
+        paymentTransactions: "Lịch sử giao dịch",
         billingEventLogs: "Sự kiện thanh toán",
+      },
+    },
+    paymentTransactionsPage: {
+      description: "Lịch sử giao dịch thanh toán.",
+      searchLabel: "Tìm kiếm",
+      searchPlaceholder: "Tìm theo hóa đơn, mã giao dịch, người dùng",
+      empty: "Chưa có giao dịch nào.",
+      columns: {
+        user: "Người dùng",
+        invoice: "Hóa đơn",
+        amount: "Số tiền",
+        paymentMethod: "Phương thức thanh toán",
+        attempt: "Lần thử #",
+        code: "Mã giao dịch",
+        status: "Trạng thái",
+        response: "Phản hồi từ cổng thanh toán",
+        createdAt: "Thời gian tạo",
+      },
+      tooltips: {
+        invoice_id: "Mã hoá đơn",
+        invoice_createdAt: "Thời gian tạo hoá đơn",
       },
     },
   },

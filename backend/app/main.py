@@ -10,6 +10,7 @@ from app.api.main import router
 from app.api.controller.auth import AuthController
 from app.db.session import engine
 from app.service.auth_codes import AuthCodeStore
+from app.scheduler.scheduler import shutdown_scheduler, start_scheduler
 
 def custom_generate_unique_id(route: APIRoute) -> str:
     tag = route.tags[0] if route.tags else "default"
@@ -46,3 +47,13 @@ async def initialize_auth_code_store():
 async def ensure_unaccent_extension():
     async with engine.begin() as conn:
         await conn.execute(text("CREATE EXTENSION IF NOT EXISTS unaccent"))
+
+
+@app.on_event("startup")
+async def start_app_scheduler():
+    start_scheduler()
+
+
+@app.on_event("shutdown")
+async def stop_app_scheduler():
+    shutdown_scheduler()

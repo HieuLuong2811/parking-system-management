@@ -1,0 +1,21 @@
+<mjml>
+  <mj-body>
+    <mj-section>
+      <mj-column>
+        <mj-text font-size="20px" font-weight="bold">
+          แจ้งเตือนอัปเดตแพ็กเกจสมัครสมาชิก
+        </mj-text>
+        <mj-text>
+          สวัสดี {{user_name}},
+        </mj-text>
+        <mj-text>
+          ประเภทแพ็กเกจสมัครสมาชิกของคุณถูกเปลี่ยนจาก <b>{{old_plan_type}}</b> เป็น <b>{{new_plan_type}}</b>.
+        </mj-text>
+        <mj-text>
+          คุณไม่จำเป็นต้องดำเนินการใด ๆ
+        </mj-text>
+      </mj-column>
+    </mj-section>
+  </mj-body>
+</mjml>
+

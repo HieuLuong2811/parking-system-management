@@ -58,13 +58,22 @@ export const requestWithContext = async <T>(
   }
 };
 
+export type PaginatedResponse<T> = {
+  data: T[];
+  total: number;
+  page: number;
+  limit: number;
+  total_pages: number;
+};
+
 export type PaymentMethod = 'MOMO' | 'STRIPE' | 'CASH';
 export type PaymentStatus = 'PENDING' | 'PAID' | 'FAILED';
 export type InvoiceStatus = 'PENDING' | 'PAID' | 'FAILED';
 export type VehicleType = 'MOTORBIKE' | 'BICYCLE' | 'ELECTRIC_BICYCLE';
-export type SubscriptionStatus = 'ACTIVE' | 'EXPIRED' | 'SUSPENDED';
+export type SubscriptionStatus = 'PENDING' | 'ACTIVE' | 'EXPIRED' | 'SUSPENDED';
 export type UserType = 'GUEST' | 'STUDENT' | 'STAFF' | 'VISITOR';
 export type PaymentPlanType = 'FULL' | 'MONTHLY';
+export type SubscriptionPlanType = 'UNLICENSED_VEHICLE' | 'LICENSED_VEHICLE';
 export type ParkingSessionStatus = 'ACTIVE' | 'DONE';
 
 export interface VehicleInfo {
@@ -123,9 +132,8 @@ export interface SubscriptionPlan {
 
 export interface SubscriptionPlanRecord {
   id: string;
-  plan_name: string;
+  plans_type: SubscriptionPlanType;
   price_per_day: number;
-  description?: string | null;
   deleted_at?: string | null;
   created_at: string;
   updated_at: string;
@@ -134,10 +142,8 @@ export interface SubscriptionPlanRecord {
 
 export interface PaymentPlan {
   id: string;
-  plan_name: string;
   payment_type: PaymentPlanType;
   discount_percent?: number | null;
-  description?: string | null;
   is_active: boolean;
   created_at: string;
   updated_at: string;
@@ -167,8 +173,6 @@ export interface PlanPricing {
 export interface PaymentPlanPricingDetail {
   payment_plan_id: string;
   payment_type: PaymentPlanType;
-  plan_name: string;
-  description?: string | null;
   discount_percent?: number | null;
   is_active: boolean;
   original_amount: number;
@@ -248,13 +252,12 @@ export interface VehicleSummary {
 
 export interface SubscriptionPlanSummary {
   id: string;
-  plan_name: string;
+  plans_type: SubscriptionPlanType;
   price_per_day: number;
 }
 
 export interface PaymentPlanSummary {
   id: string;
-  plan_name: string;
   payment_type: PaymentPlanType;
 }
 

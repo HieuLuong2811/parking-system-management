@@ -1,9 +1,10 @@
-from fastapi import APIRouter, Depends
+from fastapi import APIRouter, Depends, Query
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.api.controller.subscriptions import SubscriptionController
 from app.authen.current_user import AuthUser, is_admin_user, required_roles
 from app.db.session import get_db
+from app.enums.parking import SubscriptionStatus
 from app.models.responses import DeleteResponse
 from app.models.subscriptions import (
     UserSubscriptionCreate,
@@ -11,6 +12,7 @@ from app.models.subscriptions import (
     UserSubscriptionRead,
     UserSubscriptionUpdate,
 )
+from app.utils.pagination import PaginatedResponse
 
 router = APIRouter(prefix="/subscriptions", tags=["user_subscriptions"])
 
@@ -48,6 +50,20 @@ async def get_subscription_details(
     return await SubscriptionController.get_all_subscription_details_ctrl(db)
 
 
+@router.get("/details/paginated", response_model=PaginatedResponse[UserSubscriptionDetail])
+async def get_subscription_details_paginated(
+    current_user: AuthUser = Depends(required_roles("ADMIN")),
+    db: AsyncSession = Depends(get_db),
+    search: str | None = Query(None, description="Search by user, plan, plate, term"),
+    status: SubscriptionStatus | None = Query(None, description="Filter by subscription status"),
+    page: int = Query(1, ge=1, description="Page number (1-based)"),
+    limit: int = Query(20, ge=1, le=100, description="Number of items per page"),
+):
+    return await SubscriptionController.get_all_subscription_details_paginated_ctrl(
+        db, search=search, status=status, page=page, limit=limit
+    )
+
+
 @router.get("/{subscription_id}", response_model=UserSubscriptionRead)
 async def get_subscription(subscription_id: str, db: AsyncSession = Depends(get_db)):
     return await SubscriptionController.get_subscription_ctrl(subscription_id, db)
@@ -55,9 +71,12 @@ async def get_subscription(subscription_id: str, db: AsyncSession = Depends(get_
 
 @router.patch("/{subscription_id}", response_model=UserSubscriptionRead)
 async def update_subscription(
-    subscription_id: str, payload: UserSubscriptionUpdate, db: AsyncSession = Depends(get_db)
+    subscription_id: str,
+    payload: UserSubscriptionUpdate,
+    db: AsyncSession = Depends(get_db),
+    current_user: AuthUser = Depends(required_roles("USER", "ADMIN")),
 ):
-    return await SubscriptionController.update_subscription_ctrl(subscription_id, payload, db)
+    return await SubscriptionController.update_subscription_ctrl(subscription_id, payload, db, current_user)
 
 
 @router.delete("/{subscription_id}", response_model=DeleteResponse)

@@ -7,19 +7,13 @@ import uuid
 from sqlalchemy import Column as SAColumn, Enum, Integer, String, Text
 from sqlmodel import Field, SQLModel
 
-from app.enums.parking import TransactionStatus
+from app.enums.parking import InvoiceStatus, PaymentMethod
 
 
 class PaymentTransactionBase(SQLModel):
     invoice_id: uuid.UUID = Field(foreign_key="invoices.id")
     attempt_number: int = Field(sa_column=SAColumn(Integer, nullable=False))
     transaction_code: str = Field(max_length=255, nullable=False)
-    status: TransactionStatus = Field(
-        sa_column=SAColumn(
-            Enum(TransactionStatus, name="transaction_status_enum", create_type=False),
-            nullable=False,
-        )
-    )
     response_message: str = Field(sa_column=SAColumn(Text, nullable=False))
 
 
@@ -40,5 +34,20 @@ class PaymentTransactionRead(PaymentTransactionBase):
 
 class PaymentTransactionUpdate(SQLModel):
     attempt_number: Optional[int] = None
-    status: Optional[TransactionStatus] = None
     response_message: Optional[str] = None
+
+
+class PaymentTransactionDetailRead(SQLModel):
+    id: uuid.UUID
+    invoice_id: uuid.UUID
+    attempt_number: int
+    transaction_code: str
+    response_message: str
+    created_at: datetime
+
+    user_code: str
+    user_full_name: str
+
+    invoice_amount: int
+    invoice_payment_method: PaymentMethod
+    invoice_created_at: datetime

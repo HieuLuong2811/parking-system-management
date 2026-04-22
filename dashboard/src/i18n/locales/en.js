@@ -10,6 +10,12 @@ const en = {
         settings: "Settings",
       },
     },
+    common: {
+      tooltips: {
+        user_code: "User code",
+        full_name: "Full name",
+      },
+    },
     pageTitle: {
       home: "Parking Management System - Hung Yen University of Technology and Education",
       parkingSessions: "Parking sessions",
@@ -35,7 +41,7 @@ const en = {
       refresh: "Refresh",
       cancel: "Cancel",
       save: "Save",
-      clear: "Clear",
+      clear: "Clear filters",
     },
     validation: {
       requiredField: "{{field}} is required.",
@@ -119,6 +125,11 @@ const en = {
           invalidRange: "Start date must be on or before the end date.",
         },
       },
+      search: {
+        label: "Search by session, vehicle, plate",
+        userCode: "Search by user code",
+        vehicleType: "Search by vehicle type",
+      }
     },
     usersPage: {
       title: "User management",
@@ -239,6 +250,9 @@ const en = {
       filters: {
         role: "Role",
         allRoles: "All roles",
+        userCode: "Search by user code",
+        nameOrEmail: "Search by full name or email",
+        phoneNumber: "Search by phone number",
       },
       form: {
         userCode: "User code",
@@ -270,16 +284,39 @@ const en = {
         active: "Active",
         deleted: "Deleted",
       },
+      vehicleTypes: {
+        motorbike: "Motorbike",
+        electricBicycle: "Electric bicycle",
+        bicycle: "Bicycle",
+      },
     },
     rolesPage: {
       title: "Roles",
     },
     termsPage: {
       title: "Academic terms",
+      description: "Define academic terms and their application periods.",
+      searchTerm: {
+        name: "Search by term name"
+      },
+      empty: "No academic terms registered.",
       fields: {
         termName: "Term name",
         startDate: "Start date",
         endDate: "End date",
+        createdAt: "Created at",
+        actions: "Actions",
+      },
+      buttons: {
+        add: "Add new term",
+      },
+      warnings: {
+        rename: "If you change the term name, the system will notify (and email) all users who are currently using this term."
+      },
+      tooltips: {
+         edit: "Edit term",
+         delete: "Delete term",
+         inUse: "Term is in use and cannot be deleted",
       },
     },
     plansPage: {
@@ -291,11 +328,15 @@ const en = {
       },
     },
     subscriptionsPage: {
-      title: "User subscriptions",
+      title: "User subscriptions list",
       description: "Overview of every registered subscription processed through the system.",
       searchPlaceholder: "Search user, plan, or term",
       filters: {
         status: "Status",
+      },
+      periodLabels: {
+        from: "From",
+        to: "To",
       },
       columns: {
         user: "User",
@@ -313,6 +354,10 @@ const en = {
       error: "Unable to load subscriptions.",
     },
     subscriptionPlansPage: {
+      title: "Subscription plans",
+      description: "List of available subscription plans",
+      searchPlaceholder: "Search by plan name or id",
+      empty: "No plans defined yet.",
       columns: {
         planName: "Plan name",
         pricePerDay: "Parking fee per day",
@@ -320,6 +365,15 @@ const en = {
         createdAt: "Created at",
         updatedAt: "Updated at",
         actions: "Actions",
+      },
+      tooltips: {
+        locked: 'Plan is in use',
+        delete: 'Delete plan',
+        edit: 'Edit plan',
+
+      },
+      button: {
+        add: "Add new Plan",
       }
     },
     subscriptionInvoicesPage: {
@@ -392,8 +446,29 @@ const en = {
         subscriptions: "User subscriptions",
         parkingSessions: "Parking sessions",
         invoices: "Invoices",
-        paymentTransactions: "Payment transactions",
+        paymentTransactions: "Transaction history",
         billingEventLogs: "Billing events",
+      },
+    },
+    paymentTransactionsPage: {
+      description: "History of payment transactions.",
+      searchLabel: "Search",
+      searchPlaceholder: "Search by invoice, code, or user",
+      empty: "No transactions yet.",
+      columns: {
+        user: "User",
+        invoice: "Invoice",
+        amount: "Amount",
+        paymentMethod: "Payment method",
+        attempt: "Attempt #",
+        code: "Code",
+        status: "Status",
+        response: "Response message",
+        createdAt: "Created at",
+      },
+      tooltips: {
+        invoice_id: "Invoice ID",
+        invoice_createdAt: "Invoice created at",
       },
     },
   },

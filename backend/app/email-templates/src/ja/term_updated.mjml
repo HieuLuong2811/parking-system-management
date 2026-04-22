@@ -1,0 +1,21 @@
+<mjml>
+  <mj-body>
+    <mj-section>
+      <mj-column>
+        <mj-text font-size="20px" font-weight="bold">
+          学期更新のお知らせ
+        </mj-text>
+        <mj-text>
+          {{user_name}} 様
+        </mj-text>
+        <mj-text>
+          ご利用中の学期名が <b>{{old_term_name}}</b> から <b>{{new_term_name}}</b> に変更されました。
+        </mj-text>
+        <mj-text>
+          操作は不要です。
+        </mj-text>
+      </mj-column>
+    </mj-section>
+  </mj-body>
+</mjml>
+

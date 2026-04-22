@@ -1,12 +1,25 @@
-import { Button, Dialog, DialogActions, DialogContent, DialogTitle, Stack, TextField, Typography } from '@mui/material';
+import {
+  Alert,
+  Button,
+  Dialog,
+  DialogActions,
+  DialogContent,
+  DialogTitle,
+  FormControl,
+  InputLabel,
+  MenuItem,
+  Select,
+  Stack,
+  Typography,
+} from '@mui/material';
 import type { SubscriptionPlanRecord } from '../../api/types';
 import React, { useState } from 'react';
 import { useTranslation } from 'react-i18next';
+import { FormInput } from '../common/FormInput';
 
 export type SubscriptionPlanFormPayload = {
-  plan_name: string;
+  plans_type: 'UNLICENSED_VEHICLE' | 'LICENSED_VEHICLE';
   price_per_day: number;
-  description?: string;
 };
 
 interface SubscriptionPlanModalProps {
@@ -27,45 +40,46 @@ export const SubscriptionPlanModal: React.FC<SubscriptionPlanModalProps> = ({
   disablePriceField = false,
 }) => {
   const { t } = useTranslation();
-  const [planName, setPlanName] = useState(initialValue?.plan_name ?? '');
+  const [plansType, setPlansType] = useState<'UNLICENSED_VEHICLE' | 'LICENSED_VEHICLE'>(
+    initialValue?.plans_type ?? 'LICENSED_VEHICLE'
+  );
   const [priceInput, setPriceInput] = useState(initialValue?.price_per_day?.toString() ?? '');
-  const [description, setDescription] = useState(initialValue?.description ?? '');
-  const [error, setError] = useState('');
+  const [formError, setFormError] = useState('');
+  const [fieldErrors, setFieldErrors] = useState<{ plans_type?: string; price_per_day?: string }>({});
 
   const getRequiredError = (labelKey: string) =>
     t('validation.requiredField', { field: t(labelKey) });
 
   const handleSave = async () => {
-    setError('');
-    const trimmedName = planName.trim();
-    if (!trimmedName) {
-      setError(getRequiredError('plansPage.fields.planName'));
+    setFormError('');
+    setFieldErrors({});
+    if (!plansType) {
+      setFieldErrors({ plans_type: getRequiredError('plansPage.fields.planType') });
       return;
     }
 
-    const normalizedDescription = description.trim() || undefined;
-
     if (!disablePriceField) {
       if (!priceInput.trim()) {
-        setError(getRequiredError('plansPage.fields.pricePerDay'));
+        setFieldErrors({ price_per_day: getRequiredError('plansPage.fields.pricePerDay') });
         return;
       }
 
       const numeric = Number(priceInput);
       if (Number.isNaN(numeric) || numeric <= 0) {
-        setError('Price per day must be a positive number');
+        setFieldErrors({
+          price_per_day: t('validation.invalidNumber', { defaultValue: 'Price must be a positive number.' }),
+        });
         return;
       }
 
       try {
         await onSubmit({
-          plan_name: trimmedName,
+          plans_type: plansType,
           price_per_day: numeric,
-          description: normalizedDescription,
         });
       } catch (err) {
         console.error('Failed to save subscription plan:', err);
-        setError(err instanceof Error ? err.message : 'An unexpected error occurred');
+        setFormError(err instanceof Error ? err.message : 'An unexpected error occurred');
       }
       return;
     }
@@ -73,13 +87,12 @@ export const SubscriptionPlanModal: React.FC<SubscriptionPlanModalProps> = ({
     const backupPrice = Number(initialValue?.price_per_day ?? 0);
     try {
       await onSubmit({
-        plan_name: trimmedName,
+        plans_type: plansType,
         price_per_day: Number.isNaN(backupPrice) ? 0 : backupPrice,
-        description: normalizedDescription,
       });
     } catch (err) {
       console.error('Failed to save subscription plan:', err);
-      setError(err instanceof Error ? err.message : 'An unexpected error occurred');
+      setFormError(err instanceof Error ? err.message : 'An unexpected error occurred');
     }
   };
 
@@ -88,35 +101,49 @@ export const SubscriptionPlanModal: React.FC<SubscriptionPlanModalProps> = ({
       <DialogTitle>{initialValue ? 'Edit subscription plan' : 'Create new subscription plan'}</DialogTitle>
       <DialogContent>
         <Stack spacing={2} sx={{ mt: 1 }}>
-          <TextField
-            label="Plan name"
-            value={planName}
-            onChange={(event) => setPlanName(event.target.value)}
-            fullWidth
-            size="small"
-          />
-          <TextField
-            label="Price per day"
+          <FormControl fullWidth>
+            <InputLabel id="plans-type-label">{t('plansPage.fields.planType', { defaultValue: 'Plan type' })}</InputLabel>
+            <Select
+              labelId="plans-type-label"
+              value={plansType}
+              label={t('plansPage.fields.planType', { defaultValue: 'Plan type' })}
+              onChange={(event) => setPlansType(event.target.value as 'UNLICENSED_VEHICLE' | 'LICENSED_VEHICLE')}
+              disabled={submitting}
+            >
+              <MenuItem value="UNLICENSED_VEHICLE">{t('plansPage.types.unlicensed', { defaultValue: 'Unlicensed vehicle' })}</MenuItem>
+              <MenuItem value="LICENSED_VEHICLE">{t('plansPage.types.licensed', { defaultValue: 'Licensed vehicle' })}</MenuItem>
+            </Select>
+            {fieldErrors.plans_type ? (
+              <Typography variant="caption" color="error" sx={{ mt: 0.5 }}>
+                {fieldErrors.plans_type}
+              </Typography>
+            ) : null}
+          </FormControl>
+          {initialValue?.is_in_use && (
+            <Alert severity="warning" sx={{ py: 0.75 }}>
+              {t('plansPage.warnings.typeChange', {
+                defaultValue:
+                  "If you change the plan type, the system may notify users who are currently using this plan.",
+              })}
+            </Alert>
+          )}
+          <FormInput
+            label={t('plansPage.fields.pricePerDay', { defaultValue: 'Price per day' })}
+            required={!disablePriceField}
+            type="number"
             value={priceInput}
             onChange={(event) => setPriceInput(event.target.value)}
-            fullWidth
-            size="small"
-            type="number"
             disabled={disablePriceField}
-            helperText={disablePriceField ? 'Price is locked while the plan is in use' : undefined}
+            helperText={
+              disablePriceField
+                ? t('plansPage.warnings.priceLocked', { defaultValue: 'Price is locked while the plan is in use.' })
+                : undefined
+            }
+            error={fieldErrors.price_per_day}
           />
-          <TextField
-            label="Description"
-            value={description}
-            onChange={(event) => setDescription(event.target.value)}
-            fullWidth
-            size="small"
-            multiline
-            minRows={2}
-          />
-          {error && (
+          {formError && (
             <Typography variant="body2" color="error">
-              {error}
+              {formError}
             </Typography>
           )}
         </Stack>

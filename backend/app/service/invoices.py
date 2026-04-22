@@ -5,7 +5,7 @@ from uuid import UUID
 from app.enums.parking import SubscriptionStatus
 from app.models.billing_event_logs import BillingEventLogCreate
 from app.models.invoices import Invoice, InvoiceCreate, InvoiceUpdate
-from app.models.subscriptions import UserSubscriptionCreate
+from app.models.subscriptions import UserSubscriptionCreate, UserSubscriptionUpdate
 from app.service.base import CRUDService
 from app.service.billing_event_logs import billingEventLogService
 from app.service.subscriptions import subscriptionService
@@ -108,3 +108,4 @@ class invoiceService:
         statement = select(Invoice).where(Invoice.user_code == user_code)
         result = await db.execute(statement)
         return result.scalars().all()
+

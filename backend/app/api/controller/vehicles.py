@@ -88,8 +88,8 @@ class VehicleController:
                 active_subscriptions[0],
             )
             subscription_info = SubscriptionInfo(
-                plan_name=active.subscription_plan.plan_name if active.subscription_plan else None,
-                payment_type=active.payment_plan.plan_name if active.payment_plan else None,
+                plans_type=str(active.subscription_plan.plans_type) if active.subscription_plan else None,
+                payment_type=str(active.payment_plan.payment_type) if active.payment_plan else None,
                 status=active.status,
                 paid_amount=active.paid_amount,
                 total_amount=active.total_amount,

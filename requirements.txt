@@ -30,3 +30,5 @@ PyQt6
 
 passlib
 setuptools
+apscheduler
+openpyxl

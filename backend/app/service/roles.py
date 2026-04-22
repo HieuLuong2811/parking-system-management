@@ -19,11 +19,11 @@ class roleService:
         return result.scalar_one_or_none()
 
     @staticmethod
-    async def get_or_create(role_code: str, role_name: str, db: AsyncSession) -> Roles:
+    async def get_or_create(role_code: str, db: AsyncSession) -> Roles:
         existing = await roleService.get_by_code(role_code, db)
         if existing:
             return existing
-        return await roleService.create_role(RolesCreate(role_code=role_code, role_name=role_name), db)
+        return await roleService.create_role(RolesCreate(role_code=role_code), db)
 
     @staticmethod
     async def create_role(data: RolesCreate, db: AsyncSession):

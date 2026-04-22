@@ -1,15 +1,19 @@
 import { Box, Button, Step, StepLabel, Stepper, Typography } from '@mui/material';
-import { useMemo } from 'react';
+import { useMemo, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useTranslation } from 'react-i18next';
 import { SubscriptionPlanRecord } from '../../api/clientApi';
 import { useAcademicTerms } from '../../api/academic_terms';
 import { useCreateInvoice } from '../../api/invoices';
-import { useCreateMomoPayment } from '../../api/momo';
+import { useCreateMomoPaymentForInvoice } from '../../api/momo';
 import { useVehicles } from '../../api/vehicles';
 import { useAppAuth } from '../../contexts/useAppAuth';
-import { CardElement, useElements, useStripe } from '@stripe/react-stripe-js';
-import type { StripeCardElementChangeEvent } from '@stripe/stripe-js';
+import { CardCvcElement, CardExpiryElement, CardNumberElement, useElements, useStripe } from '@stripe/react-stripe-js';
+import type {
+  StripeCardCvcElementChangeEvent,
+  StripeCardExpiryElementChangeEvent,
+  StripeCardNumberElementChangeEvent,
+} from '@stripe/stripe-js';
 import { createSetupIntent, createStripePaymentIntent } from '../../api/stripe';
 import { getPlanCardKey } from '../../ultis/planCards';
 import { useCheckoutState } from './hooks/useCheckoutState';
@@ -20,25 +24,58 @@ import { payment_plan } from '../../constant/config';
 const priceFormatter = new Intl.NumberFormat('en-US', { maximumFractionDigits: 0 });
 const formatCurrency = (value: number) => `${priceFormatter.format(value)} VND`;
 
-type PlanCheckoutPanelProps = {
-  plan: SubscriptionPlanRecord;
+const getVehicleTypeLabel = (
+  vehicleType: string | undefined,
+  t: (key: string, options?: { defaultValue?: string }) => string
+) => {
+  switch (vehicleType) {
+    case 'MOTORBIKE':
+      return t('vehicle.modal.types.motorbike', { defaultValue: vehicleType });
+    case 'BICYCLE':
+      return t('vehicle.modal.types.bicycle', { defaultValue: vehicleType });
+    case 'ELECTRIC_BICYCLE':
+      return t('vehicle.modal.types.electricBicycle', { defaultValue: vehicleType });
+    default:
+      return vehicleType ?? '—';
+  }
 };
 
-export default function PlanCheckoutPanel({ plan }: PlanCheckoutPanelProps) {
+const STRIPE_ELEMENT_OPTIONS = {
+  style: {
+    base: {
+      fontSize: '16px',
+      color: '#0f172a',
+      fontFamily: '"Inter", sans-serif',
+      '::placeholder': {
+        color: '#94a3b8',
+      },
+    },
+    invalid: {
+      color: '#b91c1c',
+    },
+  },
+} as const;
+
+type PlanCheckoutPanelProps = {
+  plan: SubscriptionPlanRecord;
+  initialVehicleId?: string;
+};
+
+export default function PlanCheckoutPanel({ plan, initialVehicleId }: PlanCheckoutPanelProps) {
   const { t } = useTranslation();
   const navigate = useNavigate();
-  const planKey = getPlanCardKey(plan.plan_name);
+  const planKey = getPlanCardKey(plan.plans_type);
   const planTitle =
     planKey !== null
-      ? t(`plan.cards.${planKey}.title`, { defaultValue: plan.plan_name })
-      : plan.plan_name;
+      ? t(`plan.cards.${planKey}.title`, { defaultValue: plan.plans_type })
+      : plan.plans_type;
   const planSubtitle =
-    planKey !== null ? t(`plan.cards.${planKey}.subtitle`, { defaultValue: plan.description ?? '' }) : plan.description ?? '';
+    planKey !== null ? t(`plan.cards.${planKey}.subtitle`, { defaultValue: '' }) : '';
   const { user: currentUser } = useAppAuth();
   const { data: academicTerms = [] } = useAcademicTerms();
   const { data: vehicles = [] } = useVehicles();
   const { mutateAsync: createInvoice } = useCreateInvoice();
-  const { mutateAsync: createMomoPayment } = useCreateMomoPayment();
+  const { mutateAsync: createMomoPayment } = useCreateMomoPaymentForInvoice();
   const stripe = useStripe();
   const elements = useElements();
 
@@ -72,7 +109,8 @@ export default function PlanCheckoutPanel({ plan }: PlanCheckoutPanelProps) {
   const { state: checkoutState, actions: checkoutActions } = useCheckoutState(
     plan?.id,
     academicTermOptions,
-    vehicles
+    vehicles,
+    initialVehicleId
   );
 
   const {
@@ -107,6 +145,17 @@ export default function PlanCheckoutPanel({ plan }: PlanCheckoutPanelProps) {
   } = usePlanCheckoutPricing(plan?.id, selectedTermRecord?.id, activeStep >= 1);
 
   const selectedVehicle = vehicles.find((vehicle) => vehicle.id === selectedVehicleId) ?? null;
+  const selectedVehicleSummary = useMemo(() => {
+    if (!selectedVehicle) {
+      return t('plan.checkoutSummary.vehicleEmpty');
+    }
+    const typeLabel = getVehicleTypeLabel(selectedVehicle.vehicle_type, t);
+    const plate = selectedVehicle.license_plate?.trim();
+    if (plate) {
+      return `${typeLabel} • ${plate}`;
+    }
+    return `${typeLabel} • ${t('plan.checkoutSummary.noPlate')}`;
+  }, [selectedVehicle, t]);
   const recurringPlanId = recurringModePricing?.payment_plan_id ?? null;
   const fullPlanId = fullModePricing?.payment_plan_id ?? null;
 
@@ -151,9 +200,44 @@ export default function PlanCheckoutPanel({ plan }: PlanCheckoutPanelProps) {
   };
   const primaryLabel = getPrimaryLabel();
 
-  const handleCardElementChange = (event: StripeCardElementChangeEvent) => {
-    setCardComplete(event.complete);
-    setCardError(event.error?.message ?? null);
+  const [, setStripeFieldComplete] = useState({
+    number: false,
+    expiry: false,
+    cvc: false,
+  });
+  const [, setStripeFieldErrors] = useState<{
+    number: string | null;
+    expiry: string | null;
+    cvc: string | null;
+  }>({
+    number: null,
+    expiry: null,
+    cvc: null,
+  });
+
+  const syncStripeField = (field: 'number' | 'expiry' | 'cvc', complete: boolean, errorMessage?: string) => {
+    setStripeFieldComplete((prev) => {
+      const next = { ...prev, [field]: complete };
+      setCardComplete(next.number && next.expiry && next.cvc);
+      return next;
+    });
+    setStripeFieldErrors((prev) => {
+      const next = { ...prev, [field]: errorMessage ?? null };
+      setCardError(next.number || next.expiry || next.cvc);
+      return next;
+    });
+  };
+
+  const handleCardNumberChange = (event: StripeCardNumberElementChangeEvent) => {
+    syncStripeField('number', event.complete, event.error?.message);
+  };
+
+  const handleCardExpiryChange = (event: StripeCardExpiryElementChangeEvent) => {
+    syncStripeField('expiry', event.complete, event.error?.message);
+  };
+
+  const handleCardCvcChange = (event: StripeCardCvcElementChangeEvent) => {
+    syncStripeField('cvc', event.complete, event.error?.message);
   };
 
   const handleRecurringSetup = async () => {
@@ -166,13 +250,13 @@ export default function PlanCheckoutPanel({ plan }: PlanCheckoutPanelProps) {
     setProcessingError(null);
     try {
       const { client_secret } = await createSetupIntent();
-      const cardElement = elements.getElement(CardElement);
-      if (!cardElement) {
+      const cardNumberElement = elements.getElement(CardNumberElement);
+      if (!cardNumberElement) {
         throw new Error(t('plan.checkoutStepper.cardNotLoaded'));
       }
       const result = await stripe.confirmCardSetup(client_secret, {
         payment_method: {
-          card: cardElement,
+          card: cardNumberElement,
           billing_details: {
             name: currentUser?.full_name ?? currentUser?.user_code,
             email: currentUser?.email,
@@ -258,19 +342,22 @@ export default function PlanCheckoutPanel({ plan }: PlanCheckoutPanelProps) {
       });
 
       const momoResponse = await createMomoPayment({
-        amount: invoice.amount,
-        orderId: invoice.id,
-        orderInfo: `Invoice ${invoice.id}`,
-        redirectUrl: `${window.location.origin}/plan`,
-        extraData: JSON.stringify({ invoice_id: invoice.id }),
-        lang: currentUser.language_use || 'vi',
+        invoiceId: invoice.id,
+        payload: {
+          orderInfo: `Invoice ${invoice.id}`,
+          redirectUrl: `${window.location.origin}/profile`,
+          extraData: JSON.stringify({ invoice_id: invoice.id }),
+          lang: currentUser.language_use || 'vi',
+        },
       });
 
       const checkoutUrl =
         momoResponse.payUrl ??
         momoResponse.deeplink ??
+        momoResponse.shortLink ??
         momoResponse.qrCodeUrl ??
-        momoResponse.redirectUrl ??
+        momoResponse.deeplinkWebInApp ??
+        momoResponse.deeplinkMiniApp ??
         null;
 
       if (!checkoutUrl) {
@@ -427,7 +514,33 @@ export default function PlanCheckoutPanel({ plan }: PlanCheckoutPanelProps) {
                   <Box className="checkout-step-card">
                     <Typography variant="subtitle1">{t('plan.checkoutStepper.cardFormTitle')}</Typography>
                     <Box className="checkout-form checkout-form--stripe">
-                      <CardElement onChange={handleCardElementChange} />
+                      <Box className="stripe-field">
+                        <Typography variant="body2" className="stripe-field-label">
+                          {t('stripe.cardNumber', { defaultValue: 'Số thẻ' })}
+                        </Typography>
+                        <Box className="stripe-field-input">
+                          <CardNumberElement options={STRIPE_ELEMENT_OPTIONS} onChange={handleCardNumberChange} />
+                        </Box>
+                      </Box>
+
+                      <Box className="stripe-field-row">
+                        <Box className="stripe-field">
+                          <Typography variant="body2" className="stripe-field-label">
+                            {t('stripe.expiry', { defaultValue: 'Ngày hết hạn' })}
+                          </Typography>
+                          <Box className="stripe-field-input">
+                            <CardExpiryElement options={STRIPE_ELEMENT_OPTIONS} onChange={handleCardExpiryChange} />
+                          </Box>
+                        </Box>
+                        <Box className="stripe-field">
+                          <Typography variant="body2" className="stripe-field-label">
+                            {t('stripe.cvc', { defaultValue: 'CVC' })}
+                          </Typography>
+                          <Box className="stripe-field-input">
+                            <CardCvcElement options={STRIPE_ELEMENT_OPTIONS} onChange={handleCardCvcChange} />
+                          </Box>
+                        </Box>
+                      </Box>
                       {cardError && (
                         <Typography variant="body2" color="error" sx={{ mt: 1 }}>
                           {cardError}
@@ -491,6 +604,13 @@ export default function PlanCheckoutPanel({ plan }: PlanCheckoutPanelProps) {
             <Typography variant="body2" color="text.secondary">
               {t('plan.perDay')}
             </Typography>
+          </Box>
+
+          <Box sx={{ mt: 2 }}>
+            <Typography variant="body2" color="text.secondary">
+              {t('plan.checkoutSummary.vehicleLabel')}
+            </Typography>
+            <Typography variant="body1">{selectedVehicleSummary}</Typography>
           </Box>
         </Box>
       </Box>

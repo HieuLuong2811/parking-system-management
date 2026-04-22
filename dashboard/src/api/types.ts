@@ -11,12 +11,12 @@ export type AdminUser = {
 
 export type SubscriptionPlanRecord = {
   id: string;
-  plan_name: string;
+  plans_type: 'UNLICENSED_VEHICLE' | 'LICENSED_VEHICLE';
   price_per_day: number;
-  description?: string | null;
   deleted_at?: string | null;
   created_at: string;
   updated_at: string;
+  is_in_use?: boolean;
 };
 
 export type AcademicTermRecord = {
@@ -26,14 +26,13 @@ export type AcademicTermRecord = {
   end_date: string;
   created_at: string;
   updated_at: string;
+  is_in_use?: boolean;
 };
 
 export type PaymentPlanRecord = {
   id: string;
-  plan_name: string;
   payment_type: 'FULL' | 'MONTHLY';
   discount_percent?: number | null;
-  description?: string | null;
   is_active: boolean;
   created_at: string;
   updated_at: string;
@@ -76,6 +75,7 @@ export type SubscriptionSearchRow = UserSubscriptionRecord & {
 export type UserSubscriptionDetailRecord = {
   id: string;
   user_code: string;
+  user?: AdminUser | null;
   status: 'ACTIVE' | 'EXPIRED' | 'SUSPENDED';
   start_date: string;
   end_date: string;
@@ -117,10 +117,15 @@ export type ParkingSessionRecord = {
   updated_at: string;
 };
 
+export type ParkingSessionAdminRow = ParkingSessionRecord & {
+  user_code?: string | null;
+  user_full_name?: string | null;
+  vehicle_type?: string | null;
+};
+
 export type RoleRecord = {
   id: string;
   role_code: string;
-  role_name: string;
   created_at: string;
 };
 
@@ -133,7 +138,6 @@ export type UserRoleRecord = {
 
 export type RoleSummary = {
   id: string;
-  role_name: string;
   role_code: string;
 };
 
@@ -147,9 +151,16 @@ export type PaymentTransactionRecord = {
   invoice_id: string;
   attempt_number: number;
   transaction_code: string;
-  status: 'SUCCESS' | 'FAILED';
   response_message: string;
   created_at: string;
+};
+
+export type PaymentTransactionDetailRecord = PaymentTransactionRecord & {
+  user_code: string;
+  user_full_name: string;
+  invoice_amount: number;
+  invoice_payment_method: string;
+  invoice_created_at: string;
 };
 
 export type BillingEventLogRecord = {

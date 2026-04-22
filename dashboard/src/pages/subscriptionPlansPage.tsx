@@ -1,12 +1,11 @@
-import { Alert, Box, Button, IconButton, Snackbar, Tooltip } from '@mui/material';
+import { Alert, Box, Button, IconButton, Paper, Snackbar, Stack, TextField, Tooltip, Typography } from '@mui/material';
 import type { GridColDef } from '@mui/x-data-grid';
-import AddIcon from '@mui/icons-material/Add';
 import DeleteIcon from '@mui/icons-material/Delete';
 import EditIcon from '@mui/icons-material/Edit';
 import React, { useCallback, useMemo, useState } from 'react';
 import { useTranslation } from 'react-i18next';
 
-import { ResourceTableLayout } from '../components/resource/resourceTableLayout';
+import { SoftDataGrid } from '../components/common/SoftDataGrid';
 import { SubscriptionPlanModal, type SubscriptionPlanFormPayload } from '../components/modals/SubscriptionPlanModal';
 import {
   useAdminSubscriptionPlans,
@@ -96,20 +95,13 @@ export const SubscriptionPlansPage: React.FC = () => {
 
   const columns = useMemo<GridColDef<SubscriptionPlanRecord>[]>(() => {
     const baseColumns: GridColDef<SubscriptionPlanRecord>[] = [
-      { field: 'plan_name', headerName: t('subscriptionPlansPage.columns.planName'), width: 240, sortable: true },
+      { field: 'plans_type', headerName: t('subscriptionPlansPage.columns.planType', { defaultValue: 'Plan type' }), width: 240, sortable: true },
       {
         field: 'price_per_day',
         headerName: t('subscriptionPlansPage.columns.pricePerDay'),
         width: 160,
         sortable: true,
         renderCell: (params) => <span>{formatCurrency(params.value as number)}</span>,
-      },
-      {
-        field: 'description',
-        headerName: t('subscriptionPlansPage.columns.description'),
-        flex: 1,
-        sortable: false,
-        renderCell: (params) => <span>{params.value ?? '-'}</span>,
       },
       {
         field: 'updated_at',
@@ -128,20 +120,32 @@ export const SubscriptionPlansPage: React.FC = () => {
         width: 150,
         renderCell: (params) => {
           const plan = params.row as SubscriptionPlanRecord;
+          const disabled = Boolean(plan.is_in_use);
           return (
             <Box sx={{ display: 'flex', gap: 0.5 }}>
-              <Tooltip title={t('subscriptionPlansPage.tooltips.edit')}>
+              <Tooltip title={t('subscriptionPlansPage.tooltips.edit', { defaultValue: 'Edit plan' })}>
                 <IconButton size="small" onClick={() => handleStartEdit(plan)} aria-label="edit">
                   <EditIcon fontSize="small" />
                 </IconButton>
               </Tooltip>
-              {/* <Tooltip title={disabled ? t('subscriptionPlansPage.tooltips.locked') : t('subscriptionPlansPage.tooltips.delete')}> */}
+              <Tooltip
+                title={
+                  disabled
+                    ? t('subscriptionPlansPage.tooltips.locked', { defaultValue: 'Plan is in use' })
+                    : t('subscriptionPlansPage.tooltips.delete', { defaultValue: 'Delete plan' })
+                }
+              >
                 <span>
-                  <IconButton size="small" onClick={() => handleDeletePlan(plan)} aria-label="delete">
+                  <IconButton
+                    size="small"
+                    onClick={() => handleDeletePlan(plan)}
+                    aria-label="delete"
+                    disabled={disabled}
+                  >
                     <DeleteIcon fontSize="small" />
                   </IconButton>
                 </span>
-              {/* </Tooltip> */}
+              </Tooltip>
             </Box>
           );
         },
@@ -150,38 +154,75 @@ export const SubscriptionPlansPage: React.FC = () => {
   }, [handleDeletePlan, handleStartEdit, t]);
 
   const searchKeys = useMemo(
-    () => (row: SubscriptionPlanRecord) => [row.id, row.plan_name],
+    () => (row: SubscriptionPlanRecord) => [row.id, row.plans_type],
     []
   );
   const handleClearFilters = useCallback(() => {
     setSearchTerm('');
   }, []);
-
-  const filterControls = (
-    <Button variant="contained" size="small" onClick={handleOpenNew} startIcon={<AddIcon />}>
-      Add plan
-    </Button>
-  );
+  const normalizedSearch = searchTerm.trim().toLowerCase();
+  const filteredPlans = useMemo(() => {
+    if (!normalizedSearch) return plans;
+    return plans.filter((plan) =>
+      searchKeys(plan).some((value) => {
+        if (value === null || value === undefined) return false;
+        return String(value).toLowerCase().includes(normalizedSearch);
+      })
+    );
+  }, [normalizedSearch, plans, searchKeys]);
+  const fetchErrorMessage = useMemo(() => {
+    if (!isError) return '';
+    if (error instanceof Error) return error.message;
+    return String(error ?? '');
+  }, [error, isError]);
 
   return (
     <>
-      <ResourceTableLayout
-        title="Subscription plans"
-        description="Danh sách gói đăng ký hiện có."
-        columns={columns}
-        rows={plans}
-        loading={isLoading}
-        error={isError ? error : undefined}
-        searchTerm={searchTerm}
-        onSearchChange={setSearchTerm}
-        searchPlaceholder="Search by plan name or id"
-        searchKeys={searchKeys}
-        emptyMessage="No plans defined yet."
-        filterControls={filterControls}
-        onClearFilters={handleClearFilters}
-        clearLabel={t('button.clear', { defaultValue: 'Clear' })}
-        getRowId={(row) => row.id}
-      />
+      <Box sx={{ display: 'flex', flexDirection: 'column', gap: 2 }}>
+        <Stack spacing={0.5}>
+          <Typography variant="h5">{t('subscriptionPlansPage.title', 'Subscription Plans')}</Typography>
+          <Typography variant="body2" color="text.secondary">
+            {t('subscriptionPlansPage.description', 'List of available subscription plans')}
+          </Typography>
+        </Stack>
+
+        <Stack direction="row" justifyContent="space-between" alignItems="center" flexWrap="wrap" gap={2}>
+          <TextField
+            fullWidth
+            size="small"
+            variant="outlined"
+            value={searchTerm}
+            label={t('subscriptionPlansPage.searchLabel', { defaultValue: 'Search' })}
+            placeholder={t('subscriptionPlansPage.searchPlaceholder', 'Search by plan type or id')}
+            onChange={(event) => setSearchTerm(event.target.value)}
+            sx={{ maxWidth: 420 }}
+          />
+          <Stack direction="row" spacing={1}>
+            <Button variant="outlined" size="small" onClick={handleClearFilters}>
+              {t('button.clear', { defaultValue: 'Clear' })}
+            </Button>
+            <Button variant="contained" size="small" onClick={handleOpenNew}>
+              {t('subscriptionPlansPage.button.add', { defaultValue: 'Add new plan' })}
+            </Button>
+          </Stack>
+        </Stack>
+
+        {fetchErrorMessage && (
+          <Alert severity="error" variant="filled">
+            {fetchErrorMessage}
+          </Alert>
+        )}
+
+        <Paper elevation={0}>
+          <SoftDataGrid
+            rows={filteredPlans}
+            columns={columns}
+            loading={isLoading}
+            getRowId={(row) => (row as SubscriptionPlanRecord).id}
+            emptyMessage={t('subscriptionPlansPage.empty', 'No plans defined yet.')}
+          />
+        </Paper>
+      </Box>
 
       <SubscriptionPlanModal
         key={`${editingPlan?.id ?? 'new'}-${modalOpen ? 'open' : 'closed'}`}

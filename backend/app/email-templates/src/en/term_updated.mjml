@@ -1,0 +1,21 @@
+<mjml>
+  <mj-body>
+    <mj-section>
+      <mj-column>
+        <mj-text font-size="20px" font-weight="bold">
+          Academic term updated
+        </mj-text>
+        <mj-text>
+          Hello {{user_name}},
+        </mj-text>
+        <mj-text>
+          The academic term you are using has been renamed from <b>{{old_term_name}}</b> to <b>{{new_term_name}}</b>.
+        </mj-text>
+        <mj-text>
+          No action is required.
+        </mj-text>
+      </mj-column>
+    </mj-section>
+  </mj-body>
+</mjml>
+

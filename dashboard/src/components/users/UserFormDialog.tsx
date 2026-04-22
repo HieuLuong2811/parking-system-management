@@ -7,9 +7,9 @@ import {
   Button,
   CircularProgress,
   Box,
-  Typography,
 } from '@mui/material';
 import { useTranslation } from 'react-i18next';
+import { FormInput } from '../common/FormInput';
 
 export type UserFormValues = {
   user_code: string;
@@ -43,6 +43,7 @@ export const UserFormDialog: React.FC<UserFormDialogProps> = ({
 }) => {
   const { t } = useTranslation();
   const isCreate = mode === 'create';
+  const toDigitsOnly = (value: string) => value.replace(/\D+/g, '');
 
   return (
     <Dialog open={open} fullWidth maxWidth="md" onClose={onClose}>
@@ -62,63 +63,46 @@ export const UserFormDialog: React.FC<UserFormDialogProps> = ({
           }}
         >
           <Box>
-            <Typography variant="body2" mb={0.5}>
-              {t('usersPage.form.userCode')}
-            </Typography>
-                  <input
-                    value={values.user_code}
-                    onChange={(e) => onChange('user_code', e.target.value)}
-                    disabled={!isCreate}
-                    style={inputStyle}
-                  />
-                  {errors.user_code && (
-                    <Typography variant="caption" color="error" sx={{ mt: 0.5 }}>
-                      {errors.user_code}
-                    </Typography>
-                  )}
-                </Box>
-
-                <Box>
-            <Typography variant="body2" mb={0.5}>
-              {t('usersPage.form.fullName')}
-            </Typography>
-                  <input
-                    value={values.full_name}
-                    onChange={(e) => onChange('full_name', e.target.value)}
-                    style={inputStyle}
-                  />
-                  {errors.full_name && (
-                    <Typography variant="caption" color="error" sx={{ mt: 0.5 }}>
-                      {errors.full_name}
-                    </Typography>
-                  )}
-                </Box>
+            <FormInput
+              label={t('usersPage.form.userCode')}
+              required
+              value={values.user_code}
+              onChange={(e) => onChange('user_code', toDigitsOnly(e.target.value))}
+              inputMode="numeric"
+              pattern="[0-9]*"
+              disabled={!isCreate}
+              error={errors.user_code}
+            />
+          </Box>
 
           <Box>
-            <Typography variant="body2" mb={0.5}>
-              {t('usersPage.form.email')}
-            </Typography>
-                  <input
-                    type="email"
-                    value={values.email}
-                    onChange={(e) => onChange('email', e.target.value)}
-                    style={inputStyle}
-                  />
-                  {errors.email && (
-                    <Typography variant="caption" color="error" sx={{ mt: 0.5 }}>
-                      {errors.email}
-                    </Typography>
-                  )}
-                </Box>
+            <FormInput
+              label={t('usersPage.form.fullName')}
+              required
+              value={values.full_name}
+              onChange={(e) => onChange('full_name', e.target.value)}
+              error={errors.full_name}
+            />
+          </Box>
 
           <Box>
-            <Typography variant="body2" mb={0.5}>
-              {t('usersPage.form.phoneNumber')}
-            </Typography>
-            <input
+            <FormInput
+              label={t('usersPage.form.email')}
+              required
+              type="email"
+              value={values.email}
+              onChange={(e) => onChange('email', e.target.value)}
+              error={errors.email}
+            />
+          </Box>
+
+          <Box>
+            <FormInput
+              label={t('usersPage.form.phoneNumber')}
               value={values.phone_number ?? ''}
-              onChange={(e) => onChange('phone_number', e.target.value)}
-              style={inputStyle}
+              onChange={(e) => onChange('phone_number', toDigitsOnly(e.target.value))}
+              inputMode="numeric"
+              pattern="[0-9]*"
             />
           </Box>
         </Box>
@@ -132,13 +116,4 @@ export const UserFormDialog: React.FC<UserFormDialogProps> = ({
       </DialogActions>
     </Dialog>
   );
-};
-
-const inputStyle: React.CSSProperties = {
-  width: '100%',
-  padding: '10px 12px',
-  border: '1px solid #ccc',
-  borderRadius: 6,
-  fontSize: 14,
-  outline: 'none',
 };

@@ -1,5 +1,6 @@
 from sqlalchemy.ext.asyncio import AsyncSession
 
+from app.enums.parking import SubscriptionStatus
 from app.models.responses import DeleteResponse
 from app.models.subscriptions import (
     UserSubscriptionCreate,
@@ -7,7 +8,9 @@ from app.models.subscriptions import (
     UserSubscriptionRead,
     UserSubscriptionUpdate,
 )
+from app.authen.current_user import AuthUser
 from app.service.subscriptions import subscriptionService
+from app.utils.pagination import PaginatedResponse
 
 
 class SubscriptionController:
@@ -41,10 +44,23 @@ class SubscriptionController:
         return await subscriptionService.get_all_subscriptions_with_details(db)
 
     @staticmethod
+    async def get_all_subscription_details_paginated_ctrl(
+        db: AsyncSession,
+        *,
+        search: str | None = None,
+        status: SubscriptionStatus | None = None,
+        page: int = 1,
+        limit: int = 20,
+    ) -> PaginatedResponse[UserSubscriptionDetail]:
+        return await subscriptionService.get_all_subscriptions_with_details_paginated(
+            db, search=search, status=status, page=page, limit=limit
+        )
+
+    @staticmethod
     async def update_subscription_ctrl(
-        subscription_id: str, payload: UserSubscriptionUpdate, db: AsyncSession
+        subscription_id: str, payload: UserSubscriptionUpdate, db: AsyncSession, current_user: AuthUser
     ) -> UserSubscriptionRead:
-        return await subscriptionService.update_subscription(subscription_id, payload, db)
+        return await subscriptionService.update_subscription_for_user(subscription_id, payload, db, current_user)
 
     @staticmethod
     async def delete_subscription_ctrl(subscription_id: str, db: AsyncSession) -> DeleteResponse:

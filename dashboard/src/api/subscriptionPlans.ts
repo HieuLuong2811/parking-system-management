@@ -4,9 +4,8 @@ import { httpDelete, httpGet, httpPatch, httpPost } from './httpClient';
 import type { SubscriptionPlanRecord } from './types';
 
 export type SubscriptionPlanCreatePayload = {
-  plan_name: string;
+  plans_type: 'UNLICENSED_VEHICLE' | 'LICENSED_VEHICLE';
   price_per_day: number;
-  description?: string;
 };
 
 export type SubscriptionPlanUpdatePayload = Partial<SubscriptionPlanCreatePayload & { deleted_at?: string | null }>;

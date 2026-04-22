@@ -42,6 +42,9 @@ const vi = {
     subtitle: 'Quản lý phương tiện cá nhân',
     registerPlanButton: 'Đăng ký gói gửi xe',
     registerVehicleButton: 'Đăng ký phương tiện',
+    alerts: {
+      noPlateAlreadyRegistered: 'Xe không biển số chỉ cần đăng ký 1 lần.',
+    },
     search: {
       userCode: 'Mã người dùng',
       license: 'Biển số',
@@ -119,6 +122,19 @@ const vi = {
   },
 
   invoices: {
+    loading: 'Đang tải hóa đơn...',
+    error: 'Không thể tải hóa đơn.',
+    table: {
+      invoiceId: 'Mã hóa đơn',
+      created_at: 'Ngày phát hành',
+      amount: 'Số tiền',
+      status: 'Trạng thái',
+      actions: 'Thao tác',
+    },
+    actions: {
+      payWithMomo: 'Thanh toán MoMo',
+      momoMissingUrl: 'MoMo không trả về đường dẫn thanh toán.',
+    },
     sectionTitle: 'Hóa đơn',
     headerTitle: 'Lịch sử thanh toán',
     filters: {
@@ -141,6 +157,15 @@ const vi = {
     sectionTitle: 'Phiên gửi xe',
     loading: 'Đang tải phiên gửi xe…',
     sessionId: 'Phiên {{id}}',
+    actions: {
+      exportExcel: 'Xuất Excel',
+      exportTitle: 'Xuất lịch sử check in/check out',
+      rangeLabel: 'Khoảng thời gian',
+      today: 'Hôm nay',
+      last7Days: '7 ngày gần nhất',
+      customRange: 'Tuỳ chọn',
+      export: 'Xuất file',
+    },
     notProvided: 'Chưa có',
     checkIn: 'Thời điểm vào',
     checkOut: 'Thời điểm ra',
@@ -171,6 +196,10 @@ const vi = {
   },
 
   profile: {
+    momo: {
+      confirming: 'Đang xác nhận thanh toán MoMo...',
+      success: 'Xác nhận thanh toán thành công.',
+    },
     loading: 'Đang tải hồ sơ…',
     sectionTitle: 'Thông tin cá nhân',
     tagline: 'Khách hàng {{id}}',
@@ -210,6 +239,7 @@ const vi = {
     subscriptions: {
       heading: 'Gói đã đăng ký',
       empty: 'Bạn chưa đăng ký gói nào.',
+      vehicleUpdated: 'Đã cập nhật xe cho gói thành công.',
       vehicle: 'Xe',
       term: 'Học kỳ',
       paymentPlan: 'Hình thức thanh toán',
@@ -218,9 +248,9 @@ const vi = {
       paidAmount: 'Đã thanh toán',
       changePaymentMethod: 'Thay đổi phương thức thanh toán',
       stripeHeader: 'Cập nhật thẻ định kỳ',
+      stripeNotReady: 'Stripe chưa sẵn sàng. Vui lòng thử lại sau.',
       stripeCardMissing: 'Biểu mẫu thẻ chưa sẵn sàng.',
       stripeCardNotReady: 'Không thể lưu phương thức thanh toán.',
-      stripeNotReady: 'Stripe chưa sẵn sàng. Vui lòng thử lại sau.',
       stripeSuccess: 'Đã cập nhật phương thức thanh toán thành công.',
       savePaymentMethod: 'Lưu thẻ mới',
       cancelChange: 'Hủy',
@@ -304,6 +334,11 @@ const vi = {
     checkoutConfirm: 'Xác nhận thanh toán',
     checkoutPaymentMomo: 'Thanh toán qua MoMo',
     checkoutPlanNote: 'Thông tin gói đăng ký được hiển thị để bạn kiểm tra.',
+    checkoutSummary: {
+      vehicleLabel: 'Xe',
+      vehicleEmpty: '—',
+      noPlate: 'Không biển số',
+    },
     checkoutStepper: {
       steps: ['Chọn học kỳ', 'Hình thức thanh toán', 'Thông tin thanh toán'],
       termLabel: 'Học kỳ',

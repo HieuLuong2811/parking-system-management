@@ -1,0 +1,32 @@
+<mjml>
+  <mj-body background-color="#f5f7fb">
+    <mj-section padding="24px 0">
+      <mj-column>
+        <mj-text font-size="18px" font-weight="bold" color="#0f172a">
+          ยืนยันการชำระเงิน
+        </mj-text>
+        <mj-text font-size="14px" color="#334155">
+          สวัสดี {{ user_name }},
+        </mj-text>
+        <mj-text font-size="14px" color="#334155">
+          ระบบได้รับการชำระเงินสำหรับใบแจ้งหนี้ <strong>{{ invoice_id }}</strong> แล้ว
+        </mj-text>
+        <mj-divider border-color="#e2e8f0" />
+        <mj-text font-size="14px" color="#0f172a">
+          <strong>จำนวนเงิน:</strong> {{ amount_text }} VND
+        </mj-text>
+        <mj-text font-size="14px" color="#0f172a">
+          <strong>ระยะเวลาแพ็กเกจ:</strong> {{ start_date }} – {{ end_date }}
+        </mj-text>
+        <mj-divider border-color="#e2e8f0" />
+        <mj-text font-size="13px" color="#64748b">
+          หากต้องการความช่วยเหลือ กรุณาตอบกลับอีเมลนี้
+        </mj-text>
+        <mj-text font-size="13px" color="#64748b">
+          {{ project_name }}
+        </mj-text>
+      </mj-column>
+    </mj-section>
+  </mj-body>
+</mjml>
+

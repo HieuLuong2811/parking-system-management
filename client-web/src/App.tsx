@@ -37,7 +37,14 @@ function App() {
               }
             />
             <Route path="vehicle" element={<VehiclePage />} />
-            <Route path="invoices" element={<InvoicesPage />} />
+            <Route
+              path="invoices"
+              element={
+                <Elements stripe={stripePromise}>
+                  <InvoicesPage />
+                </Elements>
+              }
+            />
             <Route path="*" element={<Navigate to="/" replace />} />
           </Route>
         </Routes>

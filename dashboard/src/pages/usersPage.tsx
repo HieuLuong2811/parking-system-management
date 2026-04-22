@@ -39,8 +39,8 @@ import {
   useFetchUsers,
   useUpdateUser,
 } from '../api/users';
-import type { AdminUser, PaginatedResponse, RoleSummary, UserSubscriptionDetailRecord, UserWithRoles } from '../api/types';
-import { useSubscriptionSearch } from '../api/subscriptions';
+import type { AdminUser, RoleSummary, UserSubscriptionDetailRecord } from '../api/types';
+import { useSubscriptionDetails } from '../api/subscriptions';
 import { useAdminRoles } from '../api/roles';
 import { defaultUserFormValues } from '../constant/userForm';
 import { useDebouncedValue } from '../hooks/useDebouncedValue';
@@ -74,7 +74,7 @@ export const UsersPage: React.FC = () => {
     t('validation.requiredField', { field: fieldLabels[field] });
 
   const [drawerOpen, setDrawerOpen] = useState(false);
-  const [selectedUser, setSelectedUser] = useState<UserSubscriptionDetailRecord | null>(null);
+  const [selectedUser, setSelectedUser] = useState<AdminUser | UserSubscriptionDetailRecord | null>(null);
   const [formState, setFormState] = useState<{ open: boolean; mode: UserFormMode; values: UserFormValues }>({
     open: false,
     mode: 'create',
@@ -85,45 +85,47 @@ export const UsersPage: React.FC = () => {
   const [toast, setToast] = useState<ToastState>(null);
   const [importDialog, setImportDialog] = useState<{ roleCode: string; roleLabel: string } | null>(null);
 
-  const [searchTerm, setSearchTerm] = useState('');
+  const [nameEmailFilter, setNameEmailFilter] = useState('');
   const [phoneFilter, setPhoneFilter] = useState('');
+  const [userCodeFilter, setUserCodeFilter] = useState('');
   const [roleFilter, setRoleFilter] = useState('');
   const [statusTab, setStatusTab] = useState<'active' | 'inactive'>('active');
 
   const [page, setPage] = useState(0);
   const [rowsPerPage, setRowsPerPage] = useState(5);
 
-  const debouncedSearchTerm = useDebouncedValue(searchTerm, 450);
+  const debouncedUserCodeFilter = useDebouncedValue(userCodeFilter, 450);
+  const debouncedNameEmailFilter = useDebouncedValue(nameEmailFilter, 450);
   const debouncedPhoneFilter = useDebouncedValue(phoneFilter, 450);
   const debouncedRoleFilter = useDebouncedValue(roleFilter, 450);
 
   const handleClearFilters = useCallback(() => {
-    setSearchTerm('');
+    setNameEmailFilter('');
     setPhoneFilter('');
     setRoleFilter('');
+    setUserCodeFilter('');
     setPage(0);
   }, []);
 
   const handleTabChange = useCallback((_: React.SyntheticEvent, value: 'active' | 'inactive') => {
     setStatusTab(value);
+    setPage(0);
   }, []);
 
   const filters = useMemo(
     () => ({
-      search: debouncedSearchTerm || undefined,
-      phone: debouncedPhoneFilter || undefined,
-      role: debouncedRoleFilter || undefined,
+      user_code: debouncedUserCodeFilter?.trim() || undefined,
+      nameOrEmail: debouncedNameEmailFilter?.trim() || undefined,
+      phone: debouncedPhoneFilter?.trim() || undefined,
+      role: debouncedRoleFilter?.trim() || undefined,
       is_deleted: statusTab === 'inactive',
       page: page + 1,
       limit: rowsPerPage,
     }),
-    [debouncedSearchTerm, debouncedPhoneFilter, debouncedRoleFilter, statusTab, page, rowsPerPage]
+    [debouncedNameEmailFilter, debouncedPhoneFilter, debouncedRoleFilter, statusTab, page, rowsPerPage, debouncedUserCodeFilter]
   );
 
-  const { 
-    data: paginatedData, 
-    isLoading 
-  } = useFetchUsers(filters) as unknown as {data: PaginatedResponse<UserWithRoles>, isLoading: boolean};
+  const { data: paginatedData, isLoading } = useFetchUsers(filters);
 
   const usersWithRoles = useMemo(() => 
     paginatedData?.data ?? [],
@@ -131,7 +133,7 @@ export const UsersPage: React.FC = () => {
   )
   const totalUsers = paginatedData?.total ?? 0;
 
-  const { data: subscriptionRows = [], isLoading: isSubscriptionsLoading } = useSubscriptionSearch();
+  const { data: subscriptionDetails = [], isLoading: isSubscriptionsLoading } = useSubscriptionDetails();
   const { data: availableRoles = [] } = useAdminRoles();
 
   const users = useMemo(() => 
@@ -141,7 +143,7 @@ export const UsersPage: React.FC = () => {
 
   // const [sortConfig, setSortConfig] = useState<{ field: string; direction: 'asc' | 'desc' } | null>(null);
 
-  const openSubscriptionsDrawer = useCallback((user: UserSubscriptionDetailRecord) => {
+  const openSubscriptionsDrawer = useCallback((user: AdminUser) => {
     setSelectedUser(user);
     setDrawerOpen(true);
   }, []);
@@ -357,7 +359,7 @@ export const UsersPage: React.FC = () => {
         sortable: false,
         renderCell: (params) => (
           <Stack direction="row" spacing={1}>
-            <IconButton size="small" onClick={() => openSubscriptionsDrawer(params.row as UserSubscriptionDetailRecord)}>
+            <IconButton size="small" onClick={() => openSubscriptionsDrawer(params.row as AdminUser)}>
               <FormatListBulletedIcon fontSize="small" />
             </IconButton>
             <IconButton size="small" onClick={() => openEditForm(params.row as AdminUser)}>
@@ -414,34 +416,57 @@ export const UsersPage: React.FC = () => {
       </Tabs>
 
       <Stack direction="row" justifyContent="space-between" alignItems="center" flexWrap="wrap" gap={2}>
-        <Box sx={{ display: 'flex', gap: 1, alignItems: 'center' }}>
-          <Stack direction="row" spacing={1} alignItems="center" flexWrap="wrap">
+        <Box sx={{ display: 'flex', gap: 1, alignItems: 'center', flex: 1 }}>
+          <Stack direction="row" spacing={1} alignItems="center">
             <TextField
               size="small"
               variant="outlined"
-              placeholder={t('placeHolder.search')}
-              value={searchTerm}
-              onChange={(event) => setSearchTerm(event.target.value)}
+              value={userCodeFilter}
+              label={t('usersPage.filters.userCode')}
+              onChange={(event) => {
+                setUserCodeFilter(event.target.value.replace(/\D+/g, ''));
+                setPage(0);
+              }}
+              type="text"
+              inputProps={{ inputMode: 'numeric', pattern: '[0-9]*' }}
             />
             <TextField
               size="small"
               variant="outlined"
-              placeholder="Phone number"
+              value={nameEmailFilter}
+              label={t('usersPage.filters.nameOrEmail')}
+              onChange={(event) => {
+                setNameEmailFilter(event.target.value);
+                setPage(0);
+              }}
+            />
+            <TextField
+              size="small"
+              variant="outlined"
               value={phoneFilter}
-              onChange={(event) => setPhoneFilter(event.target.value)}
+              label={t('usersPage.filters.phoneNumber')}
+              onChange={(event) => {
+                setPhoneFilter(event.target.value.replace(/\D+/g, ''));
+                setPage(0);
+              }}
+              type="text"
+              inputProps={{ inputMode: 'numeric', pattern: '[0-9]*' }}
             />
             <FormControl sx={{ minWidth: 160 }} size="small">
               <InputLabel shrink>{t('usersPage.filters.role')}</InputLabel>
               <Select
                 value={roleFilter}
                 displayEmpty
-                onChange={(event) => setRoleFilter(event.target.value)}
+                onChange={(event) => {
+                  setRoleFilter(event.target.value);
+                  setPage(0);
+                }}
                 label={t('usersPage.filters.role')}
               >
                 <MenuItem value="">{t('usersPage.filters.allRoles')}</MenuItem>
                 {availableRoles.map((role) => (
                   <MenuItem key={role.id} value={role.role_code}>
-                    {role.role_name}
+                    {role.role_code}
                   </MenuItem>
                 ))}
               </Select>
@@ -474,7 +499,7 @@ export const UsersPage: React.FC = () => {
         >
           <DrawerUserSubscription
             selectedUser={selectedUser}
-            subscriptionRows={subscriptionRows ?? []}
+            subscriptionDetails={subscriptionDetails}
             isLoading={isSubscriptionsLoading}
             onViewSubscriptions={handleViewSubscriptions}
           />

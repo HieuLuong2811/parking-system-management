@@ -2,8 +2,17 @@ import {
   Box,
   Button,
   Chip,
+  Dialog,
+  DialogActions,
+  DialogContent,
+  DialogTitle,
+  FormControl,
+  FormControlLabel,
+  FormLabel,
   Pagination,
   Paper,
+  Radio,
+  RadioGroup,
   Stack,
   Table,
   TableBody,
@@ -17,7 +26,7 @@ import {
 import React, { useEffect, useMemo, useState } from 'react';
 import { useTranslation } from 'react-i18next';
 import SectionCard from '../components/shared/SectionCard';
-import { useParkingSessions } from '../api/parking_sessions';
+import { exportMyParkingSessionsXlsx, useParkingSessions } from '../api/parking_sessions';
 import useDebouncedValue from '../hooks/useDebouncedValue';
 
 const formatDateValue = (value?: string | null) =>
@@ -44,7 +53,16 @@ export default function SessionPage() {
   const [query, setQuery] = useState('');
   const debouncedQuery = useDebouncedValue(query, 420);
   const [page, setPage] = useState(1);
-  const { data: sessions = [], isLoading, isError } = useParkingSessions();
+  const pageSize = 5;
+  const { data: paginated, isLoading, isError } = useParkingSessions({
+    page,
+    limit: pageSize,
+    query: debouncedQuery.trim() || undefined,
+    from_time: fromDate || undefined,
+    to_time: toDate || undefined,
+  });
+  const sessions = useMemo(() => paginated?.data ?? [], [paginated]);
+  const totalPages = paginated?.total_pages ?? 0;
 
   useEffect(() => {
     setPage(1);
@@ -70,24 +88,84 @@ export default function SessionPage() {
     setPage(1);
   };
 
+  const [exportOpen, setExportOpen] = useState(false);
+  const [exportRange, setExportRange] = useState<'today' | 'last7' | 'custom'>('today');
+  const [exportFrom, setExportFrom] = useState('');
+  const [exportTo, setExportTo] = useState('');
+  const [exportBusy, setExportBusy] = useState(false);
+  const [exportError, setExportError] = useState<string | null>(null);
+
+  const formatLocalDateTime = (date: Date) => {
+    const pad = (value: number) => String(value).padStart(2, '0');
+    return `${date.getFullYear()}-${pad(date.getMonth() + 1)}-${pad(date.getDate())}T${pad(date.getHours())}:${pad(
+      date.getMinutes()
+    )}`;
+  };
+
+  const openExportDialog = () => {
+    setExportError(null);
+    setExportBusy(false);
+    setExportRange('today');
+    setExportFrom(fromDate);
+    setExportTo(toDate);
+    setExportOpen(true);
+  };
+
+  const closeExportDialog = () => {
+    if (exportBusy) return;
+    setExportOpen(false);
+  };
+
+  const handleExport = async () => {
+    setExportError(null);
+    setExportBusy(true);
+    try {
+      const now = new Date();
+      let resolvedFrom = exportFrom;
+      let resolvedTo = exportTo;
+
+      if (exportRange === 'today') {
+        const start = new Date(now);
+        start.setHours(0, 0, 0, 0);
+        resolvedFrom = formatLocalDateTime(start);
+        resolvedTo = formatLocalDateTime(now);
+      } else if (exportRange === 'last7') {
+        const start = new Date(now.getTime() - 7 * 24 * 60 * 60 * 1000);
+        resolvedFrom = formatLocalDateTime(start);
+        resolvedTo = formatLocalDateTime(now);
+      } else if (exportRange === 'custom') {
+        if (!resolvedFrom || !resolvedTo) {
+          setExportError(t('common.error'));
+          return;
+        }
+      }
+
+      const { blob, filename } = await exportMyParkingSessionsXlsx({
+        query: debouncedQuery.trim() || undefined,
+        from_time: resolvedFrom || undefined,
+        to_time: resolvedTo || undefined,
+      });
+
+      const url = window.URL.createObjectURL(blob);
+      const link = document.createElement('a');
+      link.href = url;
+      link.download = filename;
+      document.body.appendChild(link);
+      link.click();
+      link.remove();
+      window.URL.revokeObjectURL(url);
+
+      setExportOpen(false);
+    } catch (error) {
+      setExportError(error instanceof Error ? error.message : t('common.error'));
+    } finally {
+      setExportBusy(false);
+    }
+  };
+
   const tableColumns = ['vehicle', 'checkIn', 'checkOut', 'status', 'amount'];
 
-  const filtered = useMemo(() => {
-    return sessions.filter((session) => {
-      const checkIn = session.check_in_time ? new Date(session.check_in_time) : null;
-      if (fromDate && checkIn && new Date(fromDate) > checkIn) return false;
-      if (toDate && checkIn && new Date(toDate) < checkIn) return false;
-      const keyword = debouncedQuery.trim().toLowerCase();
-      if (keyword) {
-        const text = `${session.license_plate ?? ''} ${session.vehicle_id}`.toLowerCase();
-        if (!text.includes(keyword)) return false;
-      }
-      return true;
-    });
-  }, [fromDate, toDate, debouncedQuery, sessions]);
-
-  const pageSize = 5;
-  const pagedSessions = filtered.slice((page - 1) * pageSize, page * pageSize);
+  const pagedSessions = useMemo(() => sessions, [sessions]);
 
   return (
     <SectionCard>
@@ -118,9 +196,17 @@ export default function SessionPage() {
         >
           {t('sessions.filters.clear')}
         </Button>
+        <Button
+          variant="contained"
+          color="primary"
+          onClick={openExportDialog}
+          sx={{ height: 40, alignSelf: 'flex-start' }}
+        >
+          {t('sessions.actions.exportExcel', { defaultValue: 'Export Excel' })}
+        </Button>
       </Stack>
 
-      {filtered.length === 0 ? (
+      {pagedSessions.length === 0 ? (
         <Typography color="text.secondary">{t('sessions.empty')}</Typography>
       ) : (
         <>
@@ -143,7 +229,7 @@ export default function SessionPage() {
                       </TableRow>
                 </TableHead>
                 <TableBody>
-                  {filtered.length === 0 && (
+                  {pagedSessions.length === 0 && (
                     <TableRow>
                       <TableCell colSpan={6} align="center">
                         <Typography color="text.secondary">{t('sessions.empty')}</Typography>
@@ -175,10 +261,10 @@ export default function SessionPage() {
               </Table>
             )}
           </TableContainer>
-          {filtered.length > pageSize && (
+          {totalPages > 1 && (
             <Box display="flex" justifyContent="center" mt={2}>
               <Pagination
-                count={Math.ceil(filtered.length / pageSize)}
+                count={totalPages}
                 page={page}
                 color="primary"
                 onChange={(_, value) => setPage(value)}
@@ -188,6 +274,72 @@ export default function SessionPage() {
           )}
         </>
       )}
+
+      <Dialog open={exportOpen} onClose={closeExportDialog} fullWidth maxWidth="sm">
+        <DialogTitle>{t('sessions.actions.exportTitle', { defaultValue: 'Export check in/out history' })}</DialogTitle>
+        <DialogContent>
+          {exportError ? (
+            <Typography color="error" sx={{ mb: 1 }}>
+              {exportError}
+            </Typography>
+          ) : null}
+
+          <FormControl component="fieldset" sx={{ mt: 1 }}>
+            <FormLabel>{t('sessions.actions.rangeLabel', { defaultValue: 'Time range' })}</FormLabel>
+            <RadioGroup
+              value={exportRange}
+              onChange={(event) => setExportRange(event.target.value as 'today' | 'last7' | 'custom')}
+            >
+              <FormControlLabel
+                value="today"
+                control={<Radio />}
+                label={t('sessions.actions.today', { defaultValue: 'Today' })}
+              />
+              <FormControlLabel
+                value="last7"
+                control={<Radio />}
+                label={t('sessions.actions.last7Days', { defaultValue: 'Last 7 days' })}
+              />
+              <FormControlLabel
+                value="custom"
+                control={<Radio />}
+                label={t('sessions.actions.customRange', { defaultValue: 'Custom range' })}
+              />
+            </RadioGroup>
+          </FormControl>
+
+          {exportRange === 'custom' ? (
+            <Stack direction={{ xs: 'column', sm: 'row' }} spacing={2} sx={{ mt: 1 }}>
+              <TextField
+                label={t('sessions.filters.from')}
+                type="datetime-local"
+                value={exportFrom}
+                onChange={(event) => setExportFrom(event.target.value)}
+                InputLabelProps={{ shrink: true }}
+                disabled={exportBusy}
+                sx={{ flex: 1 }}
+              />
+              <TextField
+                label={t('sessions.filters.to')}
+                type="datetime-local"
+                value={exportTo}
+                onChange={(event) => setExportTo(event.target.value)}
+                InputLabelProps={{ shrink: true }}
+                disabled={exportBusy}
+                sx={{ flex: 1 }}
+              />
+            </Stack>
+          ) : null}
+        </DialogContent>
+        <DialogActions>
+          <Button onClick={closeExportDialog} disabled={exportBusy}>
+            {t('common.cancel', { defaultValue: 'Cancel' })}
+          </Button>
+          <Button onClick={handleExport} variant="contained" disabled={exportBusy}>
+            {t('sessions.actions.export', { defaultValue: 'Export' })}
+          </Button>
+        </DialogActions>
+      </Dialog>
 
     </SectionCard>
   );

@@ -6,7 +6,7 @@ class DeleteResponse(SQLModel):
 
 
 class SubscriptionInfo(SQLModel):
-    plan_name: str | None = None
+    plans_type: str | None = None
     payment_type: str | None = None
     status: str | None = None
     paid_amount: int | None = None

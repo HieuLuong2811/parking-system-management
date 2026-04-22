@@ -1,0 +1,21 @@
+<mjml>
+  <mj-body>
+    <mj-section>
+      <mj-column>
+        <mj-text font-size="20px" font-weight="bold">
+          Thông báo cập nhật gói đăng ký
+        </mj-text>
+        <mj-text>
+          Xin chào {{user_name}},
+        </mj-text>
+        <mj-text>
+          Gói đăng ký của bạn đã được thay đổi loại từ <b>{{old_plan_type}}</b> thành <b>{{new_plan_type}}</b>.
+        </mj-text>
+        <mj-text>
+          Bạn không cần thực hiện thao tác nào.
+        </mj-text>
+      </mj-column>
+    </mj-section>
+  </mj-body>
+</mjml>
+

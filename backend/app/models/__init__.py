@@ -11,3 +11,4 @@ from .users import Users
 from .vehicles import Vehicle
 from .payment_plans import PaymentPlan
 from .notifications import Notification
+from .auth_verification_requests import AuthVerificationRequest

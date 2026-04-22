@@ -146,9 +146,9 @@ const ja = {
       paidAmount: '支払済み',
       changePaymentMethod: '支払い方法を変更',
       stripeHeader: '定期支払いカードを更新',
+      stripeNotReady: 'Stripeは現在利用できません。',
       stripeCardMissing: 'カードフォームが準備されていません。',
       stripeCardNotReady: '支払い方法をキャプチャできません。',
-      stripeNotReady: 'Stripeは現在利用できません。',
       stripeSuccess: '支払い方法が正常に更新されました。',
       savePaymentMethod: '新しいカードを保存',
       cancelChange: 'キャンセル',
@@ -304,6 +304,8 @@ const ja = {
   },
 
   invoices: {
+    loading: 'Loading...',
+    error: 'Error loading invoices.',
     sectionTitle: '請求書',
     headerTitle: '請求履歴',
     filters: {
@@ -323,6 +325,10 @@ const ja = {
     issuedOn: '発行日',
     dueOn: '支払期限',
     amountLabel: '金額',
+    actions: {
+      payWithMomo: 'Pay with MoMo',
+      momoMissingUrl: 'MoMo did not return a payment link.',
+    },
     status: {
       paid: '支払い済み',
       pending: '保留中',

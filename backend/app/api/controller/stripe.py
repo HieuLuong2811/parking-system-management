@@ -37,7 +37,6 @@ class StripePaymentIntentRequest(BaseModel):
 
 
 class StripePaymentIntentResponse(BaseModel):
-    invoice_id: UUID
     subscription_id: UUID
     payment_intent_id: str
     status: str

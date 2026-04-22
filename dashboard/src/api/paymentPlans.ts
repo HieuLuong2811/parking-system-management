@@ -4,10 +4,8 @@ import { httpDelete, httpGet, httpPatch, httpPost } from './httpClient';
 import type { PaymentPlanRecord } from './types';
 
 export type PaymentPlanCreatePayload = {
-  plan_name: string;
   payment_type: 'FULL' | 'MONTHLY';
   discount_percent?: number;
-  description?: string;
   is_active?: boolean;
 };
 

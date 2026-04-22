@@ -3,6 +3,7 @@ from sqlalchemy.ext.asyncio import AsyncSession
 from app.models.responses import DeleteResponse
 from app.models.payment_transactions import (
     PaymentTransactionCreate,
+    PaymentTransactionDetailRead,
     PaymentTransactionRead,
     PaymentTransactionUpdate,
 )
@@ -27,9 +28,19 @@ class PaymentTransactionController:
         *,
         search: str | None = None,
         page: int = 1,
-        limit: int = 20,
+        limit: int = 5,
     ) -> PaginatedResponse[PaymentTransactionRead]:
         return await paymentTransactionService.get_transactions(db, search=search, page=page, limit=limit)
+
+    @staticmethod
+    async def get_transactions_details_ctrl(
+        db: AsyncSession,
+        *,
+        search: str | None = None,
+        page: int = 1,
+        limit: int = 5,
+    ) -> PaginatedResponse[PaymentTransactionDetailRead]:
+        return await paymentTransactionService.get_transactions_details(db, search=search, page=page, limit=limit)
 
     @staticmethod
     async def update_transaction_ctrl(

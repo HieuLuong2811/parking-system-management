@@ -23,7 +23,7 @@ const Footer = () => {
   return (
     <Box component="footer" className="footer">
       <Box className="footer-top">
-        <Box className="footer-container">
+        <Box className="footer-container ps-container">
 
           {/* LEFT */}
           <Box className="footer-left">
@@ -75,7 +75,7 @@ const Footer = () => {
       </Box>
 
       {/* BOTTOM */}
-      <Box className="footer-bottom">
+      <Box className="footer-bottom ps-container">
         <Typography>
           © {new Date().getFullYear()} UTEHY
         </Typography>

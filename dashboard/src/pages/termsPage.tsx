@@ -1,4 +1,4 @@
-import { Alert, Box, Button, IconButton, Snackbar, Tooltip } from '@mui/material';
+import { Alert, Box, Button, IconButton, Paper, Snackbar, Stack, TextField, Tooltip, Typography } from '@mui/material';
 import type { GridColDef } from '@mui/x-data-grid';
 import AddIcon from '@mui/icons-material/Add';
 import DeleteIcon from '@mui/icons-material/Delete';
@@ -7,7 +7,7 @@ import React, { useCallback, useMemo, useState } from 'react';
 import { useTranslation } from 'react-i18next';
 
 import { AcademicTermModal, type AcademicTermFormPayload } from '../components/modals/AcademicTermModal';
-import { ResourceTableLayout } from '../components/resource/resourceTableLayout';
+import { SoftDataGrid } from '../components/common/SoftDataGrid';
 import {
   useAdminAcademicTerms,
   useCreateAcademicTerm,
@@ -94,49 +94,51 @@ export const TermsPage: React.FC = () => {
     [deleteTermAsync]
   );
 
-  const columns = useMemo<GridColDef<AcademicTermRecord>[]>(() => {
-    const baseColumns: GridColDef<AcademicTermRecord>[] = [
-      { field: 'id', headerName: 'Term ID', width: 220, sortable: true },
-      { field: 'term_name', headerName: 'Term name', width: 260, sortable: true },
-      { field: 'start_date', headerName: 'Start', width: 180, sortable: true },
-      { field: 'end_date', headerName: 'End', width: 180, sortable: true },
+  const columns: GridColDef[] = useMemo(
+    () => [
+      { field: 'term_name', headerName: t('termsPage.fields.termName'), width: 260, sortable: true },
+      { field: 'start_date', headerName: t('termsPage.fields.startDate'), width: 180, sortable: true },
+      { field: 'end_date', headerName: t('termsPage.fields.endDate'), width: 180, sortable: true },
       {
         field: 'created_at',
-        headerName: 'Created at',
+        headerName: t('termsPage.fields.createdAt'),
         width: 220,
         sortable: true,
         renderCell: (params) => formatDateTime(params.value),
-      }
-    ];
-    return [
-      ...baseColumns,
+      },
       {
         field: 'actions',
-        headerName: 'Actions',
+        headerName: t('termsPage.fields.actions'),
         sortable: false,
         width: 150,
         renderCell: (params) => {
           const term = params.row as AcademicTermRecord;
+          const disabled = Boolean(term.is_in_use);
           return (
             <Box sx={{ display: 'flex', gap: 0.5 }}>
-              <Tooltip title="Edit term">
+              <Tooltip title={t('termsPage.tooltips.edit')}>
                 <IconButton size="small" onClick={() => handleStartEdit(term)} aria-label="edit">
                   <EditIcon fontSize="small" />
                 </IconButton>
               </Tooltip>
-              {/* <Tooltip title={disabled ? 'Term is in use' : 'Delete term'}> */}
+              <Tooltip title={disabled ? t('termsPage.tooltips.inUse') : t('termsPage.tooltips.delete')}>
                 <span>
-                  <IconButton size="small" onClick={() => handleDeleteTerm(term)} aria-label="delete">
+                  <IconButton
+                    size="small"
+                    onClick={() => handleDeleteTerm(term)}
+                    aria-label="delete"
+                    disabled={disabled}
+                  >
                     <DeleteIcon fontSize="small" />
                   </IconButton>
                 </span>
-              {/* </Tooltip> */}
+              </Tooltip>
             </Box>
           );
         },
       },
-    ];
-  }, [handleDeleteTerm, handleStartEdit]);
+    ], [handleDeleteTerm, handleStartEdit, t]
+  );
 
   const searchKeys = useMemo(
     () => (row: AcademicTermRecord) => [row.id, row.term_name, row.start_date, row.end_date],
@@ -145,32 +147,68 @@ export const TermsPage: React.FC = () => {
   const handleClearFilters = useCallback(() => {
     setSearchTerm('');
   }, []);
-
-  const filterControls = (
-    <Button variant="contained" size="small" onClick={handleOpenNew} startIcon={<AddIcon />}>
-      Add term
-    </Button>
-  );
+  const normalizedSearch = searchTerm.trim().toLowerCase();
+  const filteredTerms = useMemo(() => {
+    if (!normalizedSearch) return terms;
+    return terms.filter((term) =>
+      searchKeys(term).some((value) => {
+        if (value === null || value === undefined) return false;
+        return String(value).toLowerCase().includes(normalizedSearch);
+      })
+    );
+  }, [normalizedSearch, searchKeys, terms]);
+  const fetchErrorMessage = useMemo(() => {
+    if (!isError) return '';
+    if (error instanceof Error) return error.message;
+    return String(error ?? '');
+  }, [error, isError]);
 
   return (
     <>
-      <ResourceTableLayout
-        title="Quản lý học kỳ"
-        description="Định nghĩa kỳ học và thời gian áp dụng."
-        columns={columns}
-        rows={terms}
-        loading={isLoading}
-        error={isError ? error : undefined}
-        searchTerm={searchTerm}
-        onSearchChange={setSearchTerm}
-        searchPlaceholder="Search by term or id"
-        searchKeys={searchKeys}
-        emptyMessage="No academic terms registered."
-        filterControls={filterControls}
-        onClearFilters={handleClearFilters}
-        clearLabel={t('button.clear', { defaultValue: 'Clear' })}
-        getRowId={(row) => row.id}
-      />
+      <Box sx={{ display: 'flex', flexDirection: 'column', gap: 2 }}>
+        <Stack spacing={0.5}>
+          <Typography variant="h5">{t('termsPage.title', 'Academic Terms')}</Typography>
+          <Typography variant="body2" color="text.secondary">
+            {t('termsPage.description', 'Define academic terms and their application periods.')}
+          </Typography>
+        </Stack>
+
+        <Stack direction="row" justifyContent="space-between" alignItems="center" flexWrap="wrap" gap={2}>
+          <Box display="flex" alignItems="center" gap={1}>
+            <TextField
+              size="small"
+              variant="outlined"
+              value={searchTerm}
+              label={t('termsPage.searchTerm.name', { defaultValue: 'Search by term name' })}
+              onChange={(event) => setSearchTerm(event.target.value)}
+            />
+            <Button size="small" onClick={handleClearFilters}>
+              {t('button.clear', { defaultValue: 'Clear' })}
+            </Button>
+          </Box>
+          <Stack direction="row" spacing={1}>
+            <Button variant="contained" size="small" onClick={handleOpenNew} startIcon={<AddIcon />}>
+              {t('termsPage.buttons.add', { defaultValue: 'Add new term' })}
+            </Button>
+          </Stack>
+        </Stack>
+
+        {fetchErrorMessage && (
+          <Alert severity="error" variant="filled">
+            {fetchErrorMessage}
+          </Alert>
+        )}
+
+        <Paper elevation={0}>
+          <SoftDataGrid
+            rows={filteredTerms}
+            columns={columns}
+            loading={isLoading}
+            getRowId={(row) => (row as AcademicTermRecord).id}
+            emptyMessage={t('termsPage.empty', { defaultValue: 'No academic terms registered.' })}
+          />
+        </Paper>
+      </Box>
 
       <AcademicTermModal
         key={`${editingTerm?.id ?? 'new'}-${modalOpen ? 'open' : 'closed'}`}
@@ -179,7 +217,6 @@ export const TermsPage: React.FC = () => {
         onSubmit={handleSubmitTerm}
         initialValue={editingTerm}
         submitting={isSaving}
-        // disableDates={Boolean(editingTerm && isTermUsed(editingTerm.id))}
       />
 
       <Snackbar

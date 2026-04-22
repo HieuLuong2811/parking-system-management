@@ -12,14 +12,16 @@ import {
   Select,
   Stack,
   TextField,
+  TablePagination,
   Typography,
 } from '@mui/material';
 import FormatListBulletedIcon from '@mui/icons-material/FormatListBulleted';
 import { useTranslation } from 'react-i18next';
 
 import { SoftDataGrid } from '../components/common/SoftDataGrid';
+import { UserIdentityCell } from '../components/common/UserIdentityCell';
 import { DrawerUserSubscription } from '../components/users/DrawerUserSubscription';
-import { useSubscriptionDetails } from '../api/subscriptions';
+import { useSubscriptionDetailsPaginated } from '../api/subscriptions';
 import type {  UserSubscriptionDetailRecord } from '../api/types';
 import { formatCurrency, formatDateTime } from '../ultis/format';
 import type { GridColDef } from '@mui/x-data-grid';
@@ -40,35 +42,21 @@ export const SubscriptionsPage: React.FC = () => {
   const { t } = useTranslation();
   const [searchTerm, setSearchTerm] = useState('');
   const [statusFilter, setStatusFilter] = useState<typeof statusOptions[number]>('ALL');
+  const [page, setPage] = useState(0);
+  const [rowsPerPage, setRowsPerPage] = useState(5);
   const [drawerOpen, setDrawerOpen] = useState(false);
   const [selectedUser, setSelectedUser] = useState<UserSubscriptionDetailRecord | null>(null);
   const navigate = useNavigate();
 
-  const { data: subscriptionDetails = [], isLoading, isError } = useSubscriptionDetails();
+  const { data: paginated, isLoading, isError } = useSubscriptionDetailsPaginated({
+    search: searchTerm.trim() || undefined,
+    status: statusFilter === 'ALL' ? undefined : statusFilter,
+    page: page + 1,
+    limit: rowsPerPage,
+  });
 
-  const normalizedQuery = useMemo(() => searchTerm.trim().toLowerCase(), [searchTerm]);
-
-  const filteredSubscriptions = useMemo(() => {
-    return subscriptionDetails.filter((subscription) => {
-      if (statusFilter !== 'ALL' && subscription.status !== statusFilter) {
-        return false;
-      }
-      if (!normalizedQuery) {
-        return true;
-      }
-      const haystack = [
-        subscription.user_code,
-        subscription.subscription_plan?.plan_name,
-        subscription.payment_plan?.plan_name,
-        subscription.term?.term_name,
-        subscription.vehicle?.license_plate,
-      ]
-        .filter(Boolean)
-        .map((value) => String(value).toLowerCase())
-        .join('|');
-      return haystack.includes(normalizedQuery);
-    });
-  }, [subscriptionDetails, normalizedQuery, statusFilter]);
+  const rows = useMemo(() => paginated?.data ?? [], [paginated]);
+  const total = paginated?.total ?? 0;
 
   const openDrawerForUser = useCallback((user: UserSubscriptionDetailRecord) => {
     setSelectedUser(user);
@@ -95,11 +83,7 @@ export const SubscriptionsPage: React.FC = () => {
         minWidth: 160,
         flex: 1,
         renderCell: (params) => {
-          return (
-            <Stack spacing={0.5}>
-              <Typography variant="subtitle2">{params.value}</Typography>
-            </Stack>
-          );
+          return <UserIdentityCell fullName={params.row.user?.full_name} userCode={String(params.value ?? '')} />;
         },
       },
       {
@@ -108,7 +92,7 @@ export const SubscriptionsPage: React.FC = () => {
         minWidth: 180,
         flex: 1,
         renderCell: (params) => (
-          <Typography>{params.row.subscription_plan?.plan_name ?? '—'}</Typography>
+          <Typography>{params.row.subscription_plan?.plans_type ?? '—'}</Typography>
         ),
       },
       {
@@ -116,7 +100,7 @@ export const SubscriptionsPage: React.FC = () => {
         headerName: t('subscriptionsPage.columns.paymentPlan', 'Payment plan'),
         minWidth: 170,
         renderCell: (params) => (
-          <Typography>{params.row.payment_plan?.plan_name ?? '—'}</Typography>
+          <Typography>{params.row.payment_plan?.payment_type ?? '—'}</Typography>
         ),
       },
       {
@@ -132,9 +116,16 @@ export const SubscriptionsPage: React.FC = () => {
         headerName: t('subscriptionsPage.columns.period', 'Period'),
         minWidth: 200,
         renderCell: (params) => (
-          <Typography>
-            {formatDateTime(params.row.start_date)} – {formatDateTime(params.row.end_date)}
-          </Typography>
+          <Stack spacing={0.5}>
+            <Typography variant="subtitle2">
+              {t('subscriptionsPage.periodLabels.from', { defaultValue: 'From' })}:{' '}
+              {formatDateTime(params.row.start_date)}
+            </Typography>
+            <Typography variant="subtitle2">
+              {t('subscriptionsPage.periodLabels.to', { defaultValue: 'To' })}:{' '}
+              {formatDateTime(params.row.end_date)}
+            </Typography>
+          </Stack>
         ),
       },
       {
@@ -190,6 +181,7 @@ export const SubscriptionsPage: React.FC = () => {
   const handleClearFilters = () => {
     setSearchTerm('');
     setStatusFilter('ALL');
+    setPage(0);
   };
 
   return (
@@ -207,16 +199,20 @@ export const SubscriptionsPage: React.FC = () => {
             variant="outlined"
             placeholder={t('subscriptionsPage.searchPlaceholder')}
             value={searchTerm}
-            onChange={(event) => setSearchTerm(event.target.value)}
+            onChange={(event) => {
+              setSearchTerm(event.target.value);
+              setPage(0);
+            }}
           />
           <FormControl size="small">
             <InputLabel>{t('subscriptionsPage.filters.status')}</InputLabel>
             <Select
               value={statusFilter}
               label={t('subscriptionsPage.filters.status')}
-              onChange={(event) =>
-                setStatusFilter(event.target.value as typeof statusOptions[number])
-              }
+              onChange={(event) => {
+                setStatusFilter(event.target.value as typeof statusOptions[number]);
+                setPage(0);
+              }}
             >
               {statusOptions.map((status) => (
                 <MenuItem key={status} value={status}>
@@ -239,12 +235,24 @@ export const SubscriptionsPage: React.FC = () => {
 
       <Box sx={{ mt: 2 }}>
         <SoftDataGrid
-          rows={filteredSubscriptions}
+          rows={rows}
           columns={columns}
           loading={isLoading}
           getRowId={(row) => row.id}
           maxHeight={560}
           emptyMessage={t('subscriptionsPage.empty')}
+        />
+        <TablePagination
+          component="div"
+          count={total}
+          page={page}
+          onPageChange={(_event, newPage) => setPage(newPage)}
+          rowsPerPage={rowsPerPage}
+          onRowsPerPageChange={(event) => {
+            setRowsPerPage(parseInt(event.target.value, 10));
+            setPage(0);
+          }}
+          rowsPerPageOptions={[5, 10, 20, 50, 100]}
         />
       </Box>
 
@@ -261,8 +269,7 @@ export const SubscriptionsPage: React.FC = () => {
         >
           <DrawerUserSubscription
             selectedUser={selectedUser}
-            subscriptionRows={subscriptionRows || []}
-            isLoading={isSubscriptionsLoading}
+            isLoading={isLoading}
             onViewSubscriptions={handleViewSubscriptions}
           />
         </Box>

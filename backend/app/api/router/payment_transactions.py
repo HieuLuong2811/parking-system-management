@@ -1,11 +1,13 @@
-from fastapi import APIRouter, Depends, HTTPException, Query
+from fastapi import APIRouter, Depends, Query
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.api.controller.payment_transactions import PaymentTransactionController
+from app.authen.current_user import AuthUser, required_roles
 from app.db.session import get_db
 from app.models.responses import DeleteResponse
 from app.models.payment_transactions import (
     PaymentTransactionCreate,
+    PaymentTransactionDetailRead,
     PaymentTransactionRead,
     PaymentTransactionUpdate,
 )
@@ -23,10 +25,27 @@ async def create_transaction(payload: PaymentTransactionCreate, db: AsyncSession
 async def list_transactions(
     search: str | None = None,
     page: int = Query(1, ge=1, description="Page number"),
-    limit: int = Query(20, ge=1, le=100, description="Number of items per page"),
+    limit: int = Query(5, ge=1, le=100, description="Number of items per page"),
     db: AsyncSession = Depends(get_db),
+    current_user: AuthUser = Depends(required_roles("ADMIN")),
 ):
     return await PaymentTransactionController.get_transactions_ctrl(db, search=search, page=page, limit=limit)
+
+
+@router.get("/details", response_model=PaginatedResponse[PaymentTransactionDetailRead])
+async def list_transactions_details(
+    search: str | None = None,
+    page: int = Query(1, ge=1, description="Page number"),
+    limit: int = Query(5, ge=1, le=100, description="Number of items per page"),
+    db: AsyncSession = Depends(get_db),
+    current_user: AuthUser = Depends(required_roles("ADMIN")),
+):
+    return await PaymentTransactionController.get_transactions_details_ctrl(
+        db,
+        search=search,
+        page=page,
+        limit=limit,
+    )
 
 
 @router.get("/{transaction_id}", response_model=PaymentTransactionRead)

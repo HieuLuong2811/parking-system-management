@@ -1,6 +1,5 @@
 from sqlalchemy.ext.asyncio import AsyncSession
 
-from app.models.responses import DeleteResponse
 from app.models.invoices import InvoiceCreate, InvoiceRead, InvoiceUpdate
 from app.service.invoices import invoiceService
 

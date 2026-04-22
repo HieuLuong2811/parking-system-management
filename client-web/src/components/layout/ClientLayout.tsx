@@ -44,7 +44,7 @@ export default function ClientLayout() {
 
       <Box className="client-body">
         <QueryLoadingOverlay />
-        <Box className="client-content">
+        <Box className="client-content ps-container">
           <Outlet />
         </Box>
       </Box>

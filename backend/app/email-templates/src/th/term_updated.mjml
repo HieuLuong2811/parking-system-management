@@ -1,0 +1,21 @@
+<mjml>
+  <mj-body>
+    <mj-section>
+      <mj-column>
+        <mj-text font-size="20px" font-weight="bold">
+          แจ้งเตือนอัปเดตภาคการศึกษา
+        </mj-text>
+        <mj-text>
+          สวัสดี {{user_name}},
+        </mj-text>
+        <mj-text>
+          ภาคการศึกษาที่คุณใช้งานถูกเปลี่ยนชื่อจาก <b>{{old_term_name}}</b> เป็น <b>{{new_term_name}}</b>.
+        </mj-text>
+        <mj-text>
+          คุณไม่จำเป็นต้องดำเนินการใด ๆ
+        </mj-text>
+      </mj-column>
+    </mj-section>
+  </mj-body>
+</mjml>
+

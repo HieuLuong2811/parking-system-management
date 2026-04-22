@@ -9,14 +9,9 @@ from fastapi import HTTPException, status
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.core.stripe_client import ensure_stripe_configured, stripe_client
-from app.enums.parking import InvoiceStatus, PaymentMethod, SubscriptionStatus, TransactionStatus
-from app.models.invoices import InvoiceCreate, InvoiceUpdate
-from app.models.payment_transactions import PaymentTransactionCreate
+from app.enums.parking import SubscriptionStatus
 from app.models.subscriptions import UserSubscriptionCreate
 from app.models.users import UsersUpdate
-from app.service.invoices import invoiceService
-from app.service.payment_notifications import send_payment_confirmation_email
-from app.service.payment_transactions import paymentTransactionService
 from app.service.subscriptions import subscriptionService
 from app.service.users import userService
 
@@ -80,36 +75,18 @@ class StripePaymentService:
             "end_date": end_date.isoformat(),
         }
 
-        invoice = await invoiceService.create_invoice(
-            InvoiceCreate(
-                user_code=user_code,
-                subscription_id=None,
-                amount=amount,
-                payment_method=PaymentMethod.STRIPE,
-                status=InvoiceStatus.PENDING,
-                metadata=metadata,
-            ),
-            db,
-        )
-
         try:
             payment_intent = stripe_client.PaymentIntent.create(
                 amount=amount,
                 currency="vnd",
                 customer=customer_id,
                 payment_method=payment_method_id,
-                off_session=True,
                 confirm=True,
                 setup_future_usage="off_session",
-                metadata={"invoice_id": str(invoice.id)},
+                metadata=metadata,
             )
         except stripe.error.StripeError as exc:
-            await invoiceService.update_invoice(
-                invoice.id,
-                InvoiceUpdate(status=InvoiceStatus.FAILED),
-                db,
-            )
-            logger.exception("Stripe PaymentIntent creation failed for invoice %s", invoice.id)
+            logger.exception("Stripe PaymentIntent creation failed for user %s", user_code)
             raise HTTPException(
                 status_code=status.HTTP_502_BAD_GATEWAY, detail="Unable to process payment with Stripe"
             ) from exc
@@ -128,32 +105,7 @@ class StripePaymentService:
         )
         subscription = await subscriptionService.create_subscription(subscription_payload, db)
 
-        await paymentTransactionService.create_transaction(
-            PaymentTransactionCreate(
-                invoice_id=invoice.id,
-                attempt_number=1,
-                transaction_code=payment_intent.id,
-                status=TransactionStatus.SUCCESS,
-                response_message=f"PaymentIntent {payment_intent.status}",
-            ),
-            db,
-        )
-
-        invoice = await invoiceService.update_invoice(
-            invoice.id,
-            InvoiceUpdate(
-                status=InvoiceStatus.PAID,
-                subscription_id=subscription.id,
-                stripe_invoice_id=payment_intent.id,
-            ),
-            db,
-        )
-
-        user = await userService.crud.get(db, user_code)
-        send_payment_confirmation_email(user, invoice, subscription)
-
         return {
-            "invoice_id": str(invoice.id),
             "subscription_id": str(subscription.id),
             "payment_intent_id": payment_intent.id,
             "status": payment_intent.status,

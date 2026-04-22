@@ -19,10 +19,23 @@ class notificationService:
         return await notificationService.crud.get(db, notification_id)
 
     @staticmethod
-    async def get_all_notifications(db: AsyncSession, receiver_id: Optional[str] = None) -> list[Notification]:
-        statement = select(Notification)
+    async def get_all_notifications(
+        db: AsyncSession,
+        receiver_id: Optional[str] = None,
+        *,
+        limit: int | None = None,
+        offset: int | None = None,
+        include_deleted: bool = True,
+    ) -> list[Notification]:
+        statement = select(Notification).order_by(Notification.created_at.desc(), Notification.id.desc())
         if receiver_id:
             statement = statement.where(Notification.receiver_id == receiver_id)
+        if not include_deleted:
+            statement = statement.where(Notification.deleted_at.is_(None))
+        if offset:
+            statement = statement.offset(offset)
+        if limit:
+            statement = statement.limit(limit)
         result = await db.execute(statement)
         return result.scalars().all()
 

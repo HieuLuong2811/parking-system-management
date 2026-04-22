@@ -81,7 +81,7 @@ class userService:
             for role_def in DEFAULT_ROLES:
                 role = await roleService.get_by_code(role_def["role_code"], db)
                 if not role:
-                    role = Roles(role_code=role_def["role_code"], role_name=role_def["role_name"])
+                    role = Roles(role_code=role_def["role_code"])
                     db.add(role)
                     await db.flush()
                 role_map[role.role_code] = role
@@ -145,7 +145,8 @@ class userService:
     @staticmethod
     async def get_users(
         db: AsyncSession,
-        search: str | None = None,
+        users_code: str | None = None,
+        nameOrEmail: str | None = None,
         phone: str | None = None,
         role: str | None = None,
         is_deleted: bool | None = None,
@@ -160,17 +161,21 @@ class userService:
         )
 
         filters = []
-        if search:
-            trimmed_search = search.strip()
+
+        if nameOrEmail:
+            trimmed_search = nameOrEmail.strip()
             if trimmed_search:
                 like_pattern = f"%{trimmed_search.lower()}%"
                 filters.append(
                     or_(
-                        func.lower(Users.user_code).ilike(like_pattern),
                         ilike_unaccent(Users.full_name, trimmed_search),
-                        func.lower(Users.email).ilike(like_pattern),
+                        ilike_unaccent(Users.email, like_pattern),
                     )
                 )
+
+        if users_code:
+            filters.append(ilike_unaccent(Users.user_code, users_code))
+
         if phone:
             normalized_phone = normalize_phone_text(phone)
             if normalized_phone:
@@ -258,13 +263,12 @@ class userService:
         existing_role = await roleService.get_by_code("user", db)
         if existing_role:
             return existing_role
-        return await roleService.create_role(RolesCreate(role_code="user", role_name="User"), db)
+        return await roleService.create_role(RolesCreate(role_code="user"), db)
 
     @staticmethod
     async def import_users(entries: List[UserImportEntry], role_code: str, db: AsyncSession) -> List[Users]:
         normalized_code = (role_code or "").strip().lower() or "user"
-        friendly_name = "User" if normalized_code == "user" else normalized_code.capitalize()
-        role = await roleService.get_or_create(normalized_code, friendly_name, db)
+        role = await roleService.get_or_create(normalized_code, db)
         user_role = await userService._ensure_user_role(db)
         user_role_id = user_role.id
         role_id = role.id

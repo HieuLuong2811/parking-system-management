@@ -3,8 +3,6 @@ import { loadStripe } from '@stripe/stripe-js';
 
 const stripePublicKey =
   process.env.REACT_APP_STRIPE_PUBLIC_KEY?.trim() ||
-  process.env.VITE_STRIPE_PUBLIC_KEY?.trim() ||
-  process.env.NEXT_PUBLIC_STRIPE_PUBLIC_KEY?.trim() ||
   "";
 
 export const stripePromise: Promise<Stripe | null> = stripePublicKey

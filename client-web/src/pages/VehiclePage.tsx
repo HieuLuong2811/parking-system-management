@@ -19,14 +19,18 @@ import {
 } from '@mui/material';
 import React, { useEffect, useMemo, useState } from 'react';
 import { useTranslation } from 'react-i18next';
+import { useNavigate } from 'react-router-dom';
 import SectionCard from '../components/shared/SectionCard';
 import VehicleRegistrationModal from '../components/vehicle/VehicleRegistrationModal';
 import { VehicleInfo } from '../api/clientApi';
+import { useSubscriptionPlans } from '../api/subscription_plans';
+import { useUserSubscriptions } from '../api/user_subscriptions';
 import { useDeleteVehicle, useVehicles } from '../api/vehicles';
 import useDebouncedValue from '../hooks/useDebouncedValue';
 import useModal from '../hooks/useModal';
 import QRCode from 'qrcode';
 import { vehicles_tab } from '../constant/config';
+import { getPlanCardKey } from '../ultis/planCards';
 import type { GridColDef } from '@mui/x-data-grid';
 
 const vehicleColumns: GridColDef[] = [
@@ -90,12 +94,17 @@ const getTabLabelKeys = {
 
 export default function VehiclePage() {
   const { t } = useTranslation();
+  const navigate = useNavigate();
   const [userCodeFilter, setUserCodeFilter] = useState('');
   const [licenseFilter, setLicenseFilter] = useState('');
   const [vehicleTab, setVehicleTab] = useState<'withPlate' | 'withoutPlate'>('withPlate');
+  const [editingVehicle, setEditingVehicle] = useState<VehicleInfo | null>(null);
+  const [snackbar, setSnackbar] = useState<{ message: string; severity: 'success' | 'info' | 'error' } | null>(null);
   const debouncedUserCodeFilter = useDebouncedValue(userCodeFilter, 420);
   const debouncedLicenseFilter = useDebouncedValue(licenseFilter, 420);
   const { data: vehicles = [], isLoading, isError } = useVehicles();
+  const { data: plans = [] } = useSubscriptionPlans();
+  const { data: subscriptions = [], isLoading: subscriptionsLoading } = useUserSubscriptions();
   const deleteVehicle = useDeleteVehicle();
   const registerModal = useModal();
 
@@ -124,32 +133,60 @@ export default function VehiclePage() {
   }, [filteredVehicles, vehicleTab]);
 
   const handleEdit = (vehicle: VehicleInfo) => {
-    <>
-      <Snackbar anchorOrigin={{ vertical: 'top', horizontal: 'center' }} open autoHideDuration={3000}>
-        <Alert>
-          Edit ${vehicle.id}`
-        </Alert>
-      </Snackbar>
-    </>
+    setEditingVehicle(vehicle);
+    registerModal.openModal();
   };
 
   const handleDelete = (vehicle: VehicleInfo) => {
     deleteVehicle.mutate({ vehicleId: vehicle.id });
   };
 
-  const handleRidirectToPlan = () => {
-    if (filteredVehicles.length === 0) {
-      <>
-        <Snackbar>
-          <Alert severity="info" sx={{ width: '100%' }}>
-            {t('vehicle.empty')}
-          </Alert>
-        </Snackbar>
-      </>;
-      return;
+  const handleOpenCreate = () => {
+    setEditingVehicle(null);
+    registerModal.openModal();
+  };
+
+  const handleCloseModal = () => {
+    setEditingVehicle(null);
+    registerModal.closeModal();
+  };
+
+  const showToast = (message: string, severity: 'success' | 'info' | 'error' = 'info') => {
+    setSnackbar({ message, severity });
+  };
+
+  const handleRegisterPlan = (vehicle: VehicleInfo) => {
+    const hasPlate = Boolean(vehicle.license_plate?.trim());
+    const planKey = hasPlate ? 'withPlate' : 'noPlate';
+
+    if (!hasPlate) {
+      if (subscriptionsLoading) {
+        showToast(t('common.loading'), 'info');
+        return;
+      }
+
+      const alreadyRegistered = subscriptions.some((subscription) => {
+        const matchesVehicle = subscription.vehicle?.id === vehicle.id;
+        const isActiveLike = subscription.status !== 'EXPIRED';
+        return matchesVehicle && isActiveLike;
+      });
+
+      if (alreadyRegistered) {
+        showToast(t('vehicle.alerts.noPlateAlreadyRegistered'), 'info');
+        return;
+      }
     }
-    window.location.href = '/plan';
-  }
+
+    const matchedPlanId = plans.find((plan) => getPlanCardKey(plan.plans_type) === planKey)?.id ?? null;
+    const params = new URLSearchParams();
+    params.set('vehicleId', vehicle.id);
+    params.set('planKey', planKey);
+    if (matchedPlanId) {
+      params.set('planId', matchedPlanId);
+    }
+
+    navigate(`/plan?${params.toString()}`);
+  };
 
   const visibleColumbs = useMemo(() => {
     if (vehicleTab === vehicles_tab.withoutPlate) {
@@ -167,10 +204,7 @@ export default function VehiclePage() {
         <Stack direction="row" justifyContent="space-between" flexWrap="wrap" spacing={1}>
           <Typography variant="h5">{t('vehicle.subtitle')}</Typography>
           <Stack direction="row" spacing={1}>
-            <Button variant="outlined" onClick={handleRidirectToPlan}>
-              {t('vehicle.registerPlanButton')}
-            </Button>
-            <Button variant="contained" onClick={registerModal.openModal} disabled={isError}>
+            <Button variant="contained" onClick={handleOpenCreate} disabled={isError}>
               {t('vehicle.registerVehicleButton')}
             </Button>
           </Stack>
@@ -255,6 +289,9 @@ export default function VehiclePage() {
                       </TableCell>
                       <TableCell>
                         <Stack direction="row" spacing={1}>
+                          <Button size="small" variant="contained" onClick={() => handleRegisterPlan(vehicle)}>
+                            {t('vehicle.registerPlanButton')}
+                          </Button>
                           <Button size="small" variant="outlined" onClick={() => handleEdit(vehicle)}>
                             {t('vehicle.table.actionsMenu.edit')}
                           </Button>
@@ -310,7 +347,22 @@ export default function VehiclePage() {
         </Paper>
       )}
 
-      <VehicleRegistrationModal open={registerModal.open} onClose={registerModal.closeModal} />
+      <VehicleRegistrationModal
+        open={registerModal.open}
+        onClose={handleCloseModal}
+        vehicle={editingVehicle}
+      />
+
+      <Snackbar
+        anchorOrigin={{ vertical: 'top', horizontal: 'right' }}
+        open={Boolean(snackbar)}
+        autoHideDuration={3000}
+        onClose={() => setSnackbar(null)}
+      >
+        <Alert severity={snackbar?.severity ?? 'info'} onClose={() => setSnackbar(null)} sx={{ width: '100%' }}>
+          {snackbar?.message ?? ''}
+        </Alert>
+      </Snackbar>
     </SectionCard>
   );
 }

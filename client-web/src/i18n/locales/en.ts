@@ -39,6 +39,9 @@ const en = {
     subtitle: 'Personal vehicle management',
     registerPlanButton: 'Register parking plan',
     registerVehicleButton: 'Register vehicle',
+    alerts: {
+      noPlateAlreadyRegistered: 'Vehicles without a license plate only need to be registered once.',
+    },
     search: {
       userCode: 'User code',
       license: 'License plate',
@@ -117,6 +120,8 @@ const en = {
   invoices: {
     sectionTitle: 'Invoices',
     headerTitle: 'Billing history',
+    loading: 'Loading invoices...',
+    error: 'Unable to load invoices.',
     filters: {
       from: 'From',
       to: 'To',
@@ -130,10 +135,15 @@ const en = {
       dueOn: 'Due',
       amount: 'Amount',
       status: 'Status',
+      actions: 'Actions',
     },
     issuedOn: 'Issued',
     dueOn: 'Due',
     amountLabel: 'Amount',
+    actions: {
+      payWithMomo: 'Pay with MoMo',
+      momoMissingUrl: 'MoMo did not return a payment link.',
+    },
     status: {
       paid: 'Paid',
       pending: 'Pending',
@@ -144,6 +154,15 @@ const en = {
     sectionTitle: 'Check in/out history',
     loading: 'Loading check in/out history...',
     sessionId: 'Session {{id}}',
+    actions: {
+      exportExcel: 'Export Excel',
+      exportTitle: 'Export check in/out history',
+      rangeLabel: 'Time range',
+      today: 'Today',
+      last7Days: 'Last 7 days',
+      customRange: 'Custom range',
+      export: 'Export',
+    },
     filters: {
       from: 'From',
       to: 'To',
@@ -185,6 +204,10 @@ const en = {
       phone: 'Phone number',
       saveSuccess: 'Profile has been updated.',
     },
+    momo: {
+      confirming: 'Confirming MoMo payment...',
+      success: 'Payment confirmed.',
+    },
     saveChanges: 'Save changes',
     passwordDialog: {
       button: 'Change password',
@@ -202,6 +225,7 @@ const en = {
     subscriptions: {
       heading: 'Registered subscriptions',
       empty: 'No registered subscriptions yet.',
+      vehicleUpdated: 'Vehicle updated successfully.',
       vehicle: 'Vehicle',
       term: 'Academic term',
       paymentPlan: 'Payment plan',
@@ -210,9 +234,9 @@ const en = {
       paidAmount: 'Paid',
       changePaymentMethod: 'Change payment method',
       stripeHeader: 'Update recurring payment card',
+      stripeNotReady: 'Stripe is not available right now.',
       stripeCardMissing: 'Card form is not ready.',
       stripeCardNotReady: 'Unable to capture the payment method.',
-      stripeNotReady: 'Stripe is not available right now.',
       stripeSuccess: 'Payment method updated successfully.',
       savePaymentMethod: 'Save new card',
       cancelChange: 'Cancel',
@@ -287,6 +311,11 @@ const en = {
     checkoutPaymentMomo: 'Pay with MoMo',
     checkoutMomoAccount: 'MoMo account: Campus Parking (0912 345 678)',
     checkoutPlanNote: 'The selected plan is summarized here for you to review.',
+    checkoutSummary: {
+      vehicleLabel: 'Vehicle',
+      vehicleEmpty: '—',
+      noPlate: 'No license plate',
+    },
     checkoutStepper: {
       steps: ['Choose term', 'Payment plan', 'Payment details'],
       termLabel: 'Academic term',

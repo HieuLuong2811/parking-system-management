@@ -1,7 +1,6 @@
 DEFAULT_ROLES = [
     {
         "role_code": "admin",
-        "role_name": "Admin"
     }
 ]
 

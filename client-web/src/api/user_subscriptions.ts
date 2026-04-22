@@ -42,3 +42,27 @@ export const useUserSubscriptions = () => {
     refetchOnWindowFocus: false,
   });
 };
+
+type UpdateSubscriptionArgs = {
+  subscriptionId: string;
+  payload: {
+    vehicle_id?: string;
+  };
+};
+
+const updateSubscription = async ({ subscriptionId, payload }: UpdateSubscriptionArgs): Promise<UserSubscriptionInfo> => {
+  return requestWithContext(
+    clientHttp.patch<UserSubscriptionInfo>(`/subscriptions/${subscriptionId}`, payload),
+    'Update subscription'
+  );
+};
+
+export const useUpdateSubscription = () => {
+  const queryClient = useQueryClient();
+  return useMutation({
+    mutationFn: (args: UpdateSubscriptionArgs) => updateSubscription(args),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['userSubscriptions'] });
+    },
+  });
+};

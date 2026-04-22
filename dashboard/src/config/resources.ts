@@ -22,16 +22,18 @@ const paymentTypeOptions = [
   { value: 'MONTHLY', label: 'Monthly' },
 ];
 
+const planTypeOptions = [
+  { value: 'UNLICENSED_VEHICLE', label: 'Unlicensed vehicle' },
+  { value: 'LICENSED_VEHICLE', label: 'Licensed vehicle' },
+];
+
+
 const subscriptionStatusOptions = [
   { value: 'ACTIVE', label: 'Active' },
   { value: 'EXPIRED', label: 'Expired' },
   { value: 'SUSPENDED', label: 'Suspended' },
 ];
 
-const transactionStatusOptions = [
-  { value: 'SUCCESS', label: 'Success' },
-  { value: 'FAILED', label: 'Failed' },
-];
 
 const makeColumn = (field: string, label: string, width?: number, render?: ColumnConfig['render']): ColumnConfig => ({
   field,
@@ -123,14 +125,12 @@ export const resourceConfigs: ResourceConfig[] = [
     columns: [
       makeColumn('id', 'Role ID', 120),
       makeColumn('role_code', 'Code', 180),
-      makeColumn('role_name', 'Name', 220),
       makeColumn('created_at', 'Created at', 180),
     ],
     formFields: [
       makeField('role_code', 'Code', 'text', true),
-      makeField('role_name', 'Name', 'text', true),
     ],
-    searchFields: [makeSearch('role_code', 'Code'), makeSearch('role_name', 'Name')],
+    searchFields: [makeSearch('role_code', 'Code')],
   },
   {
     id: 'terms',
@@ -163,17 +163,15 @@ export const resourceConfigs: ResourceConfig[] = [
     allowDelete: true,
     columns: [
       makeColumn('id', 'Plan ID', 200),
-      makeColumn('plan_name', 'Name', 200),
+      makeColumn('plans_type', 'Plan type', 200),
       makeColumn('price_per_day', 'Price/day', 140),
-      makeColumn('description', 'Description', 260, (value) => (value ? `${String(value).slice(0, 50)}${String(value).length > 50 ? '…' : ''}` : '-')),
       makeColumn('deleted_at', 'Deleted at', 180),
     ],
     formFields: [
-      makeField('plan_name', 'Name', 'text', true),
+      makeField('plans_type', 'Plan type', 'select', true, planTypeOptions),
       makeField('price_per_day', 'Price per day', 'number', true),
-      makeField('description', 'Description', 'textarea'),
     ],
-    searchFields: [makeSearch('plan_name', 'Name')],
+    searchFields: [makeSearch('plans_type', 'Plan type')],
   },
   {
     id: 'subscriptions',
@@ -187,8 +185,7 @@ export const resourceConfigs: ResourceConfig[] = [
         makeColumn('sub_plan_id', 'Plan ID', 160),
         makeColumn('term_id', 'Term ID', 160),
         makeColumn('payment_type', 'Payment type', 160),
-        makeColumn('status', 'Status', 140),
-        makeColumn('start_date', 'Start date', 160),
+          makeColumn('start_date', 'Start date', 160),
         makeColumn('end_date', 'End date', 160),
       ],
       formFields: [
@@ -219,7 +216,6 @@ export const resourceConfigs: ResourceConfig[] = [
       makeColumn('license_plate', 'License plate', 160),
       makeColumn('check_in_time', 'Check in', 180),
       makeColumn('check_out_time', 'Check out', 180),
-      makeColumn('status', 'Status', 140),
       makeColumn('user_type', 'User type', 140),
       makeColumn('total_amount', 'Amount', 140),
     ],
@@ -273,17 +269,15 @@ export const resourceConfigs: ResourceConfig[] = [
       makeColumn('invoice_id', 'Invoice ID', 220),
       makeColumn('attempt_number', 'Attempt', 100),
       makeColumn('transaction_code', 'Code', 240),
-      makeColumn('status', 'Status', 140),
       makeColumn('response_message', 'Response', 260),
     ],
     formFields: [
       makeField('invoice_id', 'Invoice ID', 'text', true),
       makeField('attempt_number', 'Attempt', 'number'),
       makeField('transaction_code', 'Code', 'text', true),
-      makeField('status', 'Status', 'select', true, transactionStatusOptions),
       makeField('response_message', 'Response', 'textarea'),
     ],
-    searchFields: [makeSearch('invoice_id', 'Invoice ID'), makeSearch('status', 'Status')],
+    searchFields: [makeSearch('invoice_id', 'Invoice ID')],
   },
   {
     id: 'billing_event_logs',

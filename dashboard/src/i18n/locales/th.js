@@ -9,6 +9,12 @@ const th = {
         settings: "ตั้งค่า",
       },
     },
+    common: {
+      tooltips: {
+        user_code: "รหัสผู้ใช้",
+        full_name: "ชื่อเต็ม",
+      },
+    },
     pageTitle: {
       home: "ระบบจัดการที่จอดรถ - มหาวิทยาลัยเทคโนโลยีและการศึกษาเหิงเยิน",
       users: "ผู้ใช้งาน",
@@ -32,6 +38,7 @@ const th = {
       refresh: "รีเฟรช",
       cancel: "ยกเลิก",
       save: "บันทึก",
+      clear: "ล้าง",
     },
     validation: {
       requiredField: "{{field}} จำเป็นต้องกรอก",
@@ -203,6 +210,11 @@ const th = {
         active: "ใช้งาน",
         deleted: "ถูกลบ",
       },
+      vehicleTypes: {
+        motorbike: "รถจักรยานยนต์",
+        electricBicycle: "รถจักรยานไฟฟ้า",
+        bicycle: "รถจักรยาน",
+      }
     },
     rolesPage: {
       title: "บทบาท",
@@ -212,10 +224,28 @@ const th = {
     },
     termsPage: {
       title: "ภาคการศึกษา",
+      description: "กำหนดภาคการศึกษาและช่วงเวลาการใช้งาน",
+      searchTerm: {
+        name: "ค้นหาด้วยชื่อภาคการศึกษา"
+      },
+      empty: "ยังไม่มีภาคการศึกษาที่ลงทะเบียน",
       fields: {
         termName: "ชื่อภาคการศึกษา",
         startDate: "วันที่เริ่มต้น",
         endDate: "วันที่สิ้นสุด",
+        createdAt: "สร้างเมื่อ",
+        actions: "การดำเนินการ",
+      },
+      buttons: {
+        add: "เพิ่มภาคการศึกษาใหม่",
+      },
+      warnings: {
+        rename: "หากคุณเปลี่ยนชื่อภาคการศึกษา ระบบจะส่งการแจ้งเตือน (และอีเมล) ไปยังผู้ใช้ทั้งหมดที่กำลังใช้ภาคการศึกษานี้อยู่",
+      },
+      tooltips: {
+         edit: "แก้ไขภาคการศึกษา",
+         delete: "ลบภาคการศึกษา",
+         inUse: "ภาคการศึกษาอยู่ในใช้งานและไม่สามารถลบได้",
       },
     },
     plansPage: {
@@ -227,11 +257,15 @@ const th = {
       },
     },
     subscriptionsPage: {
-      title: "การสมัครสมาชิก",
+      title: "รายการการสมัครรับข้อมูลของผู้ใช้",
       description: "ภาพรวมของทุกการสมัครที่ลงทะเบียนในระบบ",
       searchPlaceholder: "ค้นหาตามผู้ใช้ แพ็กเกจ หรือภาคเรียน",
       filters: {
         status: "สถานะ",
+      },
+      periodLabels: {
+        from: "จาก",
+        to: "ถึง",
       },
       columns: {
         user: "ผู้ใช้",
@@ -249,6 +283,10 @@ const th = {
       error: "ไม่สามารถโหลดข้อมูลรายการได้",
     },
     subscriptionPlansPage: {
+      title: "แผนสมัครสมาชิก",
+      description: "รายการแผนสมัครสมาชิกที่มีอยู่",
+      searchPlaceholder: "ค้นหาตามชื่อแผนหรือรหัส",
+      empty: "ยังไม่มีแผนที่ถูกกำหนด",
       columns: {
         planName: "ชื่อแพ็กเกจ",
         pricePerDay: "ค่าจอดรถต่อวัน",
@@ -257,6 +295,14 @@ const th = {
         updatedAt: "อัปเดตเมื่อ",
         actions: "การดำเนินการ",
       },
+      tooltips: {
+        locked: 'แผนนี้กำลังถูกใช้งาน',
+        delete: 'ลบแผน',
+        edit: 'แก้ไขแผน',
+      },
+      button: {
+        add: "เพิ่มแผนใหม่",
+      }
     },
     subscriptionInvoicesPage: {
       title: "ใบแจ้งหนี้การสมัครสมาชิก",
@@ -327,8 +373,29 @@ const th = {
         subscriptions: "การสมัครสมาชิกผู้ใช้",
         parkingSessions: "ช่วงเวลาจอดรถ",
         invoices: "ใบแจ้งหนี้",
-        paymentTransactions: "รายการจ่ายเงิน",
+        paymentTransactions: "ประวัติธุรกรรม",
         billingEventLogs: "เหตุการณ์เรียกเก็บเงิน",
+      },
+    },
+    paymentTransactionsPage: {
+      description: "ประวัติธุรกรรมการชำระเงิน",
+      searchLabel: "ค้นหา",
+      searchPlaceholder: "ค้นหาตามใบแจ้งหนี้, โค้ด, หรือผู้ใช้",
+      empty: "ยังไม่มีธุรกรรม",
+      columns: {
+        user: "ผู้ใช้",
+        invoice: "ใบแจ้งหนี้",
+        amount: "จำนวนเงิน",
+        paymentMethod: "วิธีการชำระเงิน",
+        attempt: "ครั้งที่ #",
+        code: "รหัส",
+        status: "สถานะ",
+        response: "ข้อความตอบกลับ",
+        createdAt: "สร้างเมื่อ",
+      },
+      tooltips: {
+        invoice_id: "รหัสใบแจ้งหนี้",
+        invoice_createdAt: "วันที่สร้างใบแจ้งหนี้",
       },
     },
   },

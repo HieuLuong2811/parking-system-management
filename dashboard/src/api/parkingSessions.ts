@@ -1,51 +1,41 @@
-import { useMemo } from 'react';
 import { useQuery } from '@tanstack/react-query';
 
 import { httpGet } from './httpClient';
-import type { ParkingSessionRecord } from './types';
+import type { PaginatedResponse, ParkingSessionAdminRow } from './types';
 
-export type ParkingSessionFilters = {
+export type ParkingSessionsQuery = {
+  page: number;
+  limit: number;
   query?: string;
+  user_code?: string;
+  vehicle_type?: string;
   status?: 'ACTIVE' | 'DONE';
+  from_time?: string;
+  to_time?: string;
 };
 
-const fetchParkingSessions = () => httpGet<ParkingSessionRecord[]>('/parking_sessions');
+const fetchParkingSessionsPaginated = async (params: ParkingSessionsQuery) => {
+  const search = new URLSearchParams();
+  if (params.query) search.append('query', params.query);
+  if (params.user_code) search.append('user_code', params.user_code);
+  if (params.vehicle_type) search.append('vehicle_type', params.vehicle_type);
+  if (params.status) search.append('status', params.status);
+  if (params.from_time) search.append('from_time', params.from_time);
+  if (params.to_time) search.append('to_time', params.to_time);
+  search.append('page', String(params.page));
+  search.append('limit', String(params.limit));
 
-export const useParkingSessionSearch = (filters: ParkingSessionFilters = {}) => {
-  const sessionsQuery = useQuery({
-    queryKey: ['admin', 'parkingSessions'],
-    queryFn: fetchParkingSessions,
-    staleTime: 1000 * 60,
+  const query = search.toString();
+  return httpGet<PaginatedResponse<ParkingSessionAdminRow>>(
+    `/parking_sessions${query ? `?${query}` : ''}`
+  );
+};
+
+export const useParkingSessionsPaginated = (params: ParkingSessionsQuery) => {
+  return useQuery({
+    queryKey: ['admin', 'parkingSessions', 'paginated', params],
+    queryFn: () => fetchParkingSessionsPaginated(params),
+    staleTime: 1000 * 15,
+    placeholderData: (previous) => previous,
   });
-
-  const data = useMemo(() => sessionsQuery.data ?? [], [sessionsQuery.data]);
-
-  const filtered = useMemo(() => {
-    const query = filters.query?.trim().toLowerCase();
-    return data.filter((session) => {
-      if (filters.status && session.status !== filters.status) {
-        return false;
-      }
-      if (!query) return true;
-      const haystack = [
-        session.id,
-        session.vehicle_id,
-        session.license_plate,
-        session.status,
-        session.user_type,
-      ]
-        .filter(Boolean)
-        .map((item) => String(item).toLowerCase())
-        .join('|');
-      return haystack.includes(query);
-    });
-  }, [data, filters.query, filters.status]);
-
-  return {
-    data: filtered,
-    raw: data,
-    isLoading: sessionsQuery.isLoading,
-    isError: sessionsQuery.isError,
-    refetch: () => sessionsQuery.refetch(),
-  };
 };

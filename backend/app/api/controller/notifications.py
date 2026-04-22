@@ -17,12 +17,38 @@ class NotificationController:
         return await notificationService.get_notification(notification_id, db)
 
     @staticmethod
-    async def get_all_notifications_ctrl(db: AsyncSession, receiver_id: Optional[str] = None) -> list[NotificationRead]:
-        return await notificationService.get_all_notifications(db, receiver_id)
+    async def get_all_notifications_ctrl(
+        db: AsyncSession,
+        receiver_id: Optional[str] = None,
+        *,
+        limit: int | None = None,
+        offset: int | None = None,
+        include_deleted: bool = True,
+    ) -> list[NotificationRead]:
+        return await notificationService.get_all_notifications(
+            db,
+            receiver_id,
+            limit=limit,
+            offset=offset,
+            include_deleted=include_deleted,
+        )
 
     @staticmethod
-    async def get_notifications_for_user_ctrl(user_code: str, db: AsyncSession) -> list[NotificationRead]:
-        return await notificationService.get_all_notifications(db, user_code)
+    async def get_notifications_for_user_ctrl(
+        user_code: str,
+        db: AsyncSession,
+        *,
+        limit: int | None = None,
+        offset: int | None = None,
+        include_deleted: bool = False,
+    ) -> list[NotificationRead]:
+        return await notificationService.get_all_notifications(
+            db,
+            user_code,
+            limit=limit,
+            offset=offset,
+            include_deleted=include_deleted,
+        )
 
     @staticmethod
     async def update_notification_ctrl(notification_id: str, payload: NotificationUpdate, db: AsyncSession) -> NotificationRead:

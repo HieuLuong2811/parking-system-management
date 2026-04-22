@@ -24,27 +24,11 @@ import { useTranslation } from 'react-i18next';
 import FirstPageIcon from '@mui/icons-material/FirstPage';
 import LastPageIcon from '@mui/icons-material/LastPage';
 
+import { useNotifications } from '../../api/notifications';
 import { resourceConfigs } from '../../config/resources';
 import { languageOptions } from '../../ultis/flags';
 import { COLLAPSED_SIDEBAR_WIDTH, EXPANDED_SIDEBAR_WIDTH } from '../../constant/config';
 import { useAuth } from '../../contexts/useAuth';
-
-const notificationTemplates = [
-  {
-    id: 'permissions',
-    titleKey: 'notifications.items.permissions.title',
-    detailKey: 'notifications.items.permissions.detail',
-    senderKey: 'notifications.senders.system',
-    timeKey: 'notifications.times.twoHours',
-  },
-  {
-    id: 'vehicles',
-    titleKey: 'notifications.items.vehicles.title',
-    detailKey: 'notifications.items.vehicles.detail',
-    senderKey: 'notifications.senders.system',
-    timeKey: 'notifications.times.yesterday',
-  },
-];
 
 const getBreadcrumbs = (resourceLabel: string | null, path: string, t: ReturnType<typeof useTranslation>['t']) => {
   const crumbs = [{ label: t('breadcrumb.home'), path: '/' }];
@@ -77,17 +61,14 @@ export const Navbar: React.FC<{
   const [languageAnchor, setLanguageAnchor] = useState<null | HTMLElement>(null);
   const [profileAnchor, setProfileAnchor] = useState<null | HTMLElement>(null);
 
-  const notifications = useMemo(
-    () =>
-      notificationTemplates.map((item) => ({
-        ...item,
-        title: t(item.titleKey),
-        detail: t(item.detailKey),
-        sender: t(item.senderKey),
-        time: t(item.timeKey),
-      })),
-    [t]
-  );
+  const notificationsQuery = useNotifications();
+  const notifications = useMemo(() => {
+    const raw = notificationsQuery.data ?? [];
+    return raw
+      .filter((item) => !item.deleted_at)
+      .sort((a, b) => new Date(b.created_at).getTime() - new Date(a.created_at).getTime());
+  }, [notificationsQuery.data]);
+  const unreadCount = useMemo(() => notifications.filter((item) => !item.is_read).length, [notifications]);
 
   const currentLanguage = useMemo(
     () => languageOptions.find((option) => option.code === i18n.language) ?? languageOptions[0],
@@ -183,7 +164,7 @@ export const Navbar: React.FC<{
             color="inherit"
             sx={{ color: 'text.primary' }}
           >
-            <Badge color="secondary" variant={notifications.length > 0 ? 'dot' : undefined} overlap="circular">
+            <Badge color="secondary" variant={unreadCount > 0 ? 'dot' : undefined} overlap="circular">
               <NotificationsIcon />
             </Badge>
           </IconButton>
@@ -195,20 +176,23 @@ export const Navbar: React.FC<{
             transformOrigin={{ vertical: 'top', horizontal: 'right' }}
             PaperProps={{ sx: { width: 320 } }}
           >
-            {notifications.length > 0 ? (
-              notifications.map((item) => (
+            {notificationsQuery.isLoading ? (
+              <MenuItem onClick={closeNotificationMenu}>
+                <Typography variant="body2">{t('common.loading', { defaultValue: 'Loading...' })}</Typography>
+              </MenuItem>
+            ) : notifications.length > 0 ? (
+              notifications.slice(0, 10).map((item) => (
                 <MenuItem key={item.id} onClick={closeNotificationMenu} sx={{ alignItems: 'flex-start' }}>
                   <Stack spacing={0.35} sx={{ width: '100%' }}>
-                    <Typography variant="subtitle2">{item.title}</Typography>
-                    <Typography variant="body2" color="text.secondary">
-                      {item.detail}
+                    <Typography variant="subtitle2" sx={{ fontWeight: item.is_read ? 500 : 700 }}>
+                      {item.title}
                     </Typography>
-                    <Box sx={{ display: 'flex', justifyContent: 'space-between' }}>
+                    <Typography variant="body2" color="text.secondary">
+                      {item.content}
+                    </Typography>
+                    <Box sx={{ display: 'flex', justifyContent: 'flex-end' }}>
                       <Typography variant="caption" color="text.secondary">
-                        {t('notifications.sendBy', { sender: item.sender })}
-                      </Typography>
-                      <Typography variant="caption" color="text.secondary">
-                        {item.time}
+                        {new Date(item.created_at).toLocaleString()}
                       </Typography>
                     </Box>
                   </Stack>

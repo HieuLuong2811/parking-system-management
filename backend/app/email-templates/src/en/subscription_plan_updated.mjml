@@ -1,0 +1,21 @@
+<mjml>
+  <mj-body>
+    <mj-section>
+      <mj-column>
+        <mj-text font-size="20px" font-weight="bold">
+          Subscription plan updated
+        </mj-text>
+        <mj-text>
+          Hello {{user_name}},
+        </mj-text>
+        <mj-text>
+          Your subscription plan type has been changed from <b>{{old_plan_type}}</b> to <b>{{new_plan_type}}</b>.
+        </mj-text>
+        <mj-text>
+          No action is required.
+        </mj-text>
+      </mj-column>
+    </mj-section>
+  </mj-body>
+</mjml>
+

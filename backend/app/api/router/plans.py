@@ -11,7 +11,11 @@ router = APIRouter(prefix="/subscription_plans", tags=["subscription_plans"])
 
 
 @router.post("/", response_model=SubscriptionPlanRead)
-async def create_plan(plan_in: SubscriptionPlanCreate, db: AsyncSession = Depends(get_db)):
+async def create_plan(
+    plan_in: SubscriptionPlanCreate,
+    db: AsyncSession = Depends(get_db),
+    current_user: AuthUser = Depends(required_roles("ADMIN")),
+):
     return await PlanController.create_plan_ctrl(plan_in, db)
 
 
@@ -39,10 +43,19 @@ async def get_plan(plan_id: str, db: AsyncSession = Depends(get_db)):
 
 
 @router.patch("/{plan_id}", response_model=SubscriptionPlanRead)
-async def update_plan(plan_id: str, plan_in: SubscriptionPlanUpdate, db: AsyncSession = Depends(get_db)):
-    return await PlanController.update_plan_ctrl(plan_id, plan_in, db)
+async def update_plan(
+    plan_id: str,
+    plan_in: SubscriptionPlanUpdate,
+    db: AsyncSession = Depends(get_db),
+    current_user: AuthUser = Depends(required_roles("ADMIN")),
+):
+    return await PlanController.update_plan_ctrl(plan_id, plan_in, db, current_user)
 
 
 @router.delete("/{plan_id}", response_model=DeleteResponse)
-async def delete_plan(plan_id: str, db: AsyncSession = Depends(get_db)):
+async def delete_plan(
+    plan_id: str,
+    db: AsyncSession = Depends(get_db),
+    current_user: AuthUser = Depends(required_roles("ADMIN")),
+):
     return await PlanController.delete_plan_ctrl(plan_id, db)

@@ -30,27 +30,24 @@ export const mockVehicles = [
 export const mockSubscriptionPlans = [
   {
     id: 'plan-semester',
-    plan_name: 'Semester Pass',
+    plans_type: 'LICENSED_VEHICLE',
     price_per_day: 4500,
-    description: 'Unlimited parking for the full semester.',
     created_at: shiftDays(-200),
     updated_at: shiftDays(-30),
     deleted_at: null,
   },
   {
     id: 'plan-monthly',
-    plan_name: 'Monthly Pass',
+    plans_type: 'UNLICENSED_VEHICLE',
     price_per_day: 5200,
-    description: 'Automatic renewal every month.',
     created_at: shiftDays(-180),
     updated_at: shiftDays(-20),
     deleted_at: null,
   },
   {
     id: 'plan-weekly',
-    plan_name: 'Weekly Pass',
+    plans_type: 'LICENSED_VEHICLE',
     price_per_day: 6100,
-    description: 'Perfect for short-term campus projects.',
     created_at: shiftDays(-150),
     updated_at: shiftDays(-10),
     deleted_at: null,
@@ -60,7 +57,6 @@ export const mockSubscriptionPlans = [
 export const mockPaymentPlans = [
   {
     id: 'payment-full',
-    plan_name: 'Full payment',
     payment_type: 'FULL',
     is_active: true,
     created_at: shiftDays(-200),
@@ -68,7 +64,6 @@ export const mockPaymentPlans = [
   },
   {
     id: 'payment-monthly',
-    plan_name: 'Monthly installment',
     payment_type: 'MONTHLY',
     is_active: true,
     created_at: shiftDays(-180),

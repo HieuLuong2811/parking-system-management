@@ -3,6 +3,7 @@
     "name": "client-mobile",
     "slug": "client-mobile",
     "version": "1.0.0",
+    "scheme": "parkingsystem",
     "orientation": "portrait",
     "icon": "./assets/icon.png",
     "userInterfaceStyle": "light",
@@ -28,7 +29,13 @@
     },
     "plugins": [
       "expo-secure-store",
-      "expo-localization"
+      "expo-localization",
+      [
+        "@stripe/stripe-react-native",
+        {
+          "enableGooglePay": false
+        }
+      ]
     ]
   }
 }

@@ -8,3 +8,10 @@ class MomoInfor(BaseModel):
     redirectUrl: Optional[str] = None
     extraData: Optional[str] = None
     lang: Optional[str] = "vi"
+
+
+class MomoInvoicePaymentRequest(BaseModel):
+    redirectUrl: Optional[str] = None
+    orderInfo: Optional[str] = None
+    extraData: Optional[str] = None
+    lang: Optional[str] = "vi"

@@ -33,7 +33,8 @@ async def import_users(
 
 @router.get("/", response_model=PaginatedResponse[UserWithRoles])
 async def get_all_users(
-    search: str | None = None,
+    user_code: str | None = None,
+    nameOrEmail: str | None = None,
     phone: str | None = None,
     role: str | None = None,
     is_deleted: bool | None = None,
@@ -43,7 +44,8 @@ async def get_all_users(
 ):
     users = await UserController.get_all_users_ctrl(
         db=db,
-        search=search,
+        users_code=user_code,
+        nameOrEmail=nameOrEmail,
         phone=phone,
         role=role,
         is_deleted=is_deleted,

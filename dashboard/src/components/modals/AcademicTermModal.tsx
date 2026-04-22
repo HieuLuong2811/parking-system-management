@@ -1,7 +1,8 @@
-import { Button, Dialog, DialogActions, DialogContent, DialogTitle, Stack, TextField, Typography } from '@mui/material';
+import { Alert, Button, Dialog, DialogActions, DialogContent, DialogTitle, Stack, Typography } from '@mui/material';
 import type { AcademicTermRecord } from '../../api/types';
 import React, { useState } from 'react';
 import { useTranslation } from 'react-i18next';
+import { FormInput } from '../common/FormInput';
 
 export type AcademicTermFormPayload = {
   term_name: string;
@@ -29,29 +30,31 @@ export const AcademicTermModal: React.FC<AcademicTermModalProps> = ({
   const [termName, setTermName] = useState(initialValue?.term_name ?? '');
   const [startDate, setStartDate] = useState(initialValue?.start_date ?? '');
   const [endDate, setEndDate] = useState(initialValue?.end_date ?? '');
-  const [error, setError] = useState('');
+  const [formError, setFormError] = useState('');
+  const [fieldErrors, setFieldErrors] = useState<{ term_name?: string; start_date?: string; end_date?: string }>({});
   const { t } = useTranslation();
 
   const getRequiredError = (labelKey: string) =>
     t('validation.requiredField', { field: t(labelKey) });
 
   const handleSave = async () => {
-    setError('');
+    setFormError('');
+    setFieldErrors({});
     if (!termName.trim()) {
-      setError(getRequiredError('termsPage.fields.termName'));
+      setFieldErrors({ term_name: getRequiredError('termsPage.fields.termName') });
       return;
     }
     if (!disableDates) {
       if (!startDate) {
-        setError(getRequiredError('termsPage.fields.startDate'));
+        setFieldErrors({ start_date: getRequiredError('termsPage.fields.startDate') });
         return;
       }
       if (!endDate) {
-        setError(getRequiredError('termsPage.fields.endDate'));
+        setFieldErrors({ end_date: getRequiredError('termsPage.fields.endDate') });
         return;
       }
       if (startDate > endDate) {
-        setError('Start date must come before end date');
+        setFormError(t('validation.invalidDateRange', { defaultValue: 'Start date must come before end date.' }));
         return;
       }
     }
@@ -64,7 +67,7 @@ export const AcademicTermModal: React.FC<AcademicTermModalProps> = ({
       });
     } catch (err) {
       console.error('Failed to save academic term:', err);
-      setError(err instanceof Error ? err.message : 'An unexpected error occurred');
+      setFormError(err instanceof Error ? err.message : 'An unexpected error occurred');
     }
   };
 
@@ -73,38 +76,47 @@ export const AcademicTermModal: React.FC<AcademicTermModalProps> = ({
       <DialogTitle>{initialValue ? 'Edit academic term' : 'Create new academic term'}</DialogTitle>
       <DialogContent>
         <Stack spacing={2} sx={{ mt: 1 }}>
-          <TextField
-            label="Term name"
+          <FormInput
+            label={t('termsPage.fields.termName', { defaultValue: 'Term name' })}
+            required
             value={termName}
             onChange={(event) => setTermName(event.target.value)}
-            fullWidth
-            size="small"
+            error={fieldErrors.term_name}
           />
-          <TextField
-            label="Start date"
+          {initialValue?.is_in_use && (
+            <Alert severity="warning" sx={{ py: 0.75 }}>
+              {t('termsPage.warnings.rename', {
+                defaultValue:
+                  "If you change the term name, the system will notify (and email) all users who are currently using this term.",
+              })}
+            </Alert>
+          )}
+          <FormInput
+            label={t('termsPage.fields.startDate', { defaultValue: 'Start date' })}
+            required={!disableDates}
             type="date"
             value={startDate}
             onChange={(event) => setStartDate(event.target.value)}
-            fullWidth
-            size="small"
-            InputLabelProps={{ shrink: true }}
             disabled={disableDates}
-            helperText={disableDates ? 'Start date is locked while the term is in use' : undefined}
+            helperText={
+              disableDates
+                ? t('termsPage.warnings.datesLocked', { defaultValue: 'Dates are locked while the term is in use.' })
+                : undefined
+            }
+            error={fieldErrors.start_date}
           />
-          <TextField
-            label="End date"
+          <FormInput
+            label={t('termsPage.fields.endDate', { defaultValue: 'End date' })}
+            required={!disableDates}
             type="date"
             value={endDate}
             onChange={(event) => setEndDate(event.target.value)}
-            fullWidth
-            size="small"
-            InputLabelProps={{ shrink: true }}
             disabled={disableDates}
-            helperText={disableDates ? 'End date is locked while the term is in use' : undefined}
+            error={fieldErrors.end_date}
           />
-          {error && (
+          {formError && (
             <Typography variant="body2" color="error">
-              {error}
+              {formError}
             </Typography>
           )}
         </Stack>

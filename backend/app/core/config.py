@@ -111,6 +111,9 @@ class Settings(BaseSettings):
 
     MOMO_ENDPOINT: str = "https://test-payment.momo.vn/v2/gateway/api/create"
     MOMO_REDIRECT_URL: str = "https://webhook.site/b3088a6a-2d17-4f8d-a383-71389a6c600b"
+    # Note: MoMo calls ipnUrl from their servers, so this must be publicly reachable
+    # (use ngrok / public domain if you run locally).
+    # This project runs the FastAPI app with root_path=/api/v1, so routes are served under /api/v1.
     MOMO_IPN_URL: str = "http://localhost:8000/api/v1/payment/momo/ipn"
 
     DASHBOARD_APP_ID: str = "dashboard"

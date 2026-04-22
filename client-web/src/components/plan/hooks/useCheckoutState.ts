@@ -103,7 +103,8 @@ const checkoutReducer = (state: CheckoutState, action: CheckoutAction): Checkout
 export const useCheckoutState = (
   planId: string | undefined,
   academicTermOptions: AcademicTermOption[],
-  vehicles: VehicleInfo[]
+  vehicles: VehicleInfo[],
+  initialVehicleId?: string
 ) => {
   const [state, dispatch] = useReducer(checkoutReducer, undefined, createInitialState);
 
@@ -118,10 +119,24 @@ export const useCheckoutState = (
   }, [academicTermOptions, state.selectedTermId]);
 
   useEffect(() => {
-    if (!state.selectedVehicleId && vehicles.length > 0) {
+    if (vehicles.length === 0) {
+      return;
+    }
+
+    const preferredVehicleId = initialVehicleId?.trim() || '';
+    const preferredExists = preferredVehicleId
+      ? vehicles.some((vehicle) => vehicle.id === preferredVehicleId)
+      : false;
+
+    if (preferredExists && state.selectedVehicleId !== preferredVehicleId) {
+      dispatch({ type: 'setVehicleId', payload: preferredVehicleId });
+      return;
+    }
+
+    if (!state.selectedVehicleId) {
       dispatch({ type: 'setVehicleId', payload: vehicles[0].id });
     }
-  }, [state.selectedVehicleId, vehicles]);
+  }, [initialVehicleId, state.selectedVehicleId, vehicles]);
 
   const actions = useMemo<CheckoutActions>(
     () => ({

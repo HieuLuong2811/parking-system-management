@@ -12,12 +12,10 @@ from .mixins import TimestampMixin
 
 
 class PaymentPlanBase(SQLModel):
-    plan_name: str = Field(max_length=255, nullable=False)
     payment_type: PaymentType = Field(
         sa_column=SAColumn(Enum(PaymentType, name="payment_type_enum", create_type=False), nullable=False)
     )
     discount_percent: Optional[int] = Field(default=None, sa_column=SAColumn(Integer, nullable=True))
-    description: Optional[str] = Field(default=None, sa_column=SAColumn(Text, nullable=True))
     is_active: bool = Field(default=True, sa_column=SAColumn(Boolean, nullable=False))
 
 
@@ -37,8 +35,6 @@ class PaymentPlanRead(PaymentPlanBase):
 
 
 class PaymentPlanUpdate(SQLModel):
-    plan_name: Optional[str] = None
     payment_type: Optional[PaymentType] = None
     discount_percent: Optional[int] = None
-    description: Optional[str] = None
     is_active: Optional[bool] = None

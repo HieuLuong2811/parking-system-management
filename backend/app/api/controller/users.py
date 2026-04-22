@@ -11,7 +11,8 @@ class UserController:
     @staticmethod
     async def get_all_users_ctrl(
         db: AsyncSession,
-        search: str | None = None,
+        users_code: str | None = None,
+        nameOrEmail: str | None = None,
         phone: str | None = None,
         role: str | None = None,
         is_deleted: bool | None = None,
@@ -20,7 +21,8 @@ class UserController:
     ) -> PaginatedResponse[UserWithRoles]:
         return await userService.get_users(
             db=db,
-            search=search,
+            users_code=users_code,
+            nameOrEmail=nameOrEmail,
             phone=phone,
             role=role,
             is_deleted=is_deleted,

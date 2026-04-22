@@ -33,8 +33,6 @@ class PlanPricingResponse(BaseModel):
 class PaymentPlanPricingDetail(BaseModel):
     payment_plan_id: UUID
     payment_type: PaymentType
-    plan_name: str
-    description: Optional[str]
     discount_percent: Optional[int]
     is_active: bool
     original_amount: int

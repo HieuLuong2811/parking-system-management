@@ -6,6 +6,11 @@ class PaymentType(str, Enum):
     MONTHLY = "MONTHLY"
 
 
+class SubscriptionPlanType(str, Enum):
+    UNLICENSED_VEHICLE = "UNLICENSED_VEHICLE"
+    LICENSED_VEHICLE = "LICENSED_VEHICLE"
+
+
 class SubscriptionStatus(str, Enum):
     PENDING = "PENDING"
     ACTIVE = "ACTIVE"
@@ -30,12 +35,6 @@ class InvoiceStatus(str, Enum):
     PENDING = "PENDING"
     PAID = "PAID"
     FAILED = "FAILED"
-
-
-class TransactionStatus(str, Enum):
-    SUCCESS = "SUCCESS"
-    FAILED = "FAILED"
-
 
 class ParkingSessionStatus(str, Enum):
     ACTIVE = "ACTIVE"

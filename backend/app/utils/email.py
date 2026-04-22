@@ -18,6 +18,20 @@ RESET_PASSWORD_SUBJECTS = {
     "th": "{project_name} - กู้คืนรหัสผ่านสำหรับผู้ใช้ {email}",
 }
 
+TERM_UPDATED_SUBJECTS = {
+    "en": "{project_name} - Academic term updated",
+    "vi": "{project_name} - Thông báo cập nhật học kỳ",
+    "ja": "{project_name} - 学期更新のお知らせ",
+    "th": "{project_name} - แจ้งเตือนอัปเดตภาคการศึกษา",
+}
+
+SUBSCRIPTION_PLAN_UPDATED_SUBJECTS = {
+    "en": "{project_name} - Subscription plan updated",
+    "vi": "{project_name} - Thông báo cập nhật gói đăng ký",
+    "ja": "{project_name} - 登録プラン更新のお知らせ",
+    "th": "{project_name} - แจ้งเตือนอัปเดตแพ็กเกจสมัครสมาชิก",
+}
+
 TEST_SUBJECTS = {
     "en": "{project_name} - Test email",
     "vi": "{project_name} - Email kiểm tra",
@@ -181,3 +195,59 @@ def generate_test_email(
         html_content=html_content,
         subject=subject,
     )
+
+
+def generate_term_updated_email(
+    *,
+    user_name: str,
+    old_term_name: str,
+    new_term_name: str,
+    lang: str | None = None,
+) -> EmailData:
+    project_name = settings.APP_NAME
+    selected_lang = normalize_lang(lang)
+
+    subject_template = TERM_UPDATED_SUBJECTS.get(selected_lang, TERM_UPDATED_SUBJECTS["vi"])
+    subject = subject_template.format(project_name=project_name)
+
+    html_content = render_email_template(
+        template_name="term_updated.html",
+        lang=selected_lang,
+        context={
+            "project_name": project_name,
+            "user_name": user_name,
+            "old_term_name": old_term_name,
+            "new_term_name": new_term_name,
+        },
+    )
+
+    return EmailData(html_content=html_content, subject=subject)
+
+
+def generate_subscription_plan_updated_email(
+    *,
+    user_name: str,
+    old_plan_type: str,
+    new_plan_type: str,
+    lang: str | None = None,
+) -> EmailData:
+    project_name = settings.APP_NAME
+    selected_lang = normalize_lang(lang)
+
+    subject_template = SUBSCRIPTION_PLAN_UPDATED_SUBJECTS.get(
+        selected_lang, SUBSCRIPTION_PLAN_UPDATED_SUBJECTS["vi"]
+    )
+    subject = subject_template.format(project_name=project_name)
+
+    html_content = render_email_template(
+        template_name="subscription_plan_updated.html",
+        lang=selected_lang,
+        context={
+            "project_name": project_name,
+            "user_name": user_name,
+            "old_plan_type": old_plan_type,
+            "new_plan_type": new_plan_type,
+        },
+    )
+
+    return EmailData(html_content=html_content, subject=subject)

@@ -1,6 +1,8 @@
 import {
   Box,
+  Button,
   Chip,
+  CircularProgress,
   Divider,
   Pagination,
   Stack,
@@ -14,17 +16,20 @@ import {
   Typography,
   useTheme,
 } from '@mui/material';
-import React, { useEffect, useMemo, useState } from 'react';
+import { useEffect, useMemo, useState } from 'react';
 import { useTranslation } from 'react-i18next';
 import SectionCard from '../components/shared/SectionCard';
 import { useInvoices } from '../api/invoices';
 import { invoices_status } from '../constant/config';
+import { useCreateMomoPaymentForInvoice } from '../api/momo';
 
 export default function InvoicesPage() {
   const { t } = useTranslation();
   const [fromDate, setFromDate] = useState('');
   const [toDate, setToDate] = useState('');
   const { data: invoices = [], isLoading, isError } = useInvoices();
+  const momoPaymentMutation = useCreateMomoPaymentForInvoice();
+  const [payError, setPayError] = useState<string | null>(null);
 
   const theme = useTheme();
 
@@ -47,6 +52,31 @@ export default function InvoicesPage() {
   const pageSize = 5;
   const [page, setPage] = useState(1);
   const pageInvoices = filteredInvoices.slice((page - 1) * pageSize, page * pageSize);
+
+  const handlePayInvoice = async (invoiceId: string) => {
+    setPayError(null);
+    try {
+      const response = await momoPaymentMutation.mutateAsync({
+        invoiceId,
+        payload: {
+          redirectUrl: `${window.location.origin}/profile`,
+        },
+      });
+      const redirectUrl =
+        (response.payUrl as string | undefined) ||
+        (response.deeplink as string | undefined) ||
+        (response.shortLink as string | undefined) ||
+        (response.qrCodeUrl as string | undefined) ||
+        (response.deeplinkWebInApp as string | undefined) ||
+        (response.deeplinkMiniApp as string | undefined);
+      if (!redirectUrl) {
+        throw new Error(t('invoices.actions.momoMissingUrl'));
+      }
+      window.location.href = redirectUrl;
+    } catch (error) {
+      setPayError(error instanceof Error ? error.message : t('common.error'));
+    }
+  };
 
   return (
     <SectionCard>
@@ -92,6 +122,7 @@ export default function InvoicesPage() {
       </Typography>
 
       <Stack spacing={2}>
+          {payError ? <Typography color="error">{payError}</Typography> : null}
           {filteredInvoices.length === 0 ? (
             <Typography color="text.secondary">{t('invoices.empty')}</Typography>
           ) : (
@@ -113,12 +144,14 @@ export default function InvoicesPage() {
                           <TableCell>{t('invoices.table.created_at')}</TableCell>
                           <TableCell align="right">{t('invoices.table.amount')}</TableCell>
                           <TableCell align="right">{t('invoices.table.status')}</TableCell>
+                          <TableCell align="right">{t('invoices.table.actions')}</TableCell>
                         </TableRow>
                       </TableHead>
                       <TableBody>
                         {pageInvoices.map((invoice) => {
                           const invoices_paid = invoices_status.PAID
                           const invoices_pending = invoices_status.PENDING
+                          const isMomoPayable = invoice.status === invoices_pending && invoice.payment_method === 'MOMO';
                           const statusKey =
                             invoice.status === invoices_paid
                               ? 'paid'
@@ -155,6 +188,22 @@ export default function InvoicesPage() {
                                   size="small"
                                   sx={{ textTransform: 'capitalize' }}
                                 />
+                              </TableCell>
+                              <TableCell align="right">
+                                {isMomoPayable ? (
+                                  <Button
+                                    variant="contained"
+                                    size="small"
+                                    color="warning"
+                                    onClick={() => handlePayInvoice(invoice.id)}
+                                    disabled={momoPaymentMutation.isPending}
+                                    startIcon={momoPaymentMutation.isPending ? <CircularProgress size={14} /> : null}
+                                  >
+                                    {t('invoices.actions.payWithMomo')}
+                                  </Button>
+                                ) : (
+                                  <Typography color="text.secondary">—</Typography>
+                                )}
                               </TableCell>
                             </TableRow>
                           );

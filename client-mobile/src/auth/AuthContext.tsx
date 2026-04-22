@@ -1,4 +1,5 @@
 import React, { createContext, useCallback, useContext, useEffect, useMemo, useRef, useState } from 'react';
+import { useQueryClient } from '@tanstack/react-query';
 
 import type { AuthUser, StoredAuthSession } from './authStorage';
 import { clearStoredSession, getStoredSession, isExpired, setStoredSession, updateStoredUser } from './authStorage';
@@ -19,6 +20,7 @@ type AuthContextValue = {
 const AuthContext = createContext<AuthContextValue | null>(null);
 
 export function AuthProvider({ children }: { children: React.ReactNode }) {
+  const queryClient = useQueryClient();
   const [status, setStatus] = useState<AuthStatus>('loading');
   const [accessToken, setAccessToken] = useState<string | null>(null);
   const [user, setUser] = useState<AuthUser | null>(null);
@@ -33,11 +35,14 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
 
   const signOut = useCallback(async () => {
     clearExpiryTimer();
+
+    queryClient.cancelQueries();
+    queryClient.clear();
     await clearStoredSession();
     setAccessToken(null);
     setUser(null);
     setStatus('unauthenticated');
-  }, [clearExpiryTimer]);
+  }, [clearExpiryTimer, queryClient]);
 
   const applySession = useCallback(
     (session: StoredAuthSession | null) => {

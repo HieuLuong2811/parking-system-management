@@ -1,0 +1,21 @@
+<mjml>
+  <mj-body>
+    <mj-section>
+      <mj-column>
+        <mj-text font-size="20px" font-weight="bold">
+          Thông báo cập nhật học kỳ
+        </mj-text>
+        <mj-text>
+          Xin chào {{user_name}},
+        </mj-text>
+        <mj-text>
+          Học kỳ bạn đang sử dụng đã được đổi tên từ <b>{{old_term_name}}</b> thành <b>{{new_term_name}}</b>.
+        </mj-text>
+        <mj-text>
+          Bạn không cần thực hiện thao tác nào.
+        </mj-text>
+      </mj-column>
+    </mj-section>
+  </mj-body>
+</mjml>
+
