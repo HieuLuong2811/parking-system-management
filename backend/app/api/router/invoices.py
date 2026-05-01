@@ -1,6 +1,8 @@
+from datetime import datetime
+
 from app.authen.current_user import is_admin_user, required_roles
 from app.models.auth import AuthUser
-from fastapi import APIRouter, Depends, HTTPException
+from fastapi import APIRouter, Depends, HTTPException, Query
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.api.controller.invoices import (
@@ -8,6 +10,7 @@ from app.api.controller.invoices import (
 )
 from app.db.session import get_db
 from app.models.invoices import InvoiceCreate, InvoiceRead, InvoiceUpdate
+from app.utils.pagination import PaginatedResponse
 
 router = APIRouter(prefix="/invoices", tags=["invoices"])
 
@@ -28,6 +31,24 @@ async def list_user_invoices(
     current_user: AuthUser = Depends(required_roles("USER", "ADMIN")),
 ):
     return await InvoiceController.get_invoices_by_user_ctrl(current_user.user_code, db)
+
+@router.get("/me/paginated", response_model=PaginatedResponse[InvoiceRead])
+async def list_user_invoices_paginated(
+    db: AsyncSession = Depends(get_db),
+    current_user: AuthUser = Depends(required_roles("USER", "ADMIN")),
+    page: int = Query(1, ge=1, description="Page number (1-based)"),
+    limit: int = Query(20, ge=1, le=100, description="Number of items per page"),
+    from_time: datetime | None = Query(None, description="Filter by created_at (from)"),
+    to_time: datetime | None = Query(None, description="Filter by created_at (to)"),
+):
+    return await InvoiceController.get_invoices_by_user_paginated_ctrl(
+        current_user.user_code,
+        db,
+        page=page,
+        limit=limit,
+        from_time=from_time,
+        to_time=to_time,
+    )
 
 
 @router.get("/{user_code}", response_model=InvoiceRead)

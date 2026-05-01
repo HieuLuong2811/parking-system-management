@@ -21,3 +21,20 @@ export const invoiceStatusOptions = {
   PAID: 'PAID',
   FAILED: 'FAILED',
 };
+
+export const userTypes = {
+  STUDENT: 'STUDENT',
+  GUEST: 'GUEST',
+};
+
+export const subscriptionStatusOptions = {
+  ACTIVE: 'ACTIVE',
+  PENDING: 'PENDING',
+  EXPIRED: 'EXPIRED',
+  SUSPENDED: 'SUSPENDED',
+};
+
+export const planTypeOptions = {
+  UNLICENSED_VEHICLE: 'UNLICENSED_VEHICLE',
+  LICENSED_VEHICLE: 'LICENSED_VEHICLE',
+};

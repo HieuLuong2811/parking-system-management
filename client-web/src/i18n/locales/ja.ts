@@ -46,7 +46,7 @@ const ja = {
       userCode: 'ユーザーID',
       type: '種類',
       licensePlate: 'ナンバープレート',
-      qrCode: 'QRコード',
+      qrCode: 'バーコード',
       createdAt: '作成日時',
       actions: '行動',
       actionsMenu: {
@@ -132,7 +132,7 @@ const ja = {
       required: '必須フィールド',
       minLength: 'パスワードは6文字以上である必要があります。',
       confirmMismatch: 'パスワードが一致しません。',
-      success: 'パスワードが正常に更新されました。',
+      success: 'パスワードが正常に更新されました。再度ログインしてください。',
       genericError: 'パスワードを変更できません。再度お試しください。',
     },
     subscriptions: {
@@ -228,7 +228,7 @@ const ja = {
     checkoutPlanNote: '選択したプランの内容をここで確認できます。',
     priceNote: '価格はVND表記で統一しています。',
     checkoutStepper: {
-      steps: ['学期を選択', '支払い方法', '支払い情報'],
+      steps: ['車両を選択してください', '学期を選択', '支払い方法', '支払い情報'],
       termLabel: '学期',
       termPlaceholder: '学期を選んでください',
       termHelper: '表示される学期から選択し、支払いを続行してください。',

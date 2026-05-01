@@ -1,5 +1,8 @@
+from datetime import datetime
+
 from sqlalchemy.ext.asyncio import AsyncSession
 
+from app.utils.pagination import PaginatedResponse
 from app.models.invoices import InvoiceCreate, InvoiceRead, InvoiceUpdate
 from app.service.invoices import invoiceService
 
@@ -21,6 +24,25 @@ class InvoiceController:
     async def get_invoices_by_user_ctrl(user_code: str, db: AsyncSession) -> list[InvoiceRead]:
         invoices = await invoiceService.get_invoices_by_user_code(user_code, db)
         return [invoice for invoice in invoices]
+
+    @staticmethod
+    async def get_invoices_by_user_paginated_ctrl(
+        user_code: str,
+        db: AsyncSession,
+        *,
+        page: int = 1,
+        limit: int = 20,
+        from_time: datetime | None = None,
+        to_time: datetime | None = None,
+    ) -> PaginatedResponse[InvoiceRead]:
+        return await invoiceService.get_invoices_by_user_code_paginated(
+            user_code,
+            db,
+            page=page,
+            limit=limit,
+            from_time=from_time,
+            to_time=to_time,
+        )
 
     @staticmethod
     async def update_invoice_ctrl(invoice_id: str, payload: InvoiceUpdate, db: AsyncSession) -> InvoiceRead:

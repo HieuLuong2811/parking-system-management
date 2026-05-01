@@ -60,7 +60,3 @@ class UserImportEntry(BaseModel):
 
 class UserBulkImportRequest(BaseModel):
     entries: List[UserImportEntry]
-
-
-class LogoutRequest(BaseModel):
-    app_id: str

@@ -6,6 +6,7 @@ import {
   InvoiceInfo,
   InvoiceStatus,
   PaymentMethod,
+  PaginatedResponse,
 } from './clientApi';
 
 const fetchInvoices = async (): Promise<InvoiceInfo[]> => {
@@ -17,6 +18,31 @@ export const useInvoices = () => {
     queryKey: ['invoices'],
     queryFn: fetchInvoices,
     staleTime: 1000 * 60,
+  });
+};
+
+export type InvoicesMeQuery = {
+  page: number;
+  limit: number;
+  from_time?: string;
+  to_time?: string;
+};
+
+const fetchInvoicesPaginated = async (
+  params: InvoicesMeQuery
+): Promise<PaginatedResponse<InvoiceInfo>> => {
+  return requestWithContext(
+    clientHttp.get<PaginatedResponse<InvoiceInfo>>('/invoices/me/paginated', { params }),
+    'Load invoices'
+  );
+};
+
+export const useInvoicesPaginated = (params: InvoicesMeQuery) => {
+  return useQuery({
+    queryKey: ['invoices', 'me', 'paginated', params],
+    queryFn: () => fetchInvoicesPaginated(params),
+    staleTime: 1000 * 60,
+    placeholderData: (prev) => prev,
   });
 };
 

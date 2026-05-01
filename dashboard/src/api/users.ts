@@ -50,6 +50,14 @@ export const useFetchUsers = (filters: UserListFilters = {}) => {
   });
 };
 
+export const useUserDetail = (userCode: string) => {
+  return useQuery({
+    queryKey: ['admin', 'user', userCode],
+    queryFn: () => httpGet<AdminUser>(`/users/${userCode}`),
+    enabled: !!userCode,
+  });
+};
+
 const createUser = (payload: UserCreatePayload) => httpPost<AdminUser>('/users', payload);
 
 const updateUser = (userCode: string, payload: UserUpdatePayload) =>

@@ -6,7 +6,6 @@ import {
   DialogContent,
   DialogTitle,
   FormControl,
-  InputLabel,
   MenuItem,
   Select,
   Stack,
@@ -16,6 +15,7 @@ import type { SubscriptionPlanRecord } from '../../api/types';
 import React, { useState } from 'react';
 import { useTranslation } from 'react-i18next';
 import { FormInput } from '../common/FormInput';
+import { planTypeOptions } from '../../constant/config';
 
 export type SubscriptionPlanFormPayload = {
   plans_type: 'UNLICENSED_VEHICLE' | 'LICENSED_VEHICLE';
@@ -50,17 +50,29 @@ export const SubscriptionPlanModal: React.FC<SubscriptionPlanModalProps> = ({
   const getRequiredError = (labelKey: string) =>
     t('validation.requiredField', { field: t(labelKey) });
 
+  const formatNumber = (val: string) => {
+    const num = val.replace(/\D/g, '');
+    return num.replace(/\B(?=(\d{3})+(?!\d))/g, ',');
+  };
+
+  const handleChange = (
+    e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement>
+  ) => {
+    const raw = e.target.value.replace(/\D/g, '');
+    setPriceInput(formatNumber(raw));
+  };
+
   const handleSave = async () => {
     setFormError('');
     setFieldErrors({});
     if (!plansType) {
-      setFieldErrors({ plans_type: getRequiredError('plansPage.fields.planType') });
+      setFieldErrors({ plans_type: getRequiredError('subscriptionPlansPage.fields.planType') });
       return;
     }
 
     if (!disablePriceField) {
       if (!priceInput.trim()) {
-        setFieldErrors({ price_per_day: getRequiredError('plansPage.fields.pricePerDay') });
+        setFieldErrors({ price_per_day: getRequiredError('subscriptionPlansPage.fields.pricePerDay') });
         return;
       }
 
@@ -98,47 +110,51 @@ export const SubscriptionPlanModal: React.FC<SubscriptionPlanModalProps> = ({
 
   return (
     <Dialog open={open} maxWidth="sm" fullWidth>
-      <DialogTitle>{initialValue ? 'Edit subscription plan' : 'Create new subscription plan'}</DialogTitle>
+      <DialogTitle>{initialValue ? `${t('subscriptionPlansPage.dialog.editTitle')}` : `${t('subscriptionPlansPage.dialog.addTitle')}`}</DialogTitle>
       <DialogContent>
         <Stack spacing={2} sx={{ mt: 1 }}>
           <FormControl fullWidth>
-            <InputLabel id="plans-type-label">{t('plansPage.fields.planType', { defaultValue: 'Plan type' })}</InputLabel>
-            <Select
-              labelId="plans-type-label"
-              value={plansType}
-              label={t('plansPage.fields.planType', { defaultValue: 'Plan type' })}
-              onChange={(event) => setPlansType(event.target.value as 'UNLICENSED_VEHICLE' | 'LICENSED_VEHICLE')}
-              disabled={submitting}
+            <Typography
+              component="label"
+              htmlFor="plans-type-select"
+              variant="body2"
+              sx={{ mb: 0.5 }}
             >
-              <MenuItem value="UNLICENSED_VEHICLE">{t('plansPage.types.unlicensed', { defaultValue: 'Unlicensed vehicle' })}</MenuItem>
-              <MenuItem value="LICENSED_VEHICLE">{t('plansPage.types.licensed', { defaultValue: 'Licensed vehicle' })}</MenuItem>
+              {t('subscriptionPlansPage.dialog.fields.planType')}
+              <span style={{ color: '#d32f2f' }}> *</span>
+            </Typography>
+
+            <Select
+              id="plans-type-select"
+              value={plansType}
+              onChange={(event) => setPlansType(event.target.value as typeof plansType)}
+              disabled={submitting}
+              inputProps={{ name: 'plans_type' }}
+            >
+              {Object.keys(planTypeOptions).map((option) => (
+                <MenuItem key={option} value={option}>
+                  {t(`common.subscriptionPlans.${option}`, { defaultValue: option })}
+                </MenuItem>
+              ))}
             </Select>
-            {fieldErrors.plans_type ? (
-              <Typography variant="caption" color="error" sx={{ mt: 0.5 }}>
-                {fieldErrors.plans_type}
-              </Typography>
-            ) : null}
           </FormControl>
           {initialValue?.is_in_use && (
             <Alert severity="warning" sx={{ py: 0.75 }}>
-              {t('plansPage.warnings.typeChange', {
+              {t('subscriptionPlansPage.warnings.typeChange', {
                 defaultValue:
                   "If you change the plan type, the system may notify users who are currently using this plan.",
               })}
             </Alert>
           )}
-          <FormInput
-            label={t('plansPage.fields.pricePerDay', { defaultValue: 'Price per day' })}
+         <FormInput
+            name="price_per_day"
+            label={t('subscriptionPlansPage.dialog.fields.pricePerDay') + ' (VND)'}
             required={!disablePriceField}
-            type="number"
+            type="text"
             value={priceInput}
-            onChange={(event) => setPriceInput(event.target.value)}
+            onChange={handleChange}
             disabled={disablePriceField}
-            helperText={
-              disablePriceField
-                ? t('plansPage.warnings.priceLocked', { defaultValue: 'Price is locked while the plan is in use.' })
-                : undefined
-            }
+            inputMode="numeric"
             error={fieldErrors.price_per_day}
           />
           {formError && (
@@ -150,10 +166,10 @@ export const SubscriptionPlanModal: React.FC<SubscriptionPlanModalProps> = ({
       </DialogContent>
       <DialogActions sx={{ px: 3, pb: 2 }}>
         <Button onClick={onClose} disabled={submitting}>
-          Cancel
+          {t('subscriptionPlansPage.dialog.cancel', { defaultValue: 'Cancel' })}
         </Button>
         <Button variant="contained" onClick={handleSave} disabled={submitting}>
-          {submitting ? 'Saving...' : 'Save'}
+          {submitting ? t('subscriptionPlansPage.dialog.saving', { defaultValue: 'Saving...' }) : t('subscriptionPlansPage.dialog.save', { defaultValue: 'Save' })}
         </Button>
       </DialogActions>
     </Dialog>

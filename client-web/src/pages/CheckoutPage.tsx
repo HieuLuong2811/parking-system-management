@@ -1,29 +1,34 @@
 import { Box, Button, Typography } from '@mui/material';
-import { useLocation, useNavigate } from 'react-router-dom';
+import { Link, useNavigate } from 'react-router-dom';
 import { useTranslation } from 'react-i18next';
-import { SubscriptionPlanRecord } from '../api/clientApi';
 import PlanCheckoutPanel from '../components/plan/PlanCheckoutPanel';
-
-type CheckoutState = {
-  plan?: SubscriptionPlanRecord;
-};
+import ArrowBackIcon from '@mui/icons-material/ArrowBack';
+import { PlanType } from '../constant/config';
+import { useSearchParams } from 'react-router-dom';
+import { useSubscriptionPlans } from '../api/subscription_plans';
 
 export default function CheckoutPage() {
   const { t } = useTranslation();
   const navigate = useNavigate();
-  const location = useLocation();
-  const { plan } = (location.state as CheckoutState) ?? {};
+  const [searchParams] = useSearchParams();
 
-  if (!plan) {
+  const planId = searchParams.get('planId');
+  const planType = searchParams.get('type') as PlanType | null;
+
+  const { data: plans = [] } = useSubscriptionPlans();
+
+  const plan = plans.find(p => p.id === planId);
+
+  if (!plan || !planType) {
     return (
       <Box className="checkout-page-shell">
         <Box className="checkout-page-container">
           <Box className="checkout-empty-state">
             <Typography variant="h5">{t('plan.checkoutSubtitle')}</Typography>
-            <Typography variant="body2" className="checkout-empty-description">
+            <Typography variant="body2">
               {t('plan.notChosen')}
             </Typography>
-            <Button variant="contained" onClick={() => navigate('/plan')}>
+            <Button onClick={() => navigate('/plan')}>
               {t('plan.registerPlanButton')}
             </Button>
           </Box>
@@ -36,15 +41,35 @@ export default function CheckoutPage() {
     <Box className="checkout-page-shell">
       <Box className="checkout-page-container">
         <Box className="checkout-page-header">
-          <Box>
-            <Typography variant="h4">{t('plan.checkoutTitle')}</Typography>
-            <Typography variant="body2">{t('plan.checkoutSubtitle')}</Typography>
-          </Box>
-          <Button variant="text" onClick={() => navigate('/plan')}>
-            {t('plan.checkoutCancel')}
+           <Button
+            component={Link}
+            to="/vehicle"
+            startIcon={<ArrowBackIcon />}
+            className="checkout-back-link"
+          >
+            {t('plan.backToVehicles')}
           </Button>
+          <Typography variant="h4" gutterBottom>
+            {t('plan.sectionTitle')}
+          </Typography>
+          <Typography variant="body2" color="text.secondary">
+            {t('plan.sectionDescription')}
+          </Typography>
         </Box>
-        <PlanCheckoutPanel plan={plan} />
+        
+          {plan ? (
+            <Box className="plan-checkout-frame">
+              <Box className="plan-checkout-header">
+                <Typography variant="h5">{t('plan.checkoutTitle')}</Typography>
+                <Typography variant="body2">{t('plan.checkoutSubtitle')}</Typography>
+              </Box>
+              <PlanCheckoutPanel plan={plan} planType={planType} />
+            </Box>
+          ) : (
+            <Box className="plan-checkout-placeholder">
+              <Typography variant="body1">{t('plan.notChosen')}</Typography>
+            </Box>
+          )}
       </Box>
     </Box>
   );

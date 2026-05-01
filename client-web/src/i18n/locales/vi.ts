@@ -5,7 +5,7 @@ const vi = {
 
   nav: {
     home: 'Trang chủ',
-    plan: 'Đăng ký gói',
+    plan: 'Gói gửi xe',
     vehicles: 'Phương tiện',
     sessions: 'Phiên gửi xe',
     invoices: 'Hóa đơn',
@@ -55,7 +55,7 @@ const vi = {
       userCode: 'Mã người dùng',
       type: 'Loại',
       licensePlate: 'Biển số',
-      qrCode: 'Mã QR',
+      qrCode: 'Mã barcode',
       createdAt: 'Ngày tạo',
       actions: 'Hành động',
       actionsMenu: {
@@ -85,23 +85,23 @@ const vi = {
         electricBicycle: 'Xe đạp điện',
       },
       actions: {
-        generateQr: 'Tạo mã QR',
+        generateQr: 'Tạo mã barcode',
       },
-      generatingQr: 'Đang tạo QR…',
+      generatingQr: 'Đang tạo barcode…',
       fields: {
         userCode: 'Mã người dùng',
         vehicleType: 'Loại phương tiện',
         licensePlate: 'Biển số',
         licensePlatePlaceholder: 'Ví dụ: 30K12345',
-        qrCode: 'QR code',
+        qrCode: 'Barcode',
         description: 'Ghi chú',
         vehicleTypePlaceholder: 'Chọn loại phương tiện',
       },
       errors: {
         generic: 'Không thể đăng ký phương tiện. Vui lòng thử lại.',
-        qrGenerate: 'Điền thông tin bắt buộc trước khi tạo QR.',
-        qrFailed: 'Không thể tạo mã QR.',
-        qrMissing: 'Tạo mã QR trước khi đăng ký.',
+        qrGenerate: 'Điền thông tin bắt buộc trước khi tạo barcode.',
+        qrFailed: 'Không thể tạo mã barcode.',
+        qrMissing: 'Tạo mã barcode trước khi đăng ký.',
       },
     },
     form: {
@@ -233,7 +233,7 @@ const vi = {
       cancel: 'Hủy',
       minLength: 'Mật khẩu phải có ít nhất 6 ký tự.',
       confirmMismatch: 'Mật khẩu nhập lại không trùng.',
-      success: 'Mật khẩu đã được cập nhật.',
+      success: 'Mật khẩu đã được cập nhật thành công. Vui lòng đăng nhập lại.',
       genericError: 'Không thể thay đổi mật khẩu. Vui lòng thử lại.',
     },
     subscriptions: {
@@ -340,7 +340,7 @@ const vi = {
       noPlate: 'Không biển số',
     },
     checkoutStepper: {
-      steps: ['Chọn học kỳ', 'Hình thức thanh toán', 'Thông tin thanh toán'],
+      steps: ['Chọn phương tiện', 'Chọn học kỳ', 'Hình thức thanh toán', 'Thông tin thanh toán'],
       termLabel: 'Học kỳ',
       termPlaceholder: 'Chọn học kỳ',
       termHelper: 'Chọn học kỳ phù hợp để tiếp tục quy trình thanh toán.',

@@ -26,7 +26,7 @@ class VehicleLookupResponse(SQLModel):
     user_code: str
     vehicle_type: str
     license_plate: str | None = None
-    qr_code: str | None = None
+    barcode_token: str | None = None
     user_full_name: str
     user_email: str
     active_subscription: SubscriptionInfo | None = None

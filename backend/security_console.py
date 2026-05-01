@@ -13,8 +13,7 @@ from app.core.config import settings
 
 MAX_LOOKUP_ATTEMPTS = 5
 LOOKUP_DEBOUNCE_SECONDS = 2.0
-DETECT_EVERY_N_FRAMES = 5
-
+DETECT_EVERY_N_FRAMES = 10
 
 class CameraWorker(QtCore.QThread):
     frame_ready = QtCore.pyqtSignal(QtGui.QImage)
@@ -27,10 +26,11 @@ class CameraWorker(QtCore.QThread):
         self.camera_source = camera_source
         self._running = False
         self._latest_frame = None
+        self._last_plate = None
+        self._last_emit_time = 0
 
     def _build_capture(self):
-        # RTSP ổn định hơn khi ép TCP + FFmpeg
-        os.environ["OPENCV_FFMPEG_CAPTURE_OPTIONS"] = "rtsp_transport;tcp"
+        os.environ["OPENCV_FFMPEG_CAPTURE_OPTIONS"] = "rtsp_transport;tcp|max_delay;0"
 
         if isinstance(self.camera_source, str) and self.camera_source.startswith("rtsp://"):
             cap = cv2.VideoCapture(self.camera_source, cv2.CAP_FFMPEG)
@@ -42,162 +42,92 @@ class CameraWorker(QtCore.QThread):
 
     def run(self):
         self._running = True
-        frame_count = 0
 
         try:
-            self.status_changed.emit("Loading detection model...")
+            self.status_changed.emit("Loading model...")
             model = get_model()
         except Exception as e:
-            self.error_occurred.emit(f"Không tải được model: {e}")
+            self.error_occurred.emit(str(e))
             return
 
         cap = self._build_capture()
         if not cap.isOpened():
-            self.error_occurred.emit(f"Không mở được camera source: {self.camera_source}")
+            self.error_occurred.emit("Không mở được camera")
             return
 
         self.status_changed.emit("Camera connected")
 
+        frame_count = 0
+
         while self._running:
             try:
-                ret, frame = cap.read()
+                # drop frame cũ
+                for _ in range(2):
+                    cap.grab()
+
+                ret, frame = cap.retrieve()
                 if not ret or frame is None:
-                    self.status_changed.emit("Mất frame từ camera, đang chờ lại...")
-                    QtCore.QThread.msleep(50)
+                    QtCore.QThread.msleep(30)
                     continue
 
                 frame_count += 1
-                output_frame = frame.copy()
-                plate_text = ""
+                output = frame.copy()
 
                 h, w = frame.shape[:2]
+                x1, y1 = int(w*0.2), int(h*0.25)
+                x2, y2 = int(w*0.8), int(h*0.85)
 
-                # ROI ví dụ: chỉ lấy vùng giữa ảnh, bỏ mép trên chứa timestamp
-                x1 = int(w * 0.15)
-                y1 = int(h * 0.20)
-                x2 = int(w * 0.85)
-                y2 = int(h * 0.90)
+                roi = frame[y1:y2, x1:x2]
 
-                roi = frame[y1:y2, x1:x2].copy()
+                # vẽ ROI
+                cv2.rectangle(output, (x1, y1), (x2, y2), (0, 255, 255), 2)
 
-                # Vẽ khung ROI lên ảnh hiển thị
-                cv2.rectangle(output_frame, (x1, y1), (x2, y2), (0, 255, 255), 2)
-
-                if frame_count % DETECT_EVERY_N_FRAMES == 0:
-                    try:
-                        results = model(roi, verbose=False, conf=0.4)
-
-                        # Nếu muốn hiển thị box detect đúng vị trí trên frame gốc
-                        annotated_roi = results[0].plot()
-                        output_frame[y1:y2, x1:x2] = annotated_roi
-
-                        # OCR tạm trên ROI, không OCR toàn frame nữa
-                        plate_text = DetectService.segment_image(roi).strip()
-
-                    except Exception as e:
-                        self.error_occurred.emit(f"Lỗi detect/OCR: {e}")
-
-                rgb_frame = cv2.cvtColor(output_frame, cv2.COLOR_BGR2RGB)
-                hh, ww, ch = rgb_frame.shape
-                qimage = QtGui.QImage(
-                    rgb_frame.data,
-                    ww,
-                    hh,
-                    ch * ww,
-                    QtGui.QImage.Format.Format_RGB888
-                ).copy()
-
-                self._latest_frame = output_frame.copy()
-                self.frame_ready.emit(qimage)
-
-                if plate_text:
-                    self.detection_ready.emit(plate_text)
-
-                QtCore.QThread.msleep(10)
-
-            except Exception as e:
-                self.error_occurred.emit(f"Lỗi camera thread: {e}")
-                QtCore.QThread.msleep(100)
-
-        cap.release()
-        self.status_changed.emit("Camera stopped")        
-        self._running = True
-        frame_count = 0
-
-        try:
-            self.status_changed.emit("Loading detection model...")
-            model = get_model()
-        except Exception as e:
-            self.error_occurred.emit(f"Không tải được model: {e}")
-            return
-
-        cap = self._build_capture()
-
-        if not cap.isOpened():
-            self.error_occurred.emit(f"Không mở được camera source: {self.camera_source}")
-            return
-
-        self.status_changed.emit("Camera connected")
-
-        while self._running:
-            try:
-                ret, frame = cap.read()
-                if not ret or frame is None:
-                    self.status_changed.emit("Mất frame từ camera, đang chờ lại...")
-                    QtCore.QThread.msleep(50)
-                    continue
-
-                frame_count += 1
-                output_frame = frame.copy()
                 plate_text = ""
 
-                # Chỉ detect mỗi N frame để giảm tải
                 if frame_count % DETECT_EVERY_N_FRAMES == 0:
                     try:
-                        results = model(frame, verbose=False, conf=0.4)
-                        output_frame = results[0].plot()
+                        results = model(roi, conf=0.4, verbose=False)
+                        annotated = results[0].plot()
+                        output[y1:y2, x1:x2] = annotated
 
-                        # Giữ logic cũ của bạn.
-                        # Sau này nên OCR trên vùng crop biển số thay vì ảnh annotated.
-                        plate_text = DetectService.segment_image(output_frame).strip()
+                        plate_text = DetectService.segment_image(roi).strip()
                     except Exception as e:
-                        self.error_occurred.emit(f"Lỗi detect/OCR: {e}")
+                        self.error_occurred.emit(str(e))
 
-                rgb_frame = cv2.cvtColor(output_frame, cv2.COLOR_BGR2RGB)
-                h, w, ch = rgb_frame.shape
-                bytes_per_line = ch * w
+                # render
+                rgb = cv2.cvtColor(output, cv2.COLOR_BGR2RGB)
+                h, w, ch = rgb.shape
 
-                # copy() rất quan trọng để tránh crash do vùng nhớ numpy bị giải phóng/ghi đè
-                qimage = QtGui.QImage(
-                    rgb_frame.data,
-                    w,
-                    h,
-                    bytes_per_line,
+                qimg = QtGui.QImage(
+                    rgb.data, w, h, ch*w,
                     QtGui.QImage.Format.Format_RGB888
                 ).copy()
 
-                self._latest_frame = output_frame.copy()
-                self.frame_ready.emit(qimage)
+                self.frame_ready.emit(qimg)
 
+                # debounce detection
+                now = time.time()
                 if plate_text:
-                    self.detection_ready.emit(plate_text)
+                    if (
+                        plate_text != self._last_plate
+                        or now - self._last_emit_time > 1.5
+                    ):
+                        self._last_plate = plate_text
+                        self._last_emit_time = now
+                        self.detection_ready.emit(plate_text)
 
-                QtCore.QThread.msleep(10)
+                QtCore.QThread.msleep(5)
 
             except Exception as e:
-                self.error_occurred.emit(f"Lỗi camera thread: {e}")
-                QtCore.QThread.msleep(100)
+                self.error_occurred.emit(str(e))
+                QtCore.QThread.msleep(50)
 
         cap.release()
         self.status_changed.emit("Camera stopped")
 
     def stop(self):
         self._running = False
-        self.wait(3000)
-
-    def snapshot(self):
-        return self._latest_frame.copy() if self._latest_frame is not None else None
-
+        self.wait()
 
 class LookupWorker(QtCore.QThread):
     lookup_finished = QtCore.pyqtSignal(str, object)

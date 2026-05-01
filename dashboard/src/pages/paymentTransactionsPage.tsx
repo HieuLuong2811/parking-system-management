@@ -18,10 +18,8 @@ import type {
   PaymentTransactionDetailRecord,
 } from "../api/types";
 import { UserIdentityCell } from "../components/common/UserIdentityCell";
-import { formatCurrencyInvoice, formatDateTime } from "../ultis/format";
+import { formatCurrency, formatDateTime } from "../ultis/format";
 import { useTranslation } from "react-i18next";
-
-const formatCurrency = (value: number) => formatCurrencyInvoice(String(value));
 
 export const PaymentTransactionsPage: React.FC = () => {
   const { t } = useTranslation();

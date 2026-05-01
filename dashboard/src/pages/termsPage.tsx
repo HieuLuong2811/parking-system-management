@@ -5,7 +5,7 @@ import DeleteIcon from '@mui/icons-material/Delete';
 import EditIcon from '@mui/icons-material/Edit';
 import React, { useCallback, useMemo, useState } from 'react';
 import { useTranslation } from 'react-i18next';
-
+import FilterListIcon from '@mui/icons-material/FilterList';
 import { AcademicTermModal, type AcademicTermFormPayload } from '../components/modals/AcademicTermModal';
 import { SoftDataGrid } from '../components/common/SoftDataGrid';
 import {
@@ -175,6 +175,10 @@ export const TermsPage: React.FC = () => {
 
         <Stack direction="row" justifyContent="space-between" alignItems="center" flexWrap="wrap" gap={2}>
           <Box display="flex" alignItems="center" gap={1}>
+            <Box sx={{ display: 'flex', gap: 0.5, alignItems: 'center' }}>
+              <FilterListIcon color="action" />
+              <Typography variant="body2">{t('common.filters.search')}</Typography>
+            </Box>
             <TextField
               size="small"
               variant="outlined"
@@ -182,8 +186,8 @@ export const TermsPage: React.FC = () => {
               label={t('termsPage.searchTerm.name', { defaultValue: 'Search by term name' })}
               onChange={(event) => setSearchTerm(event.target.value)}
             />
-            <Button size="small" onClick={handleClearFilters}>
-              {t('button.clear', { defaultValue: 'Clear' })}
+            <Button variant="text" onClick={handleClearFilters}>
+              {t('common.filters.reset')}
             </Button>
           </Box>
           <Stack direction="row" spacing={1}>

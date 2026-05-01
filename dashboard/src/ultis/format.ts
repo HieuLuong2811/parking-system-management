@@ -3,17 +3,6 @@ export const formatCurrency = (value?: number | null) => {
   return value.toLocaleString('vi-VN', { maximumFractionDigits: 2 });
 };
 
-export const formatCurrencyInvoice = (value: unknown) => {
-  if (value === null || value === undefined || value === '') {
-    return '-';
-  }
-  const normalized = Number(value);
-  if (Number.isNaN(normalized)) {
-    return String(value);
-  }
-  return normalized.toLocaleString(undefined, { maximumFractionDigits: 2 });
-};
-
 export const formatMeta = (value: unknown) => {
   if (value === null || value === undefined) {
     return '-';
@@ -43,3 +32,14 @@ export function formatDateTime(value?: string | null) {
     second: '2-digit',
   });
 }
+
+const pad2 = (value: number) => String(value).padStart(2, '0');
+export const toLocalDateTimeInputValue = (date: Date) => {
+  const year = date.getFullYear();
+  const month = pad2(date.getMonth() + 1);
+  const day = pad2(date.getDate());
+  const hours = pad2(date.getHours());
+  const minutes = pad2(date.getMinutes());
+  const seconds = pad2(date.getSeconds());
+  return `${year}-${month}-${day}T${hours}:${minutes}:${seconds}`;
+};

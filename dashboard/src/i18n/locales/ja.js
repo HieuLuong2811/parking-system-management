@@ -2,11 +2,19 @@ const ja = {
   translation: {
     sideBar: {
       title: "駐車場システム",
+      subMenu: {
+        General: "一般",
+        Operations: "運用",
+        Billing: "請求",
+        Management: "管理",
+        settings: "設定",
+      },
       children: {
-        home: "ホーム",
+        dashboard: "ダッシュボード",
         users: "ユーザー",
         resources: "リソース",
-        settings: "設定",
+        notifications: "通知",
+        profile: "プロフィール",
       },
       actions: {
         createButton: "ユーザーを作成",
@@ -32,10 +40,6 @@ const ja = {
           inactive: "削除済み",
         },
       },
-      filters: {
-        role: "ロール",
-        allRoles: "すべてのロール",
-      },
       form: {
         userCode: "ユーザーコード",
         fullName: "氏名",
@@ -44,9 +48,36 @@ const ja = {
       },
     },
     common: {
+      filters: {
+        search: "検索条件をクリアする :",
+        reset: "フィルターをクリアする",
+      },
       tooltips: {
         user_code: "ユーザーコード",
         full_name: "氏名",
+      },
+      subscriptionStatus: {
+        ALL: "すべて",
+        ACTIVE: "有効",
+        EXPIRED: "期限切れ",
+        SUSPENDED: "停止中",
+        PENDING: "保留中",
+      },
+      paymentPlan: {
+        ALL: "すべて",
+        MONTHLY: "月次支払い",
+        FULL: "一括支払い",
+      },
+      subscriptionPlans: {
+        ALL: "すべて",
+        LICENSED_VEHICLE: "ナンバープレート付き",
+        UNLICENSED_VEHICLE: "ナンバープレートなし",
+      },
+      vehicleTypeOptions: {
+        ALL: "すべて",
+        MOTORBIKE: "モーターバイク",
+        BICYCLE: "自転車",
+        ELECTRIC_BICYCLE: "電動自転車",
       },
     },
     pageTitle: {
@@ -90,6 +121,36 @@ const ja = {
     parkingEventsPage: {
       title: "駐車イベント",
     },
+    parkingSessionsPage: {
+      title: "駐車セッション",
+      tableHeaders: {
+        sessionId: "セッションID",
+        vehicleId: "車両",
+        checkIn: "入庫時刻",
+        checkOut: "出庫時刻",
+        totalDays: "日数",
+        amount: "金額",
+        paymentMethod: "支払い方法",
+      },
+      exportButton: "駐車セッションをエクスポート",
+      exportModal: {
+        title: "駐車セッション一覧をエクスポート",
+        description: "チェックイン期間を選択して表をエクスポートします。列名は現在の言語に従います。",
+        fromLabel: "開始日",
+        toLabel: "終了日",
+        exportLabel: "ファイルをエクスポート",
+        cancelLabel: "キャンセル",
+        note: "この期間内にチェックインしたセッションのみがエクスポートされます。",
+        errors: {
+          invalidRange: "開始日は終了日以前である必要があります。",
+        },
+      },
+      search: {
+        label: "セッションIDまたは車両ID",
+        userCode: "ユーザーコード",
+        vehicleType: "車両タイプ",
+      }
+    },
     usersPage: {
       title: "ユーザー管理",
       importButton: "{{role}}のリストをインポート",
@@ -102,7 +163,11 @@ const ja = {
         title: "学生/講師のリストをインポート",
         description: "Excelファイルを選択して、アカウント作成前にデータをプレビューします。",
         searchPlaceholder: "コード、名前、またはメールで検索",
-        statusLabel: "レコードの状態",
+        statusLabel: "状態",
+        filters: {
+          userCode: "ユーザーコード",
+          nameOrEmail: "名前またはメール",
+        },
         statusOptions: {
           valid: "有効",
           invalid: "無効",
@@ -210,6 +275,9 @@ const ja = {
       filters: {
         role: "ロール",
         allRoles: "すべてのロール",
+        userCode: "ユーザーコード",
+        nameOrEmail: "氏名またはメール",
+        phoneNumber: "電話番号",
       },
       form: {
         userCode: "ユーザーコード",
@@ -232,7 +300,7 @@ const ja = {
         userCode: "ユーザーコード",
         type: "種類",
         licensePlate: "ナンバー",
-        qrCode: "QRコード",
+        qrCode: "バーコード",
         status: "状態",
         createdAt: "作成日時",
         updatedAt: "更新日時",
@@ -240,11 +308,6 @@ const ja = {
       status: {
         active: "有効",
         deleted: "削除済み",
-      },
-      vehicleTypes: {
-        motorbike: "モーターベイク",
-        electricBicycle: "エレクトリックバイク",
-        bicycle: "バイク",
       },
     },
     rolesPage: {
@@ -257,7 +320,7 @@ const ja = {
       title: "学期",
       description: "学期とその適用期間を定義します。",
       searchTerm: {
-        name: "学期名で検索"
+        name: "学期名"
       },
       empty: "登録された学期がありません。",
       fields: {
@@ -283,11 +346,14 @@ const ja = {
       title: "サブスクリプションプラン",
     },
     subscriptionsPage: {
-      title: "ユーザー購読リスト",
+      title: "ユーザー登録",
       description: "システムで処理されたすべてのサブスクリプションを表示します。",
-      searchPlaceholder: "ユーザー、プラン、または学期で検索",
       filters: {
+        userCode: "ユーザーコード",
+        fullName: "氏名",
+        planType: "プランタイプ",
         status: "状態",
+        paymentPlan: "支払いプラン",
       },
       periodLabels: {
         from: "開始",
@@ -311,8 +377,6 @@ const ja = {
     },
     subscriptionPlansPage: {
       title: "サブスクリプションプラン",
-      description: "利用可能なサブスクリプションプランのリスト",
-      searchPlaceholder: "プラン名またはIDで検索",
       empty: "まだプランが定義されていません。",
       columns: {
         planName: "プラン名",

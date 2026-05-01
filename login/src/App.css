@@ -89,7 +89,7 @@ body {
 
 .auth-input {
   width: 100%;
-  border-radius: 12px;
+  border-radius: 6px;
   padding: 0.85rem 1rem;
   border: 1px solid var(--login-input-border);
   background-color: var(--login-input-bg);
@@ -128,7 +128,7 @@ body {
 .auth-button {
   background: var(--login-primary);
   color: #fff;
-  border-radius: 12px;
+  border-radius: 6px;
   padding: 0.95rem;
   font-weight: 600;
 }

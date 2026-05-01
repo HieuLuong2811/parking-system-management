@@ -52,7 +52,7 @@ const en = {
       userCode: 'User code',
       type: 'Type',
       licensePlate: 'License plate',
-      qrCode: 'QR code',
+      qrCode: 'Barcode',
       createdAt: 'Created at',
       actions: 'Actions',
       actionsMenu: {
@@ -82,23 +82,23 @@ const en = {
         electricBicycle: 'Electric bicycle',
       },
       actions: {
-        generateQr: 'Generate QR code',
+        generateQr: 'Generate barcode',
       },
-      generatingQr: 'Generating QR…',
+      generatingQr: 'Generating barcode…',
       fields: {
         userCode: 'User code',
         vehicleType: 'Vehicle type',
         licensePlate: 'License plate',
         licensePlatePlaceholder: 'e.g. 30K12345',
-        qrCode: 'QR code',
+        qrCode: 'Barcode',
         description: 'Notes',
         vehicleTypePlaceholder: 'Select a vehicle type',
       },
       errors: {
         generic: 'Unable to register vehicle. Please try again.',
-        qrGenerate: 'Fill required fields first to generate QR.',
-        qrFailed: 'Unable to generate QR code.',
-        qrMissing: 'Generate the QR code before registering.',
+        qrGenerate: 'Fill required fields first to generate barcode.',
+        qrFailed: 'Unable to generate barcode.',
+        qrMissing: 'Generate the barcode before registering.',
       },
     },
     form: {
@@ -219,7 +219,7 @@ const en = {
       cancel: 'Cancel',
       minLength: 'Password must be at least 6 characters.',
       confirmMismatch: 'Passwords do not match.',
-      success: 'Password updated successfully.',
+      success: 'Password updated successfully. Please log in again.',
       genericError: 'Unable to change password. Please try again.',
     },
     subscriptions: {
@@ -317,7 +317,7 @@ const en = {
       noPlate: 'No license plate',
     },
     checkoutStepper: {
-      steps: ['Choose term', 'Payment plan', 'Payment details'],
+      steps: ['Choose vehicle', 'Choose term', 'Payment plan', 'Payment details'],
       termLabel: 'Academic term',
       termPlaceholder: 'Pick a term',
       termHelper: 'Select the term you are registering for before continuing.',

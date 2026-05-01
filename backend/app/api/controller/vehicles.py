@@ -9,7 +9,7 @@ from app.models.responses import (
     SubscriptionInfo,
     VehicleLookupResponse,
 )
-from app.models.vehicles import VehicleCreate, VehicleRead, VehicleUpdate, VehicleQRVerify
+from app.models.vehicles import VehicleCreate, VehicleRead, VehicleUpdate, VehicleBarcodeVerify
 from app.service.parking_sessions import parkingSessionService
 from app.service.subscriptions import subscriptionService
 from app.service.vehicles import vehicleService
@@ -32,9 +32,11 @@ class VehicleController:
         is_deleted: bool | None = None,
         page: int = 1,
         limit: int = 20,
+        user_code: str | None = None,
     ) -> PaginatedResponse[VehicleRead]:
         return await vehicleService.get_vehicles(
             db,
+            user_code=user_code,
             search=search,
             is_deleted=is_deleted,
             page=page,
@@ -45,6 +47,27 @@ class VehicleController:
     async def get_vehicles_by_user_ctrl(user_code: str, db: AsyncSession) -> list[VehicleRead]:
         vehicles = await vehicleService.get_vehicles_by_user_code(user_code, db)
         return vehicles
+
+    @staticmethod
+    async def get_vehicles_by_user_paginated_ctrl(
+        user_code: str,
+        db: AsyncSession,
+        *,
+        page: int = 1,
+        limit: int = 20,
+        user_code_filter: str | None = None,
+        license_plate: str | None = None,
+        has_plate: bool | None = None,
+    ) -> PaginatedResponse[VehicleRead]:
+        return await vehicleService.get_vehicles_by_user_code_paginated(
+            user_code,
+            db,
+            page=page,
+            limit=limit,
+            user_code_filter=user_code_filter,
+            license_plate=license_plate,
+            has_plate=has_plate,
+        )
 
     @staticmethod
     async def update_vehicle_ctrl(vehicle_id: str, payload: VehicleUpdate, db: AsyncSession) -> VehicleRead:
@@ -64,16 +87,11 @@ class VehicleController:
         return await VehicleController._build_vehicle_lookup_response(vehicle, user, db)
 
     @staticmethod
-    async def verify_vehicle_qr_ctrl(payload: VehicleQRVerify, db: AsyncSession) -> VehicleLookupResponse:
+    async def verify_vehicle_barcode_ctrl(payload: VehicleBarcodeVerify, db: AsyncSession) -> VehicleLookupResponse:
         try:
-            vehicle, user = await vehicleService.get_vehicle_with_user(str(payload.vehicle_id), db)
+            vehicle, user = await vehicleService.get_by_barcode_token(payload.barcode_token, db)
         except ValueError:
             raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Vehicle not found")
-        if (
-            (vehicle.user_code or '') != payload.user_code
-            or (vehicle.qr_secret or '') != payload.qr_secret
-        ):
-            raise HTTPException(status_code=status.HTTP_403_FORBIDDEN, detail="Invalid QR payload")
         return await VehicleController._build_vehicle_lookup_response(vehicle, user, db)
 
     @staticmethod
@@ -111,7 +129,7 @@ class VehicleController:
             user_code=user.user_code,
             vehicle_type=vehicle.vehicle_type.value,
             license_plate=vehicle.license_plate,
-            qr_code=vehicle.qr_code,
+            barcode_token=vehicle.barcode_token,
             user_full_name=user.full_name,
             user_email=user.email,
             active_subscription=subscription_info,

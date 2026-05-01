@@ -35,7 +35,7 @@ import { useInfiniteNotifications } from '../../api/notifications';
 
 const navLinks = [
   { key: 'nav.home', to: '/' },
-  { key: 'nav.vehicles', to: '/vehicle' },
+  { key: 'nav.plan', to: '/plan' },
   { key: 'nav.sessions', to: '/sessions' },
   { key: 'nav.invoices', to: '/invoices' },
 ];
@@ -216,7 +216,7 @@ return (
                 target="_blank"
                 rel="noreferrer"
               >
-                <FacebookRoundedIcon fontSize="small" />
+                <FacebookRoundedIcon sx={{ color: '#FFFFF' }} fontSize="small" />
               </IconButton>
               <IconButton
                 className="top-navbar-icon"
@@ -226,7 +226,7 @@ return (
                 target="_blank"
                 rel="noreferrer"
               >
-                  <YouTubeIcon fontSize="small" />
+                  <YouTubeIcon sx={{ color: '#FFFFF' }} fontSize="small" />
               </IconButton>
             </Stack>
           </Stack>

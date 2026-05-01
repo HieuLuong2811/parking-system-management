@@ -77,6 +77,7 @@ export const AcademicTermModal: React.FC<AcademicTermModalProps> = ({
       <DialogContent>
         <Stack spacing={2} sx={{ mt: 1 }}>
           <FormInput
+            name="term_name"
             label={t('termsPage.fields.termName', { defaultValue: 'Term name' })}
             required
             value={termName}
@@ -92,6 +93,7 @@ export const AcademicTermModal: React.FC<AcademicTermModalProps> = ({
             </Alert>
           )}
           <FormInput
+            name="start_date"
             label={t('termsPage.fields.startDate', { defaultValue: 'Start date' })}
             required={!disableDates}
             type="date"
@@ -106,6 +108,7 @@ export const AcademicTermModal: React.FC<AcademicTermModalProps> = ({
             error={fieldErrors.start_date}
           />
           <FormInput
+            name="end_date"
             label={t('termsPage.fields.endDate', { defaultValue: 'End date' })}
             required={!disableDates}
             type="date"

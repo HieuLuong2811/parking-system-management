@@ -14,8 +14,9 @@ import { SubscriptionPlansPage } from '../pages/subscriptionPlansPage';
 import { SubscriptionsPage } from '../pages/subscriptionsPage';
 import { ParkingSessionsPage } from '../pages/parkingSessionsPage';
 import { PaymentTransactionsPage } from '../pages/paymentTransactionsPage';
-import { BillingEventLogsPage } from '../pages/billingEventLogsPage';
 import { SubscriptionInvoicesPage } from '../pages/subscriptionInvoicesPage';
+import { NotificationsPage } from '../pages/notificationsPage';
+import { UserProfilePage } from '../pages/UserProfilePage';
 
 export const AppRouter = () => {
   return (
@@ -26,6 +27,7 @@ export const AppRouter = () => {
           <Route path="/" element={<Layout />}>
             <Route index element={<HomePage />} />
             <Route path="users" element={<UsersPage />} />
+            <Route path="/users/:userCode/user-details" element={<UserProfilePage />} />
             <Route path="invoices/overview" element={<InvoicesPage />} />
             <Route path="parking_sessions" element={<ParkingSessionsPage />} />
             <Route path="vehicles" element={<VehiclesPage />} />
@@ -35,7 +37,7 @@ export const AppRouter = () => {
             <Route path="subscriptions" element={<SubscriptionsPage />} />
             <Route path="subscriptions/:subscriptionId/invoices" element={<SubscriptionInvoicesPage />} />
             <Route path="payment_transactions" element={<PaymentTransactionsPage />} />
-            <Route path="billing_event_logs" element={<BillingEventLogsPage />} />
+            <Route path="notifications" element={<NotificationsPage />} />
             <Route path="settings" element={<SettingsPage />} />
             <Route path="*" element={<NotFoundPage />} />
           </Route>

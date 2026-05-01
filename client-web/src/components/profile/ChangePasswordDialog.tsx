@@ -7,10 +7,12 @@ import {
   DialogTitle,
   Typography,
 } from '@mui/material';
-import { useState, useEffect, ChangeEvent } from 'react';
+import { useState, useEffect } from 'react';
 import { useTranslation } from 'react-i18next';
 
 import { useChangePassword } from '../../api/auth';
+import { useAppAuth } from '../../contexts/useAppAuth';
+import { FormInput } from '../common/FormInput';
 
 type ChangePasswordDialogProps = {
   open: boolean;
@@ -29,6 +31,7 @@ export default function ChangePasswordDialog({ open, onClose }: ChangePasswordDi
   const [errors, setErrors] = useState<Partial<Record<keyof typeof initialState, string>>>({});
   const [helperText, setHelperText] = useState<string | null>(null);
   const { mutateAsync, isPending } = useChangePassword();
+  const { logout } = useAppAuth();
 
   useEffect(() => {
     if (!open) {
@@ -75,6 +78,11 @@ export default function ChangePasswordDialog({ open, onClose }: ChangePasswordDi
         new_password: form.newPassword,
       });
       onClose(t('profile.passwordDialog.success'));
+
+      setTimeout(async () => {
+        await logout();
+      }, 2000);
+      
     } catch (error) {
       const message =
         error instanceof Error
@@ -100,23 +108,28 @@ export default function ChangePasswordDialog({ open, onClose }: ChangePasswordDi
                   : field === 'newPassword'
                   ? 'profile.passwordDialog.newLabel'
                   : 'profile.passwordDialog.confirmLabel';
+              const autoComplete =
+                field === 'currentPassword'
+                  ? 'current-password'
+                  : field === 'newPassword'
+                  ? 'new-password'
+                  : 'new-password';
               return (
                 <Box key={field} sx={{ display: 'flex', flexDirection: 'column', gap: 0.35 }}>
-                  <Typography className="profile-field-label">
-                    {t(labelKey)}
-                    <span className="required-marker"> *</span>
-                  </Typography>
-                  <input
-                    className="plain-input"
+                  <FormInput
+                    id={field}
+                    label={t(labelKey)}
+                    required
+                    requiredMarkerClassName="required-marker"
                     type="password"
                     value={form[field]}
-                    onChange={(event: ChangeEvent<HTMLInputElement>) => setField(field, event.target.value)}
+                    onChange={(value) => setField(field, value)}
+                    error={errors[field]}
+                    inputClassName="auth-input"
+                    labelClassName="profile-field-label"
+                    autoComplete={autoComplete}
+                    requiredFirst={t(labelKey)}
                   />
-                  {errors[field] && (
-                    <Typography variant="body2" color="error" sx={{ mt: 0.5 }}>
-                      {errors[field]}
-                    </Typography>
-                  )}
                 </Box>
               );
             }

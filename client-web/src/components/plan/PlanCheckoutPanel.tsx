@@ -1,57 +1,78 @@
-import { Box, Button, Step, StepLabel, Stepper, Typography } from '@mui/material';
-import { useMemo, useState } from 'react';
-import { useNavigate } from 'react-router-dom';
-import { useTranslation } from 'react-i18next';
-import { SubscriptionPlanRecord } from '../../api/clientApi';
-import { useAcademicTerms } from '../../api/academic_terms';
-import { useCreateInvoice } from '../../api/invoices';
-import { useCreateMomoPaymentForInvoice } from '../../api/momo';
-import { useVehicles } from '../../api/vehicles';
-import { useAppAuth } from '../../contexts/useAppAuth';
-import { CardCvcElement, CardExpiryElement, CardNumberElement, useElements, useStripe } from '@stripe/react-stripe-js';
+import {
+  Box,
+  Button,
+  MenuItem,
+  Select,
+  Step,
+  StepLabel,
+  Stepper,
+  Typography,
+} from "@mui/material";
+import { useMemo, useState } from "react";
+import { useNavigate } from "react-router-dom";
+import { useTranslation } from "react-i18next";
+import { SubscriptionPlanRecord } from "../../api/clientApi";
+import { useAcademicTerms } from "../../api/academic_terms";
+import { useCreateInvoice } from "../../api/invoices";
+import { useCreateMomoPaymentForInvoice } from "../../api/momo";
+import { useVehicles } from "../../api/vehicles";
+import { useAppAuth } from "../../contexts/useAppAuth";
+import {
+  CardCvcElement,
+  CardExpiryElement,
+  CardNumberElement,
+  useElements,
+  useStripe,
+} from "@stripe/react-stripe-js";
 import type {
   StripeCardCvcElementChangeEvent,
   StripeCardExpiryElementChangeEvent,
   StripeCardNumberElementChangeEvent,
-} from '@stripe/stripe-js';
-import { createSetupIntent, createStripePaymentIntent } from '../../api/stripe';
-import { getPlanCardKey } from '../../ultis/planCards';
-import { useCheckoutState } from './hooks/useCheckoutState';
-import { usePlanCheckoutPricing } from './hooks/usePlanCheckoutPricing';
-import { AcademicTermOption, paymentModes, RawTermCard } from './types';
-import { payment_plan } from '../../constant/config';
+} from "@stripe/stripe-js";
+import { createSetupIntent, createStripePaymentIntent } from "../../api/stripe";
+import { getPlanCardKey } from "../../ultis/planCards";
+import { useCheckoutState } from "./hooks/useCheckoutState";
+import { usePlanCheckoutPricing } from "./hooks/usePlanCheckoutPricing";
+import { AcademicTermOption, paymentModes, RawTermCard } from "./types";
+import { payment_plan, PLAN_TYPES, PlanType } from "../../constant/config";
+import VehicleRegistrationModal from '../../components/vehicle/VehicleRegistrationModal';
+import useModal from '../../hooks/useModal';
 
-const priceFormatter = new Intl.NumberFormat('en-US', { maximumFractionDigits: 0 });
+const priceFormatter = new Intl.NumberFormat("en-US", {
+  maximumFractionDigits: 0,
+});
 const formatCurrency = (value: number) => `${priceFormatter.format(value)} VND`;
 
 const getVehicleTypeLabel = (
   vehicleType: string | undefined,
-  t: (key: string, options?: { defaultValue?: string }) => string
+  t: (key: string, options?: { defaultValue?: string }) => string,
 ) => {
   switch (vehicleType) {
-    case 'MOTORBIKE':
-      return t('vehicle.modal.types.motorbike', { defaultValue: vehicleType });
-    case 'BICYCLE':
-      return t('vehicle.modal.types.bicycle', { defaultValue: vehicleType });
-    case 'ELECTRIC_BICYCLE':
-      return t('vehicle.modal.types.electricBicycle', { defaultValue: vehicleType });
+    case "MOTORBIKE":
+      return t("vehicle.modal.types.motorbike", { defaultValue: vehicleType });
+    case "BICYCLE":
+      return t("vehicle.modal.types.bicycle", { defaultValue: vehicleType });
+    case "ELECTRIC_BICYCLE":
+      return t("vehicle.modal.types.electricBicycle", {
+        defaultValue: vehicleType,
+      });
     default:
-      return vehicleType ?? '—';
+      return vehicleType ?? "—";
   }
 };
 
 const STRIPE_ELEMENT_OPTIONS = {
   style: {
     base: {
-      fontSize: '16px',
-      color: '#0f172a',
+      fontSize: "16px",
+      color: "#0f172a",
       fontFamily: '"Inter", sans-serif',
-      '::placeholder': {
-        color: '#94a3b8',
+      "::placeholder": {
+        color: "#94a3b8",
       },
     },
     invalid: {
-      color: '#b91c1c',
+      color: "#b91c1c",
     },
   },
 } as const;
@@ -59,9 +80,14 @@ const STRIPE_ELEMENT_OPTIONS = {
 type PlanCheckoutPanelProps = {
   plan: SubscriptionPlanRecord;
   initialVehicleId?: string;
+  planType?: PlanType;
 };
 
-export default function PlanCheckoutPanel({ plan, initialVehicleId }: PlanCheckoutPanelProps) {
+export default function PlanCheckoutPanel({
+  plan,
+  initialVehicleId,
+  planType,
+}: PlanCheckoutPanelProps) {
   const { t } = useTranslation();
   const navigate = useNavigate();
   const planKey = getPlanCardKey(plan.plans_type);
@@ -70,7 +96,9 @@ export default function PlanCheckoutPanel({ plan, initialVehicleId }: PlanChecko
       ? t(`plan.cards.${planKey}.title`, { defaultValue: plan.plans_type })
       : plan.plans_type;
   const planSubtitle =
-    planKey !== null ? t(`plan.cards.${planKey}.subtitle`, { defaultValue: '' }) : '';
+    planKey !== null
+      ? t(`plan.cards.${planKey}.subtitle`, { defaultValue: "" })
+      : "";
   const { user: currentUser } = useAppAuth();
   const { data: academicTerms = [] } = useAcademicTerms();
   const { data: vehicles = [] } = useVehicles();
@@ -78,14 +106,34 @@ export default function PlanCheckoutPanel({ plan, initialVehicleId }: PlanChecko
   const { mutateAsync: createMomoPayment } = useCreateMomoPaymentForInvoice();
   const stripe = useStripe();
   const elements = useElements();
+  const registerModal = useModal();
+
+  const handleOpenCreate = () => {
+    registerModal.openModal();
+  };
+
+  const handleCloseModal = () => {
+    registerModal.closeModal();
+  };
+
+  const filteredVehicles = useMemo(() => {
+    if (planType === PLAN_TYPES.UNLICENSED_VEHICLE) {
+      return vehicles.filter(v => !v.license_plate);
+    }
+
+    return vehicles.filter(v => v.license_plate);
+  }, [vehicles, planType]);
 
   const checkoutSteps = useMemo(
-    () => (t('plan.checkoutStepper.steps', { returnObjects: true }) as string[]),
-    [t]
+    () => t("plan.checkoutStepper.steps", { returnObjects: true }) as string[],
+    [t],
   );
 
   const translationTermCards = useMemo(() => {
-    const raw = (t('plan.checkoutStepper.termCards', { returnObjects: true }) as RawTermCard[]) ?? [];
+    const raw =
+      (t("plan.checkoutStepper.termCards", {
+        returnObjects: true,
+      }) as RawTermCard[]) ?? [];
     return raw.map((card) => ({
       id: card.id,
       termName: card.term_name,
@@ -104,13 +152,15 @@ export default function PlanCheckoutPanel({ plan, initialVehicleId }: PlanChecko
   }, [academicTerms]);
 
   const hasAcademicTerms = academicTermOptions.length > 0;
-  const availableTermCards = hasAcademicTerms ? academicTermOptions : translationTermCards;
+  const availableTermCards = hasAcademicTerms
+    ? academicTermOptions
+    : translationTermCards;
 
   const { state: checkoutState, actions: checkoutActions } = useCheckoutState(
     plan?.id,
     academicTermOptions,
     vehicles,
-    initialVehicleId
+    initialVehicleId,
   );
 
   const {
@@ -128,13 +178,15 @@ export default function PlanCheckoutPanel({ plan, initialVehicleId }: PlanChecko
     setActiveStep,
     selectTerm,
     selectPaymentMode,
+    setVehicleId,
     setCardComplete,
     setCardError,
     setProcessing,
     setProcessingError,
   } = checkoutActions;
 
-  const selectedTermRecord = academicTerms.find((term) => term.id === selectedTermId) ?? null;
+  const selectedTermRecord =
+    academicTerms.find((term) => term.id === selectedTermId) ?? null;
 
   const {
     planPricing,
@@ -144,17 +196,19 @@ export default function PlanCheckoutPanel({ plan, initialVehicleId }: PlanChecko
     fullModePricing,
   } = usePlanCheckoutPricing(plan?.id, selectedTermRecord?.id, activeStep >= 1);
 
-  const selectedVehicle = vehicles.find((vehicle) => vehicle.id === selectedVehicleId) ?? null;
+  const selectedVehicle = filteredVehicles.find(
+    (vehicle) => vehicle.id === selectedVehicleId,
+  );
   const selectedVehicleSummary = useMemo(() => {
     if (!selectedVehicle) {
-      return t('plan.checkoutSummary.vehicleEmpty');
+      return t("plan.checkoutSummary.vehicleEmpty");
     }
     const typeLabel = getVehicleTypeLabel(selectedVehicle.vehicle_type, t);
     const plate = selectedVehicle.license_plate?.trim();
     if (plate) {
       return `${typeLabel} • ${plate}`;
     }
-    return `${typeLabel} • ${t('plan.checkoutSummary.noPlate')}`;
+    return `${typeLabel} • ${t("plan.checkoutSummary.noPlate")}`;
   }, [selectedVehicle, t]);
   const recurringPlanId = recurringModePricing?.payment_plan_id ?? null;
   const fullPlanId = fullModePricing?.payment_plan_id ?? null;
@@ -168,9 +222,13 @@ export default function PlanCheckoutPanel({ plan, initialVehicleId }: PlanChecko
     Boolean(fullModePricing);
   const stripeReady = Boolean(stripe && elements);
   const recurringCardReady =
-    selectedPaymentMode === payment_plan.RECURRING && cardComplete && stripeReady && Boolean(recurringModePricing);
+    selectedPaymentMode === payment_plan.RECURRING &&
+    cardComplete &&
+    stripeReady &&
+    Boolean(recurringModePricing);
   const finalStepDisabled = (() => {
-    if (selectedPaymentMode === payment_plan.RECURRING) return !recurringCardReady;
+    if (selectedPaymentMode === payment_plan.RECURRING)
+      return !recurringCardReady;
     if (selectedPaymentMode === payment_plan.ONE_TIME) return !momoReady;
     return true;
   })();
@@ -188,15 +246,15 @@ export default function PlanCheckoutPanel({ plan, initialVehicleId }: PlanChecko
 
   const getPrimaryLabel = () => {
     if (activeStep < checkoutSteps.length - 1) {
-      return t('plan.checkoutStepper.next');
+      return t("plan.checkoutStepper.next");
     }
     if (selectedPaymentMode === payment_plan.RECURRING) {
-      return t('plan.checkoutStepper.confirm');
+      return t("plan.checkoutStepper.confirm");
     }
     if (selectedPaymentMode === payment_plan.ONE_TIME) {
-      return t('plan.checkoutStepper.payMomo');
+      return t("plan.checkoutStepper.payMomo");
     }
-    return t('plan.checkoutStepper.next');
+    return t("plan.checkoutStepper.next");
   };
   const primaryLabel = getPrimaryLabel();
 
@@ -215,7 +273,11 @@ export default function PlanCheckoutPanel({ plan, initialVehicleId }: PlanChecko
     cvc: null,
   });
 
-  const syncStripeField = (field: 'number' | 'expiry' | 'cvc', complete: boolean, errorMessage?: string) => {
+  const syncStripeField = (
+    field: "number" | "expiry" | "cvc",
+    complete: boolean,
+    errorMessage?: string,
+  ) => {
     setStripeFieldComplete((prev) => {
       const next = { ...prev, [field]: complete };
       setCardComplete(next.number && next.expiry && next.cvc);
@@ -228,21 +290,25 @@ export default function PlanCheckoutPanel({ plan, initialVehicleId }: PlanChecko
     });
   };
 
-  const handleCardNumberChange = (event: StripeCardNumberElementChangeEvent) => {
-    syncStripeField('number', event.complete, event.error?.message);
+  const handleCardNumberChange = (
+    event: StripeCardNumberElementChangeEvent,
+  ) => {
+    syncStripeField("number", event.complete, event.error?.message);
   };
 
-  const handleCardExpiryChange = (event: StripeCardExpiryElementChangeEvent) => {
-    syncStripeField('expiry', event.complete, event.error?.message);
+  const handleCardExpiryChange = (
+    event: StripeCardExpiryElementChangeEvent,
+  ) => {
+    syncStripeField("expiry", event.complete, event.error?.message);
   };
 
   const handleCardCvcChange = (event: StripeCardCvcElementChangeEvent) => {
-    syncStripeField('cvc', event.complete, event.error?.message);
+    syncStripeField("cvc", event.complete, event.error?.message);
   };
 
   const handleRecurringSetup = async () => {
     if (!stripe || !elements) {
-      setProcessingError(t('plan.checkoutStepper.cardSetupError'));
+      setProcessingError(t("plan.checkoutStepper.cardSetupError"));
       return;
     }
 
@@ -252,7 +318,7 @@ export default function PlanCheckoutPanel({ plan, initialVehicleId }: PlanChecko
       const { client_secret } = await createSetupIntent();
       const cardNumberElement = elements.getElement(CardNumberElement);
       if (!cardNumberElement) {
-        throw new Error(t('plan.checkoutStepper.cardNotLoaded'));
+        throw new Error(t("plan.checkoutStepper.cardNotLoaded"));
       }
       const result = await stripe.confirmCardSetup(client_secret, {
         payment_method: {
@@ -267,18 +333,18 @@ export default function PlanCheckoutPanel({ plan, initialVehicleId }: PlanChecko
         throw result.error;
       }
       const paymentMethodId = result.setupIntent?.payment_method;
-      if (!paymentMethodId || typeof paymentMethodId !== 'string') {
-        throw new Error(t('plan.checkoutStepper.cardNotReady'));
+      if (!paymentMethodId || typeof paymentMethodId !== "string") {
+        throw new Error(t("plan.checkoutStepper.cardNotReady"));
       }
       if (!plan || !selectedTermRecord || !selectedVehicle) {
-        throw new Error(t('plan.checkoutStepper.cardSetupError'));
+        throw new Error(t("plan.checkoutStepper.cardSetupError"));
       }
       const paymentPlanId = recurringPlanId ?? fullPlanId;
       if (!paymentPlanId) {
-        throw new Error(t('plan.checkoutStepper.cardSetupError'));
+        throw new Error(t("plan.checkoutStepper.cardSetupError"));
       }
       if (!recurringModePricing?.amount) {
-        throw new Error(t('plan.checkoutStepper.cardNotLoaded'));
+        throw new Error(t("plan.checkoutStepper.cardNotLoaded"));
       }
       const recurringAmount = recurringModePricing.amount;
       await createStripePaymentIntent({
@@ -292,9 +358,12 @@ export default function PlanCheckoutPanel({ plan, initialVehicleId }: PlanChecko
         end_date: selectedTermRecord.end_date,
         total_amount: recurringAmount,
       });
-      navigate('/plan');
+      navigate("/plan");
     } catch (error) {
-      const message = error instanceof Error ? error.message : t('plan.checkoutStepper.cardGeneralError');
+      const message =
+        error instanceof Error
+          ? error.message
+          : t("plan.checkoutStepper.cardGeneralError");
       setProcessingError(message);
     } finally {
       setProcessing(false);
@@ -302,13 +371,18 @@ export default function PlanCheckoutPanel({ plan, initialVehicleId }: PlanChecko
   };
 
   const handleMomoCheckout = async () => {
-    if (!currentUser || !selectedTermRecord || !selectedVehicle || !fullPlanId) {
-      setProcessingError(t('plan.checkoutStepper.momoSetupError'));
+    if (
+      !currentUser ||
+      !selectedTermRecord ||
+      !selectedVehicle ||
+      !fullPlanId
+    ) {
+      setProcessingError(t("plan.checkoutStepper.momoSetupError"));
       return;
     }
 
     if (!plan) {
-      setProcessingError(t('plan.checkoutStepper.momoSetupError'));
+      setProcessingError(t("plan.checkoutStepper.momoSetupError"));
       return;
     }
 
@@ -316,7 +390,7 @@ export default function PlanCheckoutPanel({ plan, initialVehicleId }: PlanChecko
     setProcessingError(null);
 
     if (!fullModePricing?.amount) {
-      setProcessingError(t('plan.checkoutStepper.momoSetupError'));
+      setProcessingError(t("plan.checkoutStepper.momoSetupError"));
       return;
     }
     const oneTimeAmount = fullModePricing.amount;
@@ -336,8 +410,8 @@ export default function PlanCheckoutPanel({ plan, initialVehicleId }: PlanChecko
         user_code: currentUser.user_code,
         subscription_id: null,
         amount: oneTimeAmount,
-        payment_method: 'MOMO',
-        status: 'PENDING',
+        payment_method: "MOMO",
+        status: "PENDING",
         metadata,
       });
 
@@ -347,7 +421,7 @@ export default function PlanCheckoutPanel({ plan, initialVehicleId }: PlanChecko
           orderInfo: `Invoice ${invoice.id}`,
           redirectUrl: `${window.location.origin}/profile`,
           extraData: JSON.stringify({ invoice_id: invoice.id }),
-          lang: currentUser.language_use || 'vi',
+          lang: currentUser.language_use || "vi",
         },
       });
 
@@ -361,12 +435,15 @@ export default function PlanCheckoutPanel({ plan, initialVehicleId }: PlanChecko
         null;
 
       if (!checkoutUrl) {
-        throw new Error(t('plan.checkoutStepper.momoUrlMissing'));
+        throw new Error(t("plan.checkoutStepper.momoUrlMissing"));
       }
 
       window.location.assign(checkoutUrl as string);
     } catch (error) {
-      const message = error instanceof Error ? error.message : t('plan.checkoutStepper.momoGeneralError');
+      const message =
+        error instanceof Error
+          ? error.message
+          : t("plan.checkoutStepper.momoGeneralError");
       setProcessingError(message);
     } finally {
       setProcessing(false);
@@ -418,27 +495,73 @@ export default function PlanCheckoutPanel({ plan, initialVehicleId }: PlanChecko
           <Box className="checkout-step-content">
             {activeStep === 0 && (
               <>
-                <Typography variant="subtitle1" className="checkout-payment-label">
-                  {t('plan.checkoutStepper.termLabel')}
+                {" "}
+                <Typography>Chọn phương tiện</Typography>{" "}
+                <Box>
+                  <Select
+                      value={selectedVehicleId}
+                      onChange={(e) => {
+                        const value = e.target.value;
+
+                        if (value === 'new') {
+                          navigate('/vehicles');
+                          return;
+                        }
+
+                        setVehicleId(value);
+                      }}
+                    >
+                  {filteredVehicles.map((v) => (
+                    <MenuItem key={v.id} value={v.id}>
+                      {v.license_plate || "Không biển số"}
+                    </MenuItem>
+                  ))}
+                    <MenuItem value="new">Thêm xe mới</MenuItem>{" "}
+                  </Select>
+                  <Button onClick={handleOpenCreate}>
+                    + Thêm xe
+                  </Button>
+                </Box>
+              </>
+            )}
+            {activeStep === 1 && (
+              <>
+                <Typography
+                  variant="subtitle1"
+                  className="checkout-payment-label"
+                >
+                  {t("plan.checkoutStepper.termLabel")}
                 </Typography>
-                <Typography variant="body2" className="checkout-step-description">
-                  {t('plan.checkoutStepper.termHelper')}
+                <Typography
+                  variant="body2"
+                  className="checkout-step-description"
+                >
+                  {t("plan.checkoutStepper.termHelper")}
                 </Typography>
                 {availableTermCards.length === 0 ? (
-                  <Typography variant="body2">{t('plan.checkoutStepper.termEmpty')}</Typography>
+                  <Typography variant="body2">
+                    {t("plan.checkoutStepper.termEmpty")}
+                  </Typography>
                 ) : (
                   <Box className="checkout-term-grid">
                     {availableTermCards.map((card) => (
                       <Box
                         key={card.id}
                         className={`checkout-term-card ${
-                          selectedTermId === card.id ? 'checkout-term-card--active' : ''
+                          selectedTermId === card.id
+                            ? "checkout-term-card--active"
+                            : ""
                         }`}
                         onClick={() => selectTerm(card.id)}
                       >
-                        <Typography className="checkout-term-title">{card.termName}</Typography>
-                        <Typography className="checkout-term-meta" variant="body2">
-                          {t('plan.checkoutStepper.termRange', {
+                        <Typography className="checkout-term-title">
+                          {card.termName}
+                        </Typography>
+                        <Typography
+                          className="checkout-term-meta"
+                          variant="body2"
+                        >
+                          {t("plan.checkoutStepper.termRange", {
                             start: card.startDate,
                             end: card.endDate,
                           })}
@@ -450,23 +573,33 @@ export default function PlanCheckoutPanel({ plan, initialVehicleId }: PlanChecko
               </>
             )}
 
-            {activeStep === 1 && (
+            {activeStep === 2 && (
               <Box className="checkout-step-plan">
-                <Typography variant="subtitle1" className="checkout-payment-label">
-                  {t('plan.checkoutStepper.paymentPlanLabel')}
+                <Typography
+                  variant="subtitle1"
+                  className="checkout-payment-label"
+                >
+                  {t("plan.checkoutStepper.paymentPlanLabel")}
                 </Typography>
-                <Typography variant="body2" className="checkout-step-description">
-                  {t('plan.checkoutStepper.paymentPlanDescription')}
+                <Typography
+                  variant="body2"
+                  className="checkout-step-description"
+                >
+                  {t("plan.checkoutStepper.paymentPlanDescription")}
                 </Typography>
                 <Box className="checkout-payment-modes">
                   {paymentModes.map((mode) => {
                     const modePricing =
-                      mode.id === payment_plan.RECURRING ? recurringModePricing : fullModePricing;
+                      mode.id === payment_plan.RECURRING
+                        ? recurringModePricing
+                        : fullModePricing;
                     return (
                       <Box
                         key={mode.id}
                         className={`checkout-payment-card ${
-                          selectedPaymentMode === mode.id ? 'checkout-payment-card--active' : ''
+                          selectedPaymentMode === mode.id
+                            ? "checkout-payment-card--active"
+                            : ""
                         }`}
                         onClick={() => {
                           if (!planPricing || !modePricing) {
@@ -476,29 +609,46 @@ export default function PlanCheckoutPanel({ plan, initialVehicleId }: PlanChecko
                         }}
                       >
                         <Box className="checkout-payment-header">
-                          <Typography variant="subtitle1">{t(mode.titleKey)}</Typography>
+                          <Typography variant="subtitle1">
+                            {t(mode.titleKey)}
+                          </Typography>
                           {mode.badgeKey && (
-                            <span className="checkout-payment-badge">{t(mode.badgeKey)}</span>
+                            <span className="checkout-payment-badge">
+                              {t(mode.badgeKey)}
+                            </span>
                           )}
                         </Box>
                         {modePricing && planPricing && !planPricingBusy ? (
-                          <Typography variant="h6" className="checkout-payment-price">
-                            {formatCurrency(modePricing.amount)}{' '}
+                          <Typography
+                            variant="h6"
+                            className="checkout-payment-price"
+                          >
+                            {formatCurrency(modePricing.amount)}{" "}
                             {mode.id === payment_plan.RECURRING
-                              ? t('plan.paymentModes.recurring.suffix')
-                              : t('plan.paymentModes.oneTime.suffix')}
+                              ? t("plan.paymentModes.recurring.suffix")
+                              : t("plan.paymentModes.oneTime.suffix")}
                           </Typography>
                         ) : (
-                          <Typography variant="body2" className="checkout-payment-calculating">
-                            {t('plan.calculatingPrice')}
+                          <Typography
+                            variant="body2"
+                            className="checkout-payment-calculating"
+                          >
+                            {t("plan.calculatingPrice")}
                           </Typography>
                         )}
-                        {mode.id === payment_plan.ONE_TIME && modePricing && planPricing && !planPricingBusy && (
-                          <Typography className="checkout-payment-old-price">
-                            {formatCurrency(modePricing.original_amount)} {t('plan.paymentModes.oneTime.suffix')}
-                          </Typography>
-                        )}
-                        <Typography variant="body2" className="checkout-payment-description">
+                        {mode.id === payment_plan.ONE_TIME &&
+                          modePricing &&
+                          planPricing &&
+                          !planPricingBusy && (
+                            <Typography className="checkout-payment-old-price">
+                              {formatCurrency(modePricing.original_amount)}{" "}
+                              {t("plan.paymentModes.oneTime.suffix")}
+                            </Typography>
+                          )}
+                        <Typography
+                          variant="body2"
+                          className="checkout-payment-description"
+                        >
                           {t(mode.descriptionKey)}
                         </Typography>
                       </Box>
@@ -508,41 +658,67 @@ export default function PlanCheckoutPanel({ plan, initialVehicleId }: PlanChecko
               </Box>
             )}
 
-            {activeStep === 2 && (
+            {activeStep === 3 && (
               <Box>
                 {selectedPaymentMode === payment_plan.RECURRING ? (
                   <Box className="checkout-step-card">
-                    <Typography variant="subtitle1">{t('plan.checkoutStepper.cardFormTitle')}</Typography>
+                    <Typography variant="subtitle1">
+                      {t("plan.checkoutStepper.cardFormTitle")}
+                    </Typography>
                     <Box className="checkout-form checkout-form--stripe">
                       <Box className="stripe-field">
-                        <Typography variant="body2" className="stripe-field-label">
-                          {t('stripe.cardNumber', { defaultValue: 'Số thẻ' })}
+                        <Typography
+                          variant="body2"
+                          className="stripe-field-label"
+                        >
+                          {t("stripe.cardNumber", { defaultValue: "Số thẻ" })}
                         </Typography>
                         <Box className="stripe-field-input">
-                          <CardNumberElement options={STRIPE_ELEMENT_OPTIONS} onChange={handleCardNumberChange} />
+                          <CardNumberElement
+                            options={STRIPE_ELEMENT_OPTIONS}
+                            onChange={handleCardNumberChange}
+                          />
                         </Box>
                       </Box>
 
                       <Box className="stripe-field-row">
                         <Box className="stripe-field">
-                          <Typography variant="body2" className="stripe-field-label">
-                            {t('stripe.expiry', { defaultValue: 'Ngày hết hạn' })}
+                          <Typography
+                            variant="body2"
+                            className="stripe-field-label"
+                          >
+                            {t("stripe.expiry", {
+                              defaultValue: "Ngày hết hạn",
+                            })}
                           </Typography>
                           <Box className="stripe-field-input">
-                            <CardExpiryElement options={STRIPE_ELEMENT_OPTIONS} onChange={handleCardExpiryChange} />
+                            <CardExpiryElement
+                              options={STRIPE_ELEMENT_OPTIONS}
+                              onChange={handleCardExpiryChange}
+                            />
                           </Box>
                         </Box>
                         <Box className="stripe-field">
-                          <Typography variant="body2" className="stripe-field-label">
-                            {t('stripe.cvc', { defaultValue: 'CVC' })}
+                          <Typography
+                            variant="body2"
+                            className="stripe-field-label"
+                          >
+                            {t("stripe.cvc", { defaultValue: "CVC" })}
                           </Typography>
                           <Box className="stripe-field-input">
-                            <CardCvcElement options={STRIPE_ELEMENT_OPTIONS} onChange={handleCardCvcChange} />
+                            <CardCvcElement
+                              options={STRIPE_ELEMENT_OPTIONS}
+                              onChange={handleCardCvcChange}
+                            />
                           </Box>
                         </Box>
                       </Box>
                       {cardError && (
-                        <Typography variant="body2" color="error" sx={{ mt: 1 }}>
+                        <Typography
+                          variant="body2"
+                          color="error"
+                          sx={{ mt: 1 }}
+                        >
                           {cardError}
                         </Typography>
                       )}
@@ -550,18 +726,25 @@ export default function PlanCheckoutPanel({ plan, initialVehicleId }: PlanChecko
                   </Box>
                 ) : (
                   <Box className="checkout-step-momo">
-                    <Typography variant="subtitle1">{t('plan.checkoutStepper.momoTitle')}</Typography>
-                    <Typography variant="body2">{t('plan.checkoutStepper.momoDescription')}</Typography>
-                    <Typography variant="body2" className="checkout-momo-account">
-                      {t('plan.checkoutMomoAccount')}
+                    <Typography variant="subtitle1">
+                      {t("plan.checkoutStepper.momoTitle")}
+                    </Typography>
+                    <Typography variant="body2">
+                      {t("plan.checkoutStepper.momoDescription")}
+                    </Typography>
+                    <Typography
+                      variant="body2"
+                      className="checkout-momo-account"
+                    >
+                      {t("plan.checkoutMomoAccount")}
                     </Typography>
                     {!selectedVehicle && (
                       <Typography variant="body2" color="error">
-                        {t('plan.checkoutStepper.momoMissingVehicle')}
+                        {t("plan.checkoutStepper.momoMissingVehicle")}
                       </Typography>
                     )}
                     <Typography variant="body2" className="checkout-step-help">
-                      {t('plan.checkoutStepper.momoRedirect')}
+                      {t("plan.checkoutStepper.momoRedirect")}
                     </Typography>
                   </Box>
                 )}
@@ -571,11 +754,19 @@ export default function PlanCheckoutPanel({ plan, initialVehicleId }: PlanChecko
         </Box>
 
         <Box className="checkout-step-actions">
-          <Box sx={{ flex: '1 1 auto' }} />
-          <Button variant="contained" onClick={handleBackStep} disabled={activeStep === 0}>
-            {t('plan.back')}
+          <Box sx={{ flex: "1 1 auto" }} />
+          <Button
+            variant="contained"
+            onClick={handleBackStep}
+            disabled={activeStep === 0}
+          >
+            {t("plan.back")}
           </Button>
-          <Button variant="contained" onClick={handlePrimaryAction} disabled={primaryDisabled}>
+          <Button
+            variant="contained"
+            onClick={handlePrimaryAction}
+            disabled={primaryDisabled}
+          >
             {primaryLabel}
           </Button>
           {processingError && (
@@ -586,33 +777,42 @@ export default function PlanCheckoutPanel({ plan, initialVehicleId }: PlanChecko
         </Box>
 
         <Typography variant="body2" className="checkout-rules">
-          {t('plan.checkoutRules')}
+          {t("plan.checkoutRules")}
         </Typography>
       </Box>
 
-        <Box className="checkout-summary-panel">
-          <Typography variant="subtitle2">{t('plan.checkoutPlanNote')}</Typography>
-          <Typography variant="h5">{planTitle}</Typography>
-          {planSubtitle && (
-            <Typography variant="body2" className="plan-detail">
-              {planSubtitle}
-            </Typography>
-          )}
+      <Box className="checkout-summary-panel">
+        <Typography variant="subtitle2">
+          {t("plan.checkoutPlanNote")}
+        </Typography>
+        <Typography variant="h5">{planTitle}</Typography>
+        {planSubtitle && (
+          <Typography variant="body2" className="plan-detail">
+            {planSubtitle}
+          </Typography>
+        )}
 
-          <Box className="checkout-summary-price-group">
-            <Typography variant="h4">{formatCurrency(plan.price_per_day)}</Typography>
-            <Typography variant="body2" color="text.secondary">
-              {t('plan.perDay')}
-            </Typography>
-          </Box>
+        <Box className="checkout-summary-price-group">
+          <Typography variant="h4">
+            {formatCurrency(plan.price_per_day)}
+          </Typography>
+          <Typography variant="body2" color="text.secondary">
+            {t("plan.perDay")}
+          </Typography>
+        </Box>
 
-          <Box sx={{ mt: 2 }}>
-            <Typography variant="body2" color="text.secondary">
-              {t('plan.checkoutSummary.vehicleLabel')}
-            </Typography>
-            <Typography variant="body1">{selectedVehicleSummary}</Typography>
-          </Box>
+        <Box sx={{ mt: 2 }}>
+          <Typography variant="body2" color="text.secondary">
+            {t("plan.checkoutSummary.vehicleLabel")}
+          </Typography>
+          <Typography variant="body1">{selectedVehicleSummary}</Typography>
         </Box>
       </Box>
+
+      <VehicleRegistrationModal
+        open={registerModal.open}
+        onClose={handleCloseModal}
+      />
+    </Box>
   );
 }

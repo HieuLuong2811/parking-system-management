@@ -116,17 +116,6 @@ class Settings(BaseSettings):
     # This project runs the FastAPI app with root_path=/api/v1, so routes are served under /api/v1.
     MOMO_IPN_URL: str = "http://localhost:8000/api/v1/payment/momo/ipn"
 
-    DASHBOARD_APP_ID: str = "dashboard"
-    CLIENT_WEB_APP_ID: str = "client_web"
-    LOGIN_APP_ID: str = "login_app"
-
-    DASHBOARD_APP_NAME: str = "Dashboard App"
-    CLIENT_WEB_APP_NAME: str = "Client Web App"
-    LOGIN_APP_NAME: str = "Login App"
-
-    DASHBOARD_APP_TOKEN: str = "dashboard-token"
-    CLIENT_WEB_APP_TOKEN: str = "client-web-token"
-    LOGIN_APP_TOKEN: str = "login-app-token"
     CAMERA_RTSP_URL: str | None = None
     QR_CAMERA_SOURCE: str | None = None
     APP_NAME: str

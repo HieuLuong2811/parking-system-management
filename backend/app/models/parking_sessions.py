@@ -57,7 +57,9 @@ class ParkingSessionUpdate(SQLModel):
     total_amount: Optional[int] = None
 
 
-class ParkingSessionQRCheckIn(SQLModel):
-    vehicle_id: uuid.UUID
-    user_code: str
-    qr_secret: str
+class ParkingSessionBarcodeCheckIn(SQLModel):
+    barcode_token: str
+
+
+class ParkingSessionPlateCheckIn(SQLModel):
+    license_plate: str

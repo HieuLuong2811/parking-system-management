@@ -1,11 +1,10 @@
 import { Box, Button, Typography } from '@mui/material';
-import ArrowBackIcon from '@mui/icons-material/ArrowBack';
 import { useEffect, useState } from 'react';
 import { useTranslation } from 'react-i18next';
-import { Link, useSearchParams } from 'react-router-dom';
+import { useSearchParams } from 'react-router-dom';
 import { useSubscriptionPlans } from '../api/subscription_plans';
-import PlanCheckoutPanel from '../components/plan/PlanCheckoutPanel';
 import { getPlanCardKey } from '../ultis/planCards';
+import { useNavigate } from 'react-router-dom';
 
 const priceFormatter = new Intl.NumberFormat('en-US', { maximumFractionDigits: 0 });
 
@@ -14,6 +13,7 @@ export default function PlanPage() {
   const { data: plans = [] } = useSubscriptionPlans();
   const [searchParams] = useSearchParams();
   const [selectedPlanId, setSelectedPlanId] = useState<string | null>(null);
+  const navigate = useNavigate();
 
   useEffect(() => {
     if (plans.length === 0) {
@@ -42,7 +42,6 @@ export default function PlanPage() {
     }
   }, [plans, searchParams, selectedPlanId]);
 
-  const selectedPlan = plans.find((plan) => plan.id === selectedPlanId) ?? null;
   const initialVehicleId = (searchParams.get('vehicleId') || '').trim() || undefined;
   const isPrefilledFlow = Boolean(initialVehicleId && (searchParams.get('planKey') || searchParams.get('planId')));
 
@@ -53,14 +52,6 @@ export default function PlanPage() {
     <Box className="plan-page-shell">
       <Box className='plan-page-shell-body'>
         <Box className="plan-page-header">
-          <Button
-            component={Link}
-            to="/vehicle"
-            startIcon={<ArrowBackIcon />}
-            className="plan-back-link"
-          >
-            {t('plan.backToVehicles')}
-          </Button>
           <Typography variant="h4" gutterBottom>
             {t('plan.sectionTitle')}
           </Typography>
@@ -113,27 +104,15 @@ export default function PlanPage() {
                     </Typography>
                     <Button
                       variant={selectedPlanId === plan.id ? 'contained' : 'outlined'}
-                      onClick={() => setSelectedPlanId(plan.id)}
+                      onClick={() => {
+                        navigate(`/plan/checkout?planId=${plan.id}&type=${plan.plans_type}`);
+                      }}
                     >
                       {t('plan.cta')}
                     </Button>
                   </Box>
                 );
               })}
-            </Box>
-          )}
-
-          {selectedPlan ? (
-            <Box className="plan-checkout-frame">
-              <Box className="plan-checkout-header">
-                <Typography variant="h5">{t('plan.checkoutTitle')}</Typography>
-                <Typography variant="body2">{t('plan.checkoutSubtitle')}</Typography>
-              </Box>
-              <PlanCheckoutPanel plan={selectedPlan} initialVehicleId={initialVehicleId} />
-            </Box>
-          ) : (
-            <Box className="plan-checkout-placeholder">
-              <Typography variant="body1">{t('plan.notChosen')}</Typography>
             </Box>
           )}
         </Box>

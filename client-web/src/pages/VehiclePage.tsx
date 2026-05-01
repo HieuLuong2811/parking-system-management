@@ -7,15 +7,16 @@ import {
   Paper,
   Snackbar,
   Stack,
-  Tab,
-  Tabs,
   Table,
   TableBody,
   TableCell,
   TableContainer,
   TableHead,
   TableRow,
+  TablePagination,
   Typography,
+  Tooltip,
+  IconButton,
 } from '@mui/material';
 import React, { useEffect, useMemo, useState } from 'react';
 import { useTranslation } from 'react-i18next';
@@ -23,114 +24,53 @@ import { useNavigate } from 'react-router-dom';
 import SectionCard from '../components/shared/SectionCard';
 import VehicleRegistrationModal from '../components/vehicle/VehicleRegistrationModal';
 import { VehicleInfo } from '../api/clientApi';
-import { useSubscriptionPlans } from '../api/subscription_plans';
+// import { useSubscriptionPlans } from '../api/subscription_plans';
 import { useUserSubscriptions } from '../api/user_subscriptions';
-import { useDeleteVehicle, useVehicles } from '../api/vehicles';
+import { useDeleteVehicle, useMyVehiclesPaginated } from '../api/vehicles';
 import useDebouncedValue from '../hooks/useDebouncedValue';
 import useModal from '../hooks/useModal';
-import QRCode from 'qrcode';
-import { vehicles_tab } from '../constant/config';
-import { getPlanCardKey } from '../ultis/planCards';
+import JsBarcode from 'jsbarcode';
 import type { GridColDef } from '@mui/x-data-grid';
+import DeleteIcon from '@mui/icons-material/Delete';
+import EditIcon from '@mui/icons-material/Edit';
+import DownloadIcon from '@mui/icons-material/Download';
 
 const vehicleColumns: GridColDef[] = [
-  { field: 'user_code', headerName: 'User Code', width: 500 },
   { field: 'vehicle_type', headerName: 'Vehicle Type', width: 200 },
   { field: 'license_plate', headerName: 'License Plate', width: 200 },
-  { field: 'qr_code', headerName: 'QR Code', width: 200 },
+  { field: 'barcode_token', headerName: 'Barcode', width: 220 },
   { field: 'created_at', headerName: 'Created At', width: 250 },
   { field: 'actions', headerName: 'Actions', width: 30 },
 ];
-
-interface QRCodeCellProps {
-  value: string;
-}
-
-function QRCodeCell({ value }: QRCodeCellProps) {
-  const [src, setSrc] = useState<string>();
-
-  useEffect(() => {
-    let mounted = true;
-
-    QRCode.toDataURL(value, { width: 200, margin: 1 })
-      .then((dataUrl) => {
-        if (mounted) {
-          setSrc(dataUrl);
-        }
-      })
-      .catch(() => {
-        if (mounted) {
-          setSrc('');
-        }
-      });
-
-    return () => {
-      mounted = false;
-    };
-  }, [value]);
-
-  if (!src) {
-    return (
-      <Box display="flex" alignItems="center" justifyContent="center" minHeight="120px">
-        <CircularProgress size={16} />
-      </Box>
-    );
-  }
-
-  return (
-    <Box
-      component="img"
-      alt="QR code"
-      src={src}
-      sx={{ width: '120px', height: '100px', border: '1px solid #e0e0e0' }}
-    />
-  );
-}
-
-const getTabLabelKeys = {
-  withPlate: 'vehicle.tabs.withPlate',
-  withoutPlate: 'vehicle.tabs.withoutPlate',
-};
 
 export default function VehiclePage() {
   const { t } = useTranslation();
   const navigate = useNavigate();
   const [userCodeFilter, setUserCodeFilter] = useState('');
   const [licenseFilter, setLicenseFilter] = useState('');
-  const [vehicleTab, setVehicleTab] = useState<'withPlate' | 'withoutPlate'>('withPlate');
+  const [page, setPage] = useState(0);
+  const [rowsPerPage, setRowsPerPage] = useState(10);
   const [editingVehicle, setEditingVehicle] = useState<VehicleInfo | null>(null);
   const [snackbar, setSnackbar] = useState<{ message: string; severity: 'success' | 'info' | 'error' } | null>(null);
   const debouncedUserCodeFilter = useDebouncedValue(userCodeFilter, 420);
   const debouncedLicenseFilter = useDebouncedValue(licenseFilter, 420);
-  const { data: vehicles = [], isLoading, isError } = useVehicles();
-  const { data: plans = [] } = useSubscriptionPlans();
+  const { data: paginated, isLoading, isError } = useMyVehiclesPaginated({
+    page: page + 1,
+    limit: rowsPerPage,
+    user_code: debouncedUserCodeFilter.trim() || undefined,
+    license_plate: debouncedLicenseFilter.trim() || undefined,
+  });
+  const vehicles = useMemo(() => paginated?.data ?? [], [paginated]);
+  const total = paginated?.total ?? 0;
+  // const { data: plans = [] } = useSubscriptionPlans();
   const { data: subscriptions = [], isLoading: subscriptionsLoading } = useUserSubscriptions();
   const deleteVehicle = useDeleteVehicle();
   const registerModal = useModal();
 
-  const filteredVehicles = useMemo(() => {
-    return vehicles.filter((vehicle: VehicleInfo) => {
-      const matchesUser =
-        !debouncedUserCodeFilter ||
-        vehicle.user_code?.toLowerCase().includes(debouncedUserCodeFilter.toLowerCase());
-      const matchesLicense =
-        !debouncedLicenseFilter ||
-        (vehicle.license_plate &&
-          vehicle.license_plate.toLowerCase().includes(debouncedLicenseFilter.toLowerCase()));
-      return matchesUser && matchesLicense;
-    });
-  }, [vehicles, debouncedUserCodeFilter, debouncedLicenseFilter]);
-
-  const handleTabChange = (_event: React.SyntheticEvent, newValue: 'withPlate' | 'withoutPlate') => {
-    setVehicleTab(newValue);
-  };
-
-  const visibleVehicles = useMemo(() => {
-    return filteredVehicles.filter((vehicle) => {
-      const hasPlate = Boolean(vehicle.license_plate?.trim());
-      return vehicleTab === vehicles_tab.withPlate ? hasPlate : !hasPlate;
-    });
-  }, [filteredVehicles, vehicleTab]);
+  
+  useEffect(() => {
+    setPage(0);
+  }, [debouncedUserCodeFilter, debouncedLicenseFilter]);
 
   const handleEdit = (vehicle: VehicleInfo) => {
     setEditingVehicle(vehicle);
@@ -155,67 +95,58 @@ export default function VehiclePage() {
     setSnackbar({ message, severity });
   };
 
-  const handleRegisterPlan = (vehicle: VehicleInfo) => {
-    const hasPlate = Boolean(vehicle.license_plate?.trim());
-    const planKey = hasPlate ? 'withPlate' : 'noPlate';
+  const hasActiveSubscription = useMemo(() => {
+    return subscriptions.some((s) => s.status !== 'EXPIRED');
+  }, [subscriptions]);
 
-    if (!hasPlate) {
-      if (subscriptionsLoading) {
-        showToast(t('common.loading'), 'info');
-        return;
-      }
-
-      const alreadyRegistered = subscriptions.some((subscription) => {
-        const matchesVehicle = subscription.vehicle?.id === vehicle.id;
-        const isActiveLike = subscription.status !== 'EXPIRED';
-        return matchesVehicle && isActiveLike;
-      });
-
-      if (alreadyRegistered) {
-        showToast(t('vehicle.alerts.noPlateAlreadyRegistered'), 'info');
-        return;
-      }
+  const handleRegisterPlan = () => {
+    if (subscriptionsLoading) {
+      showToast(t('common.loading'), 'info');
+      return;
     }
 
-    const matchedPlanId = plans.find((plan) => getPlanCardKey(plan.plans_type) === planKey)?.id ?? null;
-    const params = new URLSearchParams();
-    params.set('vehicleId', vehicle.id);
-    params.set('planKey', planKey);
-    if (matchedPlanId) {
-      params.set('planId', matchedPlanId);
+    if (hasActiveSubscription) {
+      console.log('hasActiveSubscription', hasActiveSubscription);
+      showToast(t('vehicle.alerts.onlyOneSubscription'), 'error');
+      return;
     }
 
-    navigate(`/plan?${params.toString()}`);
+
+    navigate(`/plan`);
   };
 
-  const visibleColumbs = useMemo(() => {
-    if (vehicleTab === vehicles_tab.withoutPlate) {
-      return vehicleColumns.filter((column) => column.field !== 'license_plate');
+  const handleDownload = (barcode_token: string, vehicle_type: string) => {
+    try {
+      const canvas = document.createElement('canvas');
+      JsBarcode(canvas, barcode_token || '-', {
+        format: 'CODE128',
+        displayValue: true,
+        margin: 8,
+      });
+      const link = document.createElement('a');
+      link.href = canvas.toDataURL('image/png');
+      link.download = `${vehicle_type}_barcode.png`;
+      link.click();
+    } catch (err) {
+      console.error('Failed to generate barcode', err);
     }
-    else if (vehicleTab === vehicles_tab.withPlate) {
-      return vehicleColumns.filter((column) => column.field !== 'qr_code');
-    }
-    return vehicleColumns;
-  }, [vehicleTab]);
+  }
 
   return (
     <SectionCard>
       <Stack spacing={1}>
-        <Stack direction="row" justifyContent="space-between" flexWrap="wrap" spacing={1}>
+        <Stack direction="row" justifyContent="space-between" flexWrap="wrap" spacing={1} mb={2}>
           <Typography variant="h5">{t('vehicle.subtitle')}</Typography>
           <Stack direction="row" spacing={1}>
+            <Button variant="contained" onClick={handleRegisterPlan}>
+              {t('vehicle.registerPlanButton')}
+            </Button>
             <Button variant="contained" onClick={handleOpenCreate} disabled={isError}>
               {t('vehicle.registerVehicleButton')}
             </Button>
           </Stack>
         </Stack>
-        <Tabs value={vehicleTab} onChange={handleTabChange} sx={{ mt: 2 }} indicatorColor="primary">
-          <Tab value="withPlate" label={t(getTabLabelKeys.withPlate)} />
-          <Tab value="withoutPlate" label={t(getTabLabelKeys.withoutPlate)} />
-        </Tabs>
       </Stack>
-
-      <Divider sx={{ mb: 2 }} />
 
       <Stack direction={{ xs: 'column', sm: 'row' }} spacing={2} flexWrap="wrap" alignItems="center" mb={2}>
         <input
@@ -232,7 +163,15 @@ export default function VehiclePage() {
           onChange={(event) => setLicenseFilter(event.target.value)}
           disabled={isLoading || isError}
         />
-        <Button variant="text" onClick={() => {setUserCodeFilter(''); setLicenseFilter(''); }} disabled={isLoading || isError}>
+        <Button
+          variant="text"
+          onClick={() => {
+            setUserCodeFilter('');
+            setLicenseFilter('');
+            setPage(0);
+          }}
+          disabled={isLoading || isError}
+        >
           {t('vehicle.clearFilter')}
         </Button>
       </Stack>
@@ -253,7 +192,7 @@ export default function VehiclePage() {
             <Table size="small">
               <TableHead>
                 <TableRow>
-                  {visibleColumbs.map((column) => (
+                  {vehicleColumns.map((column) => (
                     <TableCell key={String(column.field)} sx={{ fontWeight: 600 }}>
                       {t(column.headerName?? column.field)}
                     </TableCell>
@@ -261,25 +200,21 @@ export default function VehiclePage() {
                 </TableRow>
               </TableHead>
               <TableBody>
-                {visibleVehicles.length === 0 ? (
+                {vehicles.length === 0 ? (
                   <TableRow>
                     <TableCell colSpan={vehicleColumns.length} align="center" sx={{ py: 4 }}>
                       <Typography color="text.secondary">{t('vehicle.empty')}</Typography>
                     </TableCell>
                   </TableRow>
                 ) : (
-                  visibleVehicles.map((vehicle: VehicleInfo) => (
+                  vehicles.map((vehicle: VehicleInfo) => (
                     <TableRow key={vehicle.id} hover>
-                      <TableCell>{vehicle.user_code}</TableCell>
                       <TableCell>{vehicle.vehicle_type}</TableCell>
-                      {vehicleTab === vehicles_tab.withPlate && (
                         <TableCell>{vehicle.license_plate}</TableCell>
-                      )}
-                      {vehicleTab === vehicles_tab.withoutPlate ? (
                         <TableCell>
-                          <QRCodeCell value={vehicle.qr_code || '-'} />
+                          {/* <BarcodeCell value={vehicle.barcode_token || '-'} /> */}
+                          {vehicle.barcode_token || '-'}
                         </TableCell>
-                      ) : null}
                       <TableCell>
                         {new Date(vehicle.created_at).toLocaleString(undefined, {
                           year: 'numeric',
@@ -289,61 +224,42 @@ export default function VehiclePage() {
                       </TableCell>
                       <TableCell>
                         <Stack direction="row" spacing={1}>
-                          <Button size="small" variant="contained" onClick={() => handleRegisterPlan(vehicle)}>
-                            {t('vehicle.registerPlanButton')}
-                          </Button>
-                          <Button size="small" variant="outlined" onClick={() => handleEdit(vehicle)}>
-                            {t('vehicle.table.actionsMenu.edit')}
-                          </Button>
-                          {
-                            vehicleTab === vehicles_tab.withoutPlate && (
-                              vehicle.qr_code && (
-                                <Button variant='outlined' size='small' 
-                                onClick={() => {
-                                  const qrImage = vehicle.qr_code || '-';
-                                  QRCode.toDataURL(qrImage, {width: 200, margin: 1 })
-                                    .then((qrImage) => {
-                                      const canvas = document.createElement('canvas');
-                                      const context = canvas.getContext('2d');
-                                      const img = new Image();
-                                      img.src = qrImage;
-                                      img.onload = () => {
-                                        canvas.width = img.width;
-                                        canvas.height = img.height;
-                                        context?.drawImage(img, 0, 0);
-    
-                                        const link = document.createElement('a');
-                                        link.href = canvas.toDataURL('image/png');
-                                        link.download = `${vehicle.vehicle_type}_qr_code.png`;
-                                        link.click();
-                                      };
-                                    })
-                                    .catch((err) => {
-                                      console.error('Failed to generate QR code', err);
-                                    })
-                                }}>
-                                  Download QR code
-                                </Button>
-                              )
-                            )
-                          }
-                          <Button
-                            size="small"
-                            variant="contained"
-                            color="error"
-                            onClick={() => handleDelete(vehicle)}
-                            disabled={isLoading}
-                          >
-                            {t('vehicle.table.actionsMenu.delete')}
-                          </Button>
+                          <Tooltip title={t('vehicle.table.actionsMenu.edit')}>
+                            <IconButton size="small" onClick={() => handleEdit(vehicle)}>
+                              <EditIcon />
+                            </IconButton>
+                          </Tooltip>
+                          <Tooltip title={t('vehicle.table.actionsMenu.download')}>
+                            <IconButton size="small"  onClick={() => handleDownload(vehicle?.barcode_token || '', vehicle.vehicle_type)}>
+                              <DownloadIcon />
+                            </IconButton>
+                          </Tooltip>
+                          <Tooltip title={t('vehicle.table.actionsMenu.delete')} disableInteractive placement="top">
+                            <IconButton onClick={() => handleDelete(vehicle)}>
+                              <DeleteIcon />
+                            </IconButton>
+                          </Tooltip>
                         </Stack>
                       </TableCell>
                     </TableRow>
                   ))
                 )}
               </TableBody>
-            </Table>
+          </Table>
           </TableContainer>
+
+          <TablePagination
+            component="div"
+            count={total}
+            page={page}
+            onPageChange={(_event, newPage) => setPage(newPage)}
+            rowsPerPage={rowsPerPage}
+            onRowsPerPageChange={(event) => {
+              setRowsPerPage(parseInt(event.target.value, 5));
+              setPage(0);
+            }}
+            rowsPerPageOptions={[5, 10, 20, 50, 100]}
+          />
         </Paper>
       )}
 

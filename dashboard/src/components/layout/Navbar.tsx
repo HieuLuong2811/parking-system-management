@@ -12,7 +12,6 @@ import {
   MenuItem,
   Stack,
   Toolbar,
-  Tooltip,
   Typography,
   useMediaQuery,
   useTheme,
@@ -21,41 +20,23 @@ import MenuIcon from '@mui/icons-material/Menu';
 import NotificationsIcon from '@mui/icons-material/Notifications';
 import { Link as RouterLink, useLocation } from 'react-router-dom';
 import { useTranslation } from 'react-i18next';
-import FirstPageIcon from '@mui/icons-material/FirstPage';
-import LastPageIcon from '@mui/icons-material/LastPage';
-
 import { useNotifications } from '../../api/notifications';
-import { resourceConfigs } from '../../config/resources';
 import { languageOptions } from '../../ultis/flags';
 import { COLLAPSED_SIDEBAR_WIDTH, EXPANDED_SIDEBAR_WIDTH } from '../../constant/config';
 import { useAuth } from '../../contexts/useAuth';
-
-const getBreadcrumbs = (resourceLabel: string | null, path: string, t: ReturnType<typeof useTranslation>['t']) => {
-  const crumbs = [{ label: t('breadcrumb.home'), path: '/' }];
-  if (resourceLabel) {
-    crumbs.push({ label: resourceLabel, path });
-  } else if (path === '/settings') {
-    crumbs.push({ label: t('breadcrumb.settings'), path: '/settings' });
-  }
-  return crumbs;
-};
+import { buildBreadcrumbs } from '../../routes/RouterBreadcrumbs'
 
 export const Navbar: React.FC<{
   onMenuClick?: () => void;
   collapsed: boolean;
-  onCollapseToggle: () => void;
-}> = ({ onMenuClick, collapsed, onCollapseToggle }) => {
+}> = ({ onMenuClick, collapsed }) => {
   const location = useLocation();
   const { t, i18n } = useTranslation();
   const theme = useTheme();
   const isDesktop = useMediaQuery(theme.breakpoints.up('md'));
   const drawerWidth = collapsed ? COLLAPSED_SIDEBAR_WIDTH : EXPANDED_SIDEBAR_WIDTH;
   const { user, logout } = useAuth();
-  const pathSegments = location.pathname.split('/').filter(Boolean);
-  const resourceEndpoint = pathSegments[0];
-  const resource = resourceEndpoint ? resourceConfigs.find((entry) => entry.endpoint === resourceEndpoint) : undefined;
-  const resourceLabel = resource ? (resource.translationKey ? t(resource.translationKey) : resource.label) : null;
-  const crumbs = getBreadcrumbs(resourceLabel, location.pathname, t);
+  const crumbs = buildBreadcrumbs(location.pathname, t);
 
   const [notificationAnchor, setNotificationAnchor] = useState<null | HTMLElement>(null);
   const [languageAnchor, setLanguageAnchor] = useState<null | HTMLElement>(null);
@@ -122,13 +103,6 @@ export const Navbar: React.FC<{
             <IconButton edge="start" color="inherit" onClick={onMenuClick} sx={{ mr: 1 }}>
               <MenuIcon />
             </IconButton>
-          )}
-          {isDesktop && (
-            <Tooltip title={collapsed ? 'Mở rộng menu' : 'Thu gọn menu'}>
-              <IconButton size="small" onClick={onCollapseToggle}>
-                {collapsed ? <LastPageIcon /> : <FirstPageIcon />}
-              </IconButton>
-            </Tooltip>
           )}
           <Box sx={{ flexGrow: 1, overflow: 'hidden' }}>
             <Breadcrumbs

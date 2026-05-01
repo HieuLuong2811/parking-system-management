@@ -4,7 +4,6 @@ import {
   Chip,
   CircularProgress,
   Divider,
-  Pagination,
   Stack,
   Table,
   TableBody,
@@ -12,6 +11,7 @@ import {
   TableContainer,
   TableHead,
   TableRow,
+  TablePagination,
   TextField,
   Typography,
   useTheme,
@@ -19,7 +19,7 @@ import {
 import { useEffect, useMemo, useState } from 'react';
 import { useTranslation } from 'react-i18next';
 import SectionCard from '../components/shared/SectionCard';
-import { useInvoices } from '../api/invoices';
+import { useInvoicesPaginated } from '../api/invoices';
 import { invoices_status } from '../constant/config';
 import { useCreateMomoPaymentForInvoice } from '../api/momo';
 
@@ -27,31 +27,24 @@ export default function InvoicesPage() {
   const { t } = useTranslation();
   const [fromDate, setFromDate] = useState('');
   const [toDate, setToDate] = useState('');
-  const { data: invoices = [], isLoading, isError } = useInvoices();
+  const [page, setPage] = useState(0);
+  const [rowsPerPage, setRowsPerPage] = useState(10);
+  const { data: paginated, isLoading, isError } = useInvoicesPaginated({
+    page: page + 1,
+    limit: rowsPerPage,
+    from_time: fromDate || undefined,
+    to_time: toDate || undefined,
+  });
+  const invoices = useMemo(() => paginated?.data ?? [], [paginated]);
+  const total = paginated?.total ?? 0;
   const momoPaymentMutation = useCreateMomoPaymentForInvoice();
   const [payError, setPayError] = useState<string | null>(null);
 
   const theme = useTheme();
 
-  const filteredInvoices = useMemo(() => {
-    return invoices
-      .slice()
-      .sort((a, b) => new Date(b.created_at).getTime() - new Date(a.created_at).getTime())
-      .filter((invoice) => {
-        const issued = new Date(invoice.created_at);
-        if (fromDate && new Date(fromDate) > issued) return false;
-        if (toDate && new Date(toDate) < issued) return false;
-        return true;
-      });
-  }, [fromDate, invoices, toDate]);
-
   useEffect(() => {
-    setPage(1);
-  }, [fromDate, toDate, filteredInvoices.length]);
-
-  const pageSize = 5;
-  const [page, setPage] = useState(1);
-  const pageInvoices = filteredInvoices.slice((page - 1) * pageSize, page * pageSize);
+    setPage(0);
+  }, [fromDate, toDate]);
 
   const handlePayInvoice = async (invoiceId: string) => {
     setPayError(null);
@@ -122,115 +115,122 @@ export default function InvoicesPage() {
       </Typography>
 
       <Stack spacing={2}>
-          {payError ? <Typography color="error">{payError}</Typography> : null}
-          {filteredInvoices.length === 0 ? (
-            <Typography color="text.secondary">{t('invoices.empty')}</Typography>
-          ) : (
-            <>
-              <TableContainer className="invoice-table-container" component={Box} sx={{ borderRadius: 3 }}>
-                {isLoading ? (
-                  <SectionCard>
+        {payError ? <Typography color="error">{payError}</Typography> : null}
+        <TableContainer className="invoice-table-container" component={Box} sx={{ borderRadius: 3 }}>
+          <Table size="small">
+            <TableHead>
+              <TableRow>
+                <TableCell>{t('invoices.table.invoiceId')}</TableCell>
+                <TableCell>{t('invoices.table.created_at')}</TableCell>
+                <TableCell align="right">{t('invoices.table.amount')}</TableCell>
+                <TableCell align="right">{t('invoices.table.status')}</TableCell>
+                <TableCell align="right">{t('invoices.table.actions')}</TableCell>
+              </TableRow>
+            </TableHead>
+            <TableBody>
+              {isLoading ? (
+                <TableRow>
+                  <TableCell colSpan={5} align="center" sx={{ py: 4 }}>
                     <Typography>{t('invoices.loading')}</Typography>
-                  </SectionCard>
-                ) : isError ? (
-                  <SectionCard>
+                  </TableCell>
+                </TableRow>
+              ) : isError ? (
+                <TableRow>
+                  <TableCell colSpan={5} align="center" sx={{ py: 4 }}>
                     <Typography color="error">{t('invoices.error')}</Typography>
-                  </SectionCard>
-                  ) : (
-                    <Table size="small">
-                      <TableHead>
-                        <TableRow>
-                          <TableCell>{t('invoices.table.invoiceId')}</TableCell>
-                          <TableCell>{t('invoices.table.created_at')}</TableCell>
-                          <TableCell align="right">{t('invoices.table.amount')}</TableCell>
-                          <TableCell align="right">{t('invoices.table.status')}</TableCell>
-                          <TableCell align="right">{t('invoices.table.actions')}</TableCell>
-                        </TableRow>
-                      </TableHead>
-                      <TableBody>
-                        {pageInvoices.map((invoice) => {
-                          const invoices_paid = invoices_status.PAID
-                          const invoices_pending = invoices_status.PENDING
-                          const isMomoPayable = invoice.status === invoices_pending && invoice.payment_method === 'MOMO';
-                          const statusKey =
-                            invoice.status === invoices_paid
-                              ? 'paid'
-                              : invoice.status === invoices_pending
-                              ? 'pending'
-                              : 'overdue';
-                          const chipColor =
-                            invoice.status === invoices_paid
-                              ? 'success'
-                              : invoice.status === invoices_pending
-                              ? 'warning'
-                              : 'error';
-                          return (
-                            <TableRow key={invoice.id} hover>
-                              <TableCell sx={{ fontWeight: 600 }}>{invoice.id}</TableCell>
-                              <TableCell>
-                                {new Date(invoice.created_at).toLocaleString(undefined, {
-                                  year: 'numeric',
-                                  month: 'short',
-                                  day: 'numeric',
-                                  hour: '2-digit',
-                                  minute: '2-digit',
-                                })}
-                              </TableCell>
-                              <TableCell align="right" sx={{ fontWeight: 600 }}>
-                                {new Intl.NumberFormat('vi-VN', { style: 'currency', currency: 'VND' }).format(
-                                  invoice.amount
-                                )}
-                              </TableCell>
-                              <TableCell align="right">
-                                <Chip
-                                  label={t(`invoices.status.${statusKey}`)}
-                                  color={chipColor}
-                                  size="small"
-                                  sx={{ textTransform: 'capitalize' }}
-                                />
-                              </TableCell>
-                              <TableCell align="right">
-                                {isMomoPayable ? (
-                                  <Button
-                                    variant="contained"
+                  </TableCell>
+                </TableRow>
+              ) : invoices.length === 0 ? (
+                <TableRow>
+                  <TableCell colSpan={5} align="center" sx={{ py: 4 }}>
+                    <Typography color="text.secondary">{t('invoices.empty')}</Typography>
+                  </TableCell>
+                </TableRow>
+              ) : (
+                invoices.map((invoice) => {
+                            const invoices_paid = invoices_status.PAID;
+                            const invoices_pending = invoices_status.PENDING;
+                            const isMomoPayable =
+                              invoice.status === invoices_pending && invoice.payment_method === 'MOMO';
+                            const statusKey =
+                              invoice.status === invoices_paid
+                                ? 'paid'
+                                : invoice.status === invoices_pending
+                                  ? 'pending'
+                                  : 'overdue';
+                            const chipColor =
+                              invoice.status === invoices_paid
+                                ? 'success'
+                                : invoice.status === invoices_pending
+                                  ? 'warning'
+                                  : 'error';
+                            return (
+                              <TableRow key={invoice.id} hover>
+                                <TableCell sx={{ fontWeight: 600 }}>{invoice.id}</TableCell>
+                                <TableCell>
+                                  {new Date(invoice.created_at).toLocaleString(undefined, {
+                                    year: 'numeric',
+                                    month: 'short',
+                                    day: 'numeric',
+                                    hour: '2-digit',
+                                    minute: '2-digit',
+                                  })}
+                                </TableCell>
+                                <TableCell align="right" sx={{ fontWeight: 600 }}>
+                                  {new Intl.NumberFormat('vi-VN', { style: 'currency', currency: 'VND' }).format(
+                                    invoice.amount
+                                  )}
+                                </TableCell>
+                                <TableCell align="right">
+                                  <Chip
+                                    label={t(`invoices.status.${statusKey}`)}
+                                    color={chipColor}
                                     size="small"
-                                    color="warning"
-                                    onClick={() => handlePayInvoice(invoice.id)}
-                                    disabled={momoPaymentMutation.isPending}
-                                    startIcon={momoPaymentMutation.isPending ? <CircularProgress size={14} /> : null}
-                                  >
-                                    {t('invoices.actions.payWithMomo')}
-                                  </Button>
-                                ) : (
-                                  <Typography color="text.secondary">—</Typography>
-                                )}
-                              </TableCell>
-                            </TableRow>
-                          );
-                        })}
-                      </TableBody>
-                    </Table>
-                  )
-                }
-              </TableContainer>
-              {filteredInvoices.length > pageSize && (
-                <Box display="flex" justifyContent="center" mt={1}>
-                  <Pagination
-                    color="primary"
-                    count={Math.ceil(filteredInvoices.length / pageSize)}
-                    page={page}
-                    onChange={(_, value) => setPage(value)}
-                    sx={{
-                      '& .MuiPaginationItem-root': {
-                        color: theme.palette.text.primary,
-                      },
-                    }}
-                  />
-                </Box>
+                                    sx={{ textTransform: 'capitalize' }}
+                                  />
+                                </TableCell>
+                                <TableCell align="right">
+                                  {isMomoPayable ? (
+                                    <Button
+                                      variant="contained"
+                                      size="small"
+                                      color="warning"
+                                      onClick={() => handlePayInvoice(invoice.id)}
+                                      disabled={momoPaymentMutation.isPending}
+                                      startIcon={momoPaymentMutation.isPending ? <CircularProgress size={14} /> : null}
+                                    >
+                                      {t('invoices.actions.payWithMomo')}
+                                    </Button>
+                                  ) : (
+                                    <Typography color="text.secondary">—</Typography>
+                                  )}
+                                </TableCell>
+                              </TableRow>
+                            );
+                          })
               )}
-            </>
-          )}
-        </Stack>
+            </TableBody>
+          </Table>
+        </TableContainer>
+        <TablePagination
+          component="div"
+          count={total}
+          page={page}
+          onPageChange={(_event, newPage) => setPage(newPage)}
+          rowsPerPage={rowsPerPage}
+          onRowsPerPageChange={(event) => {
+            setRowsPerPage(parseInt(event.target.value, 10));
+            setPage(0);
+          }}
+          rowsPerPageOptions={[5, 10, 20, 50, 100]}
+          sx={{
+            '& .MuiTablePagination-toolbar': { justifyContent: 'flex-end' },
+            '& .MuiTablePagination-selectLabel, & .MuiTablePagination-displayedRows': {
+              color: theme.palette.text.secondary,
+            },
+          }}
+        />
+      </Stack>
       </SectionCard>
     );
 }

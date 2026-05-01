@@ -62,7 +62,6 @@ class parkingSessionService:
         *,
         page: int = 1,
         limit: int = 5,
-        query: str | None = None,
         user_code: str | None = None,
         vehicle_type: VehicleType | None = None,
         status: ParkingSessionStatus | None = None,
@@ -74,7 +73,7 @@ class parkingSessionService:
 
         filters = []
         if user_code:
-            filters.append(func.lower(Vehicle.user_code) == user_code.strip().lower())
+            filters.append(ilike_unaccent(Vehicle.user_code, user_code.strip()))
         if vehicle_type is not None:
             filters.append(Vehicle.vehicle_type == vehicle_type)
         if status is not None:
@@ -83,18 +82,6 @@ class parkingSessionService:
             filters.append(ParkingSession.check_in_time >= from_time)
         if to_time is not None:
             filters.append(ParkingSession.check_in_time <= to_time)
-
-        trimmed_query = (query or "").strip()
-        if trimmed_query:
-            filters.append(
-                or_(
-                    ilike_unaccent(cast(ParkingSession.id, String), trimmed_query),
-                    ilike_unaccent(cast(ParkingSession.vehicle_id, String), trimmed_query),
-                    ilike_unaccent(func.coalesce(ParkingSession.license_plate, ""), trimmed_query),
-                    ilike_unaccent(func.coalesce(Vehicle.user_code, ""), trimmed_query),
-                    ilike_unaccent(func.coalesce(Users.full_name, ""), trimmed_query),
-                )
-            )
 
         count_statement = parkingSessionService._build_admin_statement(ordered=False)
         if filters:
@@ -185,7 +172,6 @@ class parkingSessionUserService:
         user_code: str,
         page: int = 1,
         limit: int = 5,
-        query: str | None = None,
         status: ParkingSessionStatus | None = None,
         from_time: datetime | None = None,
         to_time: datetime | None = None,
@@ -200,16 +186,6 @@ class parkingSessionUserService:
             filters.append(ParkingSession.check_in_time >= from_time)
         if to_time is not None:
             filters.append(ParkingSession.check_in_time <= to_time)
-
-        trimmed_query = (query or "").strip()
-        if trimmed_query:
-            filters.append(
-                or_(
-                    ilike_unaccent(cast(ParkingSession.id, String), trimmed_query),
-                    ilike_unaccent(cast(ParkingSession.vehicle_id, String), trimmed_query),
-                    ilike_unaccent(func.coalesce(ParkingSession.license_plate, ""), trimmed_query),
-                )
-            )
 
         base_statement = (
             select(ParkingSession)

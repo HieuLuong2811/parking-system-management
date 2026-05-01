@@ -1,6 +1,13 @@
 import { createContext } from 'react';
 
-export type AuthStatus = 'loading' | 'unauthorized' | 'authenticated' | 'forbidden';
+export const AUTH_STATUS = {
+  LOADING: 'loading',
+  UNAUTHORIZED: 'unauthorized',
+  AUTHENTICATED: 'authenticated',
+  FORBIDDEN: 'forbidden',
+} as const;
+
+export type AuthStatus = typeof AUTH_STATUS[keyof typeof AUTH_STATUS];
 
 export interface AuthContextValue {
   user: import('../api/auth').CurrentUser | null;

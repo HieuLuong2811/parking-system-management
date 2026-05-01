@@ -1,11 +1,11 @@
 import math
 
 from fastapi import HTTPException
-from sqlalchemy import func, or_, select
+from sqlalchemy import String, func, or_, select
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.authen.current_user import AuthUser, is_admin_user
-from app.enums.parking import SubscriptionStatus
+from app.enums.parking import PaymentType, SubscriptionPlanType, SubscriptionStatus
 from app.models.plans import SubscriptionPlan
 from app.models.payment_plans import PaymentPlan
 from app.models.subscriptions import (
@@ -159,6 +159,50 @@ class subscriptionService:
         return await subscriptionService._fetch_subscription_details(db, user_code)
 
     @staticmethod
+    async def get_user_subscriptions_with_details_paginated(
+        db: AsyncSession,
+        *,
+        user_code: str,
+        status: SubscriptionStatus | None = None,
+        page: int = 1,
+        limit: int = 20,
+    ) -> PaginatedResponse[UserSubscriptionDetail]:
+        page = max(1, int(page or 1))
+        limit = max(1, int(limit or 20))
+
+        filters = [UserSubscription.user_code == user_code]
+        if status is not None:
+            filters.append(UserSubscription.status == status)
+
+        count_statement = subscriptionService._build_detail_statement(user_code, ordered=False).where(*filters)
+        count_subquery = count_statement.with_only_columns(UserSubscription.id).distinct().subquery()
+        total_count = await db.scalar(select(func.count()).select_from(count_subquery))
+        total_count = int(total_count or 0)
+        total_pages = math.ceil(total_count / limit) if total_count else 0
+
+        statement = subscriptionService._build_detail_statement(user_code, ordered=True).where(*filters)
+        offset = (page - 1) * limit
+        statement = statement.offset(offset).limit(limit)
+
+        result = await db.execute(statement)
+        rows = result.all()
+        details: list[UserSubscriptionDetail] = []
+        for subscription, user, vehicle, payment_plan, term, subscription_plan in rows:
+            details.append(
+                subscriptionService._convert_to_detail(
+                    subscription, user, vehicle, payment_plan, term, subscription_plan
+                )
+            )
+
+        return {
+            "data": details,
+            "total": total_count,
+            "page": page,
+            "limit": limit,
+            "total_pages": total_pages,
+        }
+
+    @staticmethod
     async def get_all_subscriptions_with_details(db: AsyncSession) -> list[UserSubscriptionDetail]:
         return await subscriptionService._fetch_subscription_details(db)
 
@@ -167,6 +211,10 @@ class subscriptionService:
         db: AsyncSession,
         *,
         search: str | None = None,
+        user_code: str | None = None,
+        full_name: str | None = None,
+        plan_type: SubscriptionPlanType | None = None,
+        payment_type: PaymentType | None = None,
         status: SubscriptionStatus | None = None,
         page: int = 1,
         limit: int = 5,
@@ -177,6 +225,20 @@ class subscriptionService:
         filters = []
         if status is not None:
             filters.append(UserSubscription.status == status)
+
+        trimmed_user_code = (user_code or "").strip()
+        if trimmed_user_code:
+            filters.append(ilike_unaccent(UserSubscription.user_code, trimmed_user_code))
+
+        trimmed_full_name = (full_name or "").strip()
+        if trimmed_full_name:
+            filters.append(ilike_unaccent(Users.full_name, trimmed_full_name))
+
+        if plan_type is not None:
+            filters.append(SubscriptionPlan.plans_type == plan_type)
+
+        if payment_type is not None:
+            filters.append(PaymentPlan.payment_type == payment_type)
 
         trimmed_search = (search or "").strip()
         if trimmed_search:

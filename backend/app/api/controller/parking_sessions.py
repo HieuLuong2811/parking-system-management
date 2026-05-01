@@ -15,7 +15,8 @@ from app.models.parking_sessions import (
     ParkingSessionAdminRead,
     ParkingSessionRead,
     ParkingSessionUpdate,
-    ParkingSessionQRCheckIn,
+    ParkingSessionBarcodeCheckIn,
+    ParkingSessionPlateCheckIn,
 )
 from app.models.responses import DeleteResponse
 from app.service.parking_sessions import parkingSessionService, parkingSessionUserService
@@ -39,7 +40,6 @@ class ParkingSessionController:
         page: int = 1,
         limit: int = 5,
         scope_user_code: str | None = None,
-        query: str | None = None,
         user_code: str | None = None,
         vehicle_type: VehicleType | None = None,
         status: ParkingSessionStatus | None = None,
@@ -52,7 +52,6 @@ class ParkingSessionController:
                 user_code=scope_user_code,
                 page=page,
                 limit=limit,
-                query=query,
                 status=status,
                 from_time=from_time,
                 to_time=to_time,
@@ -62,7 +61,6 @@ class ParkingSessionController:
             db,
             page=page,
             limit=limit,
-            query=query,
             user_code=user_code,
             vehicle_type=vehicle_type,
             status=status,
@@ -80,15 +78,13 @@ class ParkingSessionController:
         return DeleteResponse(message="Deleted parking session")
 
     @staticmethod
-    async def create_session_via_qr_ctrl(payload: ParkingSessionQRCheckIn, db: AsyncSession) -> ParkingSessionRead:
+    async def create_session_via_barcode_ctrl(payload: ParkingSessionBarcodeCheckIn, db: AsyncSession) -> ParkingSessionRead:
         try:
-            vehicle, user = await vehicleService.get_vehicle_with_user(str(payload.vehicle_id), db)
+            vehicle, user = await vehicleService.get_by_barcode_token(payload.barcode_token, db)
         except ValueError:
             raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Vehicle not found")
-        if (vehicle.user_code or '') != payload.user_code or (vehicle.qr_secret or '') != payload.qr_secret:
-            raise HTTPException(status_code=status.HTTP_403_FORBIDDEN, detail="Invalid QR payload")
         now = datetime.utcnow()
-        active_session = await parkingSessionService.get_active_session_by_vehicle(payload.vehicle_id, db)
+        active_session = await parkingSessionService.get_active_session_by_vehicle(str(vehicle.id), db)
 
         user_type = UserType.STUDENT
         if user and user.deleted_at is None:
@@ -105,6 +101,48 @@ class ParkingSessionController:
             )
             return await parkingSessionService.create_session(session_payload, db)
         amount_due = await ParkingSessionController._calculate_parking_fee(user.user_code, vehicle.id, active_session.check_in_time, now, db)
+        update_payload = ParkingSessionUpdate(
+            check_out_time=now,
+            status=ParkingSessionStatus.DONE,
+            total_amount=amount_due,
+        )
+        return await parkingSessionService.update_session(str(active_session.id), update_payload, db)
+
+    @staticmethod
+    async def create_session_via_plate_ctrl(payload: ParkingSessionPlateCheckIn, db: AsyncSession) -> ParkingSessionRead:
+        plate = (payload.license_plate or "").strip().upper()
+        if not plate:
+            raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail="license_plate is required")
+        try:
+            vehicle, user = await vehicleService.get_by_license_plate(plate, db)
+        except ValueError:
+            raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Vehicle not found")
+
+        now = datetime.utcnow()
+        active_session = await parkingSessionService.get_active_session_by_vehicle(str(vehicle.id), db)
+
+        user_type = UserType.STUDENT
+        if user and user.deleted_at is None:
+            resolved_user_type = getattr(user, "user_type", None)
+            if resolved_user_type is not None:
+                user_type = resolved_user_type
+
+        if not active_session:
+            session_payload = ParkingSessionCreate(
+                vehicle_id=vehicle.id,
+                license_plate=vehicle.license_plate,
+                check_in_time=now,
+                user_type=user_type,
+            )
+            return await parkingSessionService.create_session(session_payload, db)
+
+        amount_due = await ParkingSessionController._calculate_parking_fee(
+            user.user_code,
+            vehicle.id,
+            active_session.check_in_time,
+            now,
+            db,
+        )
         update_payload = ParkingSessionUpdate(
             check_out_time=now,
             status=ParkingSessionStatus.DONE,

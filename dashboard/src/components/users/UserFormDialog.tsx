@@ -64,6 +64,7 @@ export const UserFormDialog: React.FC<UserFormDialogProps> = ({
         >
           <Box>
             <FormInput
+              name="user_code"
               label={t('usersPage.form.userCode')}
               required
               value={values.user_code}
@@ -77,6 +78,7 @@ export const UserFormDialog: React.FC<UserFormDialogProps> = ({
 
           <Box>
             <FormInput
+              name="full_name"
               label={t('usersPage.form.fullName')}
               required
               value={values.full_name}
@@ -87,10 +89,12 @@ export const UserFormDialog: React.FC<UserFormDialogProps> = ({
 
           <Box>
             <FormInput
+              name="email"
               label={t('usersPage.form.email')}
               required
               type="email"
               value={values.email}
+              placeholder='Example@gmail.com'
               onChange={(e) => onChange('email', e.target.value)}
               error={errors.email}
             />
@@ -98,6 +102,7 @@ export const UserFormDialog: React.FC<UserFormDialogProps> = ({
 
           <Box>
             <FormInput
+              name="phone_number"
               label={t('usersPage.form.phoneNumber')}
               value={values.phone_number ?? ''}
               onChange={(e) => onChange('phone_number', toDigitsOnly(e.target.value))}

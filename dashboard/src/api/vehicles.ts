@@ -4,6 +4,7 @@ import { httpGet } from './httpClient';
 import type { PaginatedResponse, VehicleRecord } from './types';
 
 export type VehicleListFilters = {
+  user_code?: string;
   search?: string;
   is_deleted?: boolean;
   page?: number;
@@ -12,6 +13,7 @@ export type VehicleListFilters = {
 
 const fetchVehicles = (filters: VehicleListFilters = {}) => {
   const params = new URLSearchParams();
+  if (filters.user_code) params.append('user_code', filters.user_code);
   if (filters.search) params.append('search', filters.search);
   if (filters.is_deleted !== undefined) params.append('is_deleted', String(filters.is_deleted));
   if (filters.page) params.append('page', String(filters.page));

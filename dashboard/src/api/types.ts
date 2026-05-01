@@ -43,7 +43,7 @@ export type VehicleRecord = {
   user_code?: string | null;
   vehicle_type: string;
   license_plate?: string | null;
-  qr_code?: string | null;
+  barcode_token?: string | null;
   created_at?: string | null;
   updated_at?: string | null;
   deleted_at?: string | null;

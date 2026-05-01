@@ -3,12 +3,24 @@ import {
   Box,
   Button,
   Chip,
-  MenuItem,
+  Collapse,
+  Dialog,
+  DialogActions,
+  DialogContent,
+  DialogTitle,
+  IconButton,
+  Paper,
   Snackbar,
   Stack,
   Tab,
   Tabs,
-  TextField,
+  Table,
+  TableBody,
+  TableCell,
+  TableContainer,
+  TableHead,
+  TablePagination,
+  TableRow,
   Typography,
 } from '@mui/material';
 import { CardCvcElement, CardExpiryElement, CardNumberElement, useElements, useStripe } from '@stripe/react-stripe-js';
@@ -17,17 +29,20 @@ import type {
   StripeCardExpiryElementChangeEvent,
   StripeCardNumberElementChangeEvent,
 } from '@stripe/stripe-js';
-import { useEffect, useMemo, useState } from 'react';
+import { Fragment, useEffect, useMemo, useState } from 'react';
 import { useTranslation } from 'react-i18next';
 import { useNavigate, useSearchParams } from 'react-router-dom';
 
+import CreditCardIcon from '@mui/icons-material/CreditCard';
+import KeyboardArrowDownIcon from '@mui/icons-material/KeyboardArrowDown';
+import KeyboardArrowUpIcon from '@mui/icons-material/KeyboardArrowUp';
+import { FormInput } from '../components/common/FormInput';
 import ChangePasswordDialog from '../components/profile/ChangePasswordDialog';
 import { useAppAuth } from '../contexts/useAppAuth';
 import { useUpdateUser } from '../api/users';
-import { useUpdateSubscription, useUserSubscriptions } from '../api/user_subscriptions';
+import { useUserSubscriptionsPaginated } from '../api/user_subscriptions';
 import { createSetupIntent, useAttachPaymentMethod } from '../api/stripe';
 import { useConfirmMomoPayment } from '../api/momo';
-import { useVehicles } from '../api/vehicles';
 import { getPlanCardKey } from '../ultis/planCards';
 
 const priceFormatter = new Intl.NumberFormat('vi-VN', { maximumFractionDigits: 0 });
@@ -66,9 +81,14 @@ type ProfileFormValues = {
 export default function ProfilePage() {
   const { t } = useTranslation();
   const { user, status, patchUser } = useAppAuth();
-  const { data: subscriptions = [], isLoading: subscriptionsLoading } = useUserSubscriptions();
-  const { data: vehicles = [] } = useVehicles();
-  const updateSubscriptionMutation = useUpdateSubscription();
+  const [subscriptionPage, setSubscriptionPage] = useState(0);
+  const [subscriptionRowsPerPage, setSubscriptionRowsPerPage] = useState(10);
+  const { data: subscriptionsPaginated, isLoading: subscriptionsLoading } = useUserSubscriptionsPaginated({
+    page: subscriptionPage + 1,
+    limit: subscriptionRowsPerPage,
+  });
+  const subscriptions = useMemo(() => subscriptionsPaginated?.data ?? [], [subscriptionsPaginated]);
+  const subscriptionsTotal = subscriptionsPaginated?.total ?? 0;
   const confirmMomoMutation = useConfirmMomoPayment();
   const [searchParams] = useSearchParams();
   const navigate = useNavigate();
@@ -84,8 +104,8 @@ export default function ProfilePage() {
   const [passwordDialogOpen, setPasswordDialogOpen] = useState(false);
   const [passwordSuccess, setPasswordSuccess] = useState<string | null>(null);
   const [stripeSuccess, setStripeSuccess] = useState<string | null>(null);
-  const [editingSubscriptionId, setEditingSubscriptionId] = useState<string | null>(null);
-  const [toast, setToast] = useState<{ message: string; severity: 'success' | 'info' | 'error' } | null>(null);
+  const [stripeDialogOpen, setStripeDialogOpen] = useState(false);
+  const [expandedSubscriptionId, setExpandedSubscriptionId] = useState<string | null>(null);
   const [cardComplete, setCardComplete] = useState(false);
   const [cardError, setCardError] = useState<string | null>(null);
   const [isSubmittingCard, setIsSubmittingCard] = useState(false);
@@ -138,24 +158,12 @@ export default function ProfilePage() {
     }
   }, [user]);
 
-  const stripeSubscription = useMemo(
-    () =>
-      subscriptions.find(
-        (subscription) => subscription.payment_plan?.payment_type === 'MONTHLY' && subscription.status === 'ACTIVE'
-      ),
-    [subscriptions]
-  );
-
-  const plateVehicles = useMemo(() => vehicles.filter((v) => Boolean(v.license_plate?.trim())), [vehicles]);
-
-  useEffect(() => {
-    if (!editingSubscriptionId) {
-      setStripeSuccess(null);
-    }
-  }, [editingSubscriptionId]);
-
   const handleTabChange = (_event: React.SyntheticEvent, newValue: number) => {
     setTabIndex(newValue);
+    if (newValue === 1) {
+      setSubscriptionPage(0);
+      setExpandedSubscriptionId(null);
+    }
   };
 
   const handleFieldChange = (field: keyof ProfileFormValues, value: string) => {
@@ -248,7 +256,7 @@ export default function ProfilePage() {
   };
 
   const handleStripeMethodChange = async () => {
-    if (!stripe || !elements || !stripeSubscription) {
+    if (!stripe || !elements) {
       setCardError(t('profile.subscriptions.stripeNotReady'));
       return;
     }
@@ -273,7 +281,7 @@ export default function ProfilePage() {
         throw new Error(t('profile.subscriptions.stripeCardNotReady'));
       }
       await attachPaymentMethodMutation.mutateAsync({ payment_method_id: paymentMethodId });
-      setEditingSubscriptionId(null);
+      setStripeDialogOpen(false);
       setCardComplete(false);
       setStripeFieldComplete({ number: false, expiry: false, cvc: false });
       setStripeFieldErrors({ number: null, expiry: null, cvc: null });
@@ -316,50 +324,54 @@ export default function ProfilePage() {
           <Box className="profile-form-grid" mt={1}>
             <Box className="profile-field-row">
               <Stack spacing={0.4} sx={{ flex: 1, minWidth: 260 }}>
-                <Typography className="profile-field-label">{t('profile.fields.userCode')}</Typography>
-                <TextField
+                <FormInput
+                  id="profile-user-code"
+                  label={t('profile.fields.userCode')}
                   value={user.user_code}
-                  disabled
-                  fullWidth
-                  variant="outlined"
-                  InputProps={{ readOnly: true }}
+                  onChange={() => {}}
+                  readOnly
+                  inputClassName="plain-input"
+                  labelClassName="profile-field-label"
                 />
               </Stack>
               <Stack spacing={0.4} sx={{ flex: 1, minWidth: 260 }}>
-                <Typography className="profile-field-label required">
-                  {t('profile.fields.fullName')} *
-                </Typography>
-                <TextField
+                <FormInput
+                  id="profile-full-name"
+                  label={t('profile.fields.fullName')}
+                  required
+                  requiredMarkerClassName="required-marker"
                   value={formValues.full_name}
-                  onChange={(event) => handleFieldChange('full_name', event.target.value)}
-                  error={Boolean(formErrors.full_name)}
-                  helperText={formErrors.full_name}
-                  fullWidth
-                  variant="outlined"
+                  onChange={(value) => handleFieldChange('full_name', value)}
+                  error={formErrors.full_name}
+                  inputClassName="plain-input"
+                  labelClassName="profile-field-label required"
+                  requiredFirst={t('profile.fields.fullName')}
                 />
               </Stack>
             </Box>
             <Box className="profile-field-row">
               <Stack spacing={0.4} sx={{ flex: 1, minWidth: 260 }}>
-                <Typography className="profile-field-label required">
-                  {t('profile.fields.email')} *
-                </Typography>
-                <TextField
+                <FormInput
+                  id="profile-email"
+                  label={t('profile.fields.email')}
+                  required
+                  requiredMarkerClassName="required-marker"
                   value={formValues.email}
-                  onChange={(event) => handleFieldChange('email', event.target.value)}
-                  error={Boolean(formErrors.email)}
-                  helperText={formErrors.email}
-                  fullWidth
-                  variant="outlined"
+                  onChange={(value) => handleFieldChange('email', value)}
+                  error={formErrors.email}
+                  inputClassName="plain-input"
+                  labelClassName="profile-field-label required"
+                  requiredFirst={t('profile.fields.email')}
                 />
               </Stack>
               <Stack spacing={0.4} sx={{ flex: 1, minWidth: 260 }}>
-                <Typography className="profile-field-label">{t('profile.fields.phone')}</Typography>
-                <TextField
+                <FormInput
+                  id="profile-phone"
+                  label={t('profile.fields.phone')}
                   value={formValues.phone_number ?? ''}
-                  onChange={(event) => handleFieldChange('phone_number', event.target.value)}
-                  fullWidth
-                  variant="outlined"
+                  onChange={(value) => handleFieldChange('phone_number', value)}
+                  inputClassName="plain-input"
+                  labelClassName="profile-field-label"
                 />
               </Stack>
             </Box>
@@ -391,190 +403,205 @@ export default function ProfilePage() {
 
       <TabPanel value={tabIndex} index={1}>
         <Box className="profile-card">
-          <Typography variant="overline" className="section-label">
-            {t('profile.subscriptions.heading')}
-          </Typography>
-          {subscriptionsLoading ? (
-            <Typography>{t('common.loading')}</Typography>
-          ) : subscriptions.length === 0 ? (
-            <Typography>{t('profile.subscriptions.empty')}</Typography>
-          ) : (
-            subscriptions.map((subscription) => {
-              const isStripePlan = subscription.payment_plan?.payment_type === 'MONTHLY';
-              const showStripeButton =
-                isStripePlan && subscription.status === 'ACTIVE' && editingSubscriptionId !== subscription.id;
-              const showStripeForm = editingSubscriptionId === subscription.id;
-              const subscriptionPlanKey = subscription.subscription_plan?.plans_type
-                ? getPlanCardKey(subscription.subscription_plan.plans_type)
-                : null;
-              const subscriptionPlanTitle =
-                subscriptionPlanKey !== null
-                  ? t(`plan.cards.${subscriptionPlanKey}.title`, {
-                      defaultValue: subscription.subscription_plan?.plans_type ?? t('profile.subscriptions.unnamedPlan'),
-                    })
-                  : subscription.subscription_plan?.plans_type ?? t('profile.subscriptions.unnamedPlan');
-              const canChangeVehicle = subscription.status === 'ACTIVE' && subscriptionPlanKey === 'withPlate';
-              return (
-                <Box key={subscription.id} className="profile-subscription-card">
-                  <Stack direction="row" justifyContent="space-between" alignItems="center">
-                    <Box>
-                      <Typography variant="subtitle1">
-                        {subscriptionPlanTitle}
-                      </Typography>
-                      <Typography variant="body2" color="text.secondary">
-                        {subscription.payment_plan?.payment_type ?? t('profile.subscriptions.noPaymentPlan')}
-                      </Typography>
-                    </Box>
-                    <Chip
-                      size="small"
-                      label={t(`profile.subscriptions.status.${subscription.status.toLowerCase()}`, {
-                        defaultValue: subscription.status,
-                      })}
-                    />
-                  </Stack>
-                  <Box className="profile-subscription-grid" mt={2}>
-                    <Box>
-                      <Typography className="profile-subscription-label">
-                        {t('profile.subscriptions.vehicle')}
-                      </Typography>
-                      {canChangeVehicle ? (
-                        <TextField
-                          select
-                          size="small"
-                          value={subscription.vehicle?.id ?? ''}
-                          onChange={(event) => {
-                            const nextVehicleId = String(event.target.value || '').trim();
-                            if (!nextVehicleId || nextVehicleId === subscription.vehicle?.id) {
-                              return;
-                            }
-                            updateSubscriptionMutation
-                              .mutateAsync({ subscriptionId: subscription.id, payload: { vehicle_id: nextVehicleId } })
-                              .then(() => {
-                                setToast({ message: t('profile.subscriptions.vehicleUpdated'), severity: 'success' });
-                              })
-                              .catch((error) => {
-                                const message = error instanceof Error ? error.message : t('common.error');
-                                setToast({ message, severity: 'error' });
-                              });
-                          }}
-                          disabled={updateSubscriptionMutation.isPending || plateVehicles.length === 0}
-                        >
-                          {plateVehicles.map((vehicle) => (
-                            <MenuItem key={vehicle.id} value={vehicle.id}>
-                              {vehicle.license_plate}
-                            </MenuItem>
-                          ))}
-                        </TextField>
-                      ) : (
-                        <Typography>{subscription.vehicle?.license_plate ?? '—'}</Typography>
-                      )}
-                    </Box>
-                    <Box>
-                      <Typography className="profile-subscription-label">
-                        {t('profile.subscriptions.term')}
-                      </Typography>
-                      <Typography>{subscription.term?.term_name ?? '—'}</Typography>
-                    </Box>
-                    <Box>
-                      <Typography className="profile-subscription-label">
-                        {t('profile.subscriptions.paymentPlan')}
-                      </Typography>
-                      <Typography>{subscription.payment_plan?.payment_type ?? '—'}</Typography>
-                    </Box>
-                    <Box>
-                      <Typography className="profile-subscription-label">
-                        {t('profile.subscriptions.amount')}
-                      </Typography>
-                      <Typography>{formatCurrency(subscription.total_amount)}</Typography>
-                    </Box>
-                  </Box>
-                  <Stack direction="row" spacing={2} mt={2}>
-                    <Typography variant="body2" color="text.secondary">
-                      {t('profile.subscriptions.period')} {formatDate(subscription.start_date)} –{' '}
-                      {formatDate(subscription.end_date)}
-                    </Typography>
-                    <Typography variant="body2" color="text.secondary">
-                      {t('profile.subscriptions.paidAmount')} {formatCurrency(subscription.paid_amount)}
-                    </Typography>
-                  </Stack>
-                  {showStripeButton && (
-                    <Button variant="outlined" sx={{ mt: 2 }} onClick={() => setEditingSubscriptionId(subscription.id)}>
-                      {t('profile.subscriptions.changePaymentMethod')}
-                    </Button>
-                  )}
-                  {showStripeForm && (
-                    <Box sx={{ mt: 2, p: 2, borderRadius: 2, border: '1px solid rgba(15,23,52,0.08)' }}>
-                      <Typography variant="subtitle2" gutterBottom>
-                        {t('profile.subscriptions.stripeHeader')}
-                      </Typography>
-                      <Box className="stripe-field">
-                        <Typography variant="body2" className="stripe-field-label">
-                          {t('stripe.cardNumber', { defaultValue: 'Số thẻ' })}
-                        </Typography>
-                        <Box className="stripe-field-input">
-                          <CardNumberElement options={CARD_ELEMENT_OPTIONS} onChange={handleCardNumberChange} />
-                        </Box>
-                      </Box>
+          <Stack direction="row" justifyContent="space-between" alignItems="center" flexWrap="wrap" gap={1}>
+            <Typography variant="overline" className="section-label">
+              {t('profile.subscriptions.heading')}
+            </Typography>
+            <Button
+              variant="outlined"
+              startIcon={<CreditCardIcon />}
+              onClick={() => {
+                setCardError(null);
+                setStripeSuccess(null);
+                setStripeDialogOpen(true);
+              }}
+            >
+              {t('profile.subscriptions.changePaymentMethod')}
+            </Button>
+          </Stack>
 
-                      <Box className="stripe-field-row">
-                        <Box className="stripe-field">
-                          <Typography variant="body2" className="stripe-field-label">
-                            {t('stripe.expiry', { defaultValue: 'Ngày hết hạn' })}
-                          </Typography>
-                          <Box className="stripe-field-input">
-                            <CardExpiryElement options={CARD_ELEMENT_OPTIONS} onChange={handleCardExpiryChange} />
-                          </Box>
-                        </Box>
-                        <Box className="stripe-field">
-                          <Typography variant="body2" className="stripe-field-label">
-                            {t('stripe.cvc', { defaultValue: 'CVC' })}
-                          </Typography>
-                          <Box className="stripe-field-input">
-                            <CardCvcElement options={CARD_ELEMENT_OPTIONS} onChange={handleCardCvcChange} />
-                          </Box>
-                        </Box>
-                      </Box>
-                      {cardError && (
-                        <Typography variant="body2" color="error" sx={{ mt: 1 }}>
-                          {cardError}
-                        </Typography>
-                      )}
-                      {stripeSuccess && (
-                        <Typography variant="body2" color="success.main" sx={{ mt: 1 }}>
-                          {stripeSuccess}
-                        </Typography>
-                      )}
-                      <Stack direction="row" spacing={1} mt={2}>
-                        <Button
-                          variant="contained"
-                          disabled={!cardComplete || isSubmittingCard}
-                          onClick={handleStripeMethodChange}
-                        >
-                          {t('profile.subscriptions.savePaymentMethod')}
-                        </Button>
-                        <Button variant="outlined" onClick={() => setEditingSubscriptionId(null)}>
-                          {t('profile.subscriptions.cancelChange')}
-                        </Button>
-                      </Stack>
-                    </Box>
-                  )}
-                </Box>
-              );
-            })
+          {subscriptionsLoading ? (
+            <Typography sx={{ mt: 2 }}>{t('common.loading')}</Typography>
+          ) : (
+            <Paper elevation={0} sx={{ mt: 2, boxShadow: 'none' }}>
+              <TableContainer component={Box}>
+                <Table size="small">
+                  <TableHead>
+                    <TableRow>
+                      <TableCell sx={{ width: 48 }} />
+                      <TableCell>{t('profile.subscriptions.plan', { defaultValue: 'Plan' })}</TableCell>
+                      <TableCell>{t('profile.subscriptions.vehicle')}</TableCell>
+                      <TableCell>{t('profile.subscriptions.term')}</TableCell>
+                      <TableCell>{t('profile.subscriptions.paymentPlan')}</TableCell>
+                      <TableCell align="right">{t('profile.subscriptions.amount')}</TableCell>
+                      <TableCell align="right">{t('profile.subscriptions.status.label', { defaultValue: 'Status' })}</TableCell>
+                    </TableRow>
+                  </TableHead>
+                  <TableBody>
+                    {subscriptions.length === 0 ? (
+                      <TableRow>
+                        <TableCell colSpan={7} align="center" sx={{ py: 4 }}>
+                          <Typography color="text.secondary">{t('profile.subscriptions.empty')}</Typography>
+                        </TableCell>
+                      </TableRow>
+                    ) : (
+                      subscriptions.map((subscription) => {
+                        const subscriptionPlanKey = subscription.subscription_plan?.plans_type
+                          ? getPlanCardKey(subscription.subscription_plan.plans_type)
+                          : null;
+                        const subscriptionPlanTitle =
+                          subscriptionPlanKey !== null
+                            ? t(`plan.cards.${subscriptionPlanKey}.title`, {
+                                defaultValue:
+                                  subscription.subscription_plan?.plans_type ?? t('profile.subscriptions.unnamedPlan'),
+                              })
+                            : subscription.subscription_plan?.plans_type ?? t('profile.subscriptions.unnamedPlan');
+                        const isExpanded = expandedSubscriptionId === subscription.id;
+                        return (
+                          <Fragment key={subscription.id}>
+                            <TableRow
+                              hover
+                              sx={{ cursor: 'pointer' }}
+                              onClick={() => setExpandedSubscriptionId((prev) => (prev === subscription.id ? null : subscription.id))}
+                            >
+                              <TableCell>
+                                <IconButton size="small" aria-label="expand row">
+                                  {isExpanded ? <KeyboardArrowUpIcon /> : <KeyboardArrowDownIcon />}
+                                </IconButton>
+                              </TableCell>
+                              <TableCell sx={{ fontWeight: 600 }}>{subscriptionPlanTitle}</TableCell>
+                              <TableCell>{subscription.vehicle?.license_plate ?? '—'}</TableCell>
+                              <TableCell>{subscription.term?.term_name ?? '—'}</TableCell>
+                              <TableCell>{subscription.payment_plan?.payment_type ?? '—'}</TableCell>
+                              <TableCell align="right">{formatCurrency(subscription.total_amount)}</TableCell>
+                              <TableCell align="right">
+                                <Chip
+                                  size="small"
+                                  label={t(`profile.subscriptions.status.${subscription.status.toLowerCase()}`, {
+                                    defaultValue: subscription.status,
+                                  })}
+                                />
+                              </TableCell>
+                            </TableRow>
+                            <TableRow>
+                              <TableCell colSpan={7} sx={{ py: 0, borderBottom: 0 }}>
+                                <Collapse in={isExpanded} timeout="auto" unmountOnExit>
+                                  <Box sx={{ py: 2, px: 1 }}>
+                                    <Stack direction={{ xs: 'column', sm: 'row' }} spacing={2} flexWrap="wrap">
+                                      <Typography variant="body2" color="text.secondary">
+                                        {t('profile.subscriptions.period')} {formatDate(subscription.start_date)} –{' '}
+                                        {formatDate(subscription.end_date)}
+                                      </Typography>
+                                      <Typography variant="body2" color="text.secondary">
+                                        {t('profile.subscriptions.paidAmount')} {formatCurrency(subscription.paid_amount)}
+                                      </Typography>
+                                      <Typography variant="body2" color="text.secondary">
+                                        {t('profile.subscriptions.createdAt', { defaultValue: 'Created' })}:{' '}
+                                        {formatDate(String(subscription.created_at))}
+                                      </Typography>
+                                    </Stack>
+                                  </Box>
+                                </Collapse>
+                              </TableCell>
+                            </TableRow>
+                          </Fragment>
+                        );
+                      })
+                    )}
+                  </TableBody>
+                </Table>
+              </TableContainer>
+
+              <TablePagination
+                component="div"
+                count={subscriptionsTotal}
+                page={subscriptionPage}
+                onPageChange={(_event, newPage) => {
+                  setExpandedSubscriptionId(null);
+                  setSubscriptionPage(newPage);
+                }}
+                rowsPerPage={subscriptionRowsPerPage}
+                onRowsPerPageChange={(event) => {
+                  setSubscriptionRowsPerPage(parseInt(event.target.value, 10));
+                  setExpandedSubscriptionId(null);
+                  setSubscriptionPage(0);
+                }}
+                rowsPerPageOptions={[5, 10, 20, 50, 100]}
+              />
+            </Paper>
           )}
+
+          <Dialog
+            open={stripeDialogOpen}
+            onClose={() => {
+              if (isSubmittingCard) return;
+              setStripeDialogOpen(false);
+            }}
+            fullWidth
+            maxWidth="sm"
+          >
+            <DialogTitle>{t('profile.subscriptions.changePaymentMethod')}</DialogTitle>
+            <DialogContent dividers>
+              <Typography variant="body2" color="text.secondary" sx={{ mb: 2 }}>
+                {t('profile.subscriptions.stripeHeader')}
+              </Typography>
+
+              <Box className="stripe-field">
+                <Typography variant="body2" className="stripe-field-label">
+                  {t('stripe.cardNumber', { defaultValue: 'Số thẻ' })}
+                </Typography>
+                <Box className="stripe-field-input">
+                  <CardNumberElement options={CARD_ELEMENT_OPTIONS} onChange={handleCardNumberChange} />
+                </Box>
+              </Box>
+
+              <Box className="stripe-field-row">
+                <Box className="stripe-field">
+                  <Typography variant="body2" className="stripe-field-label">
+                    {t('stripe.expiry', { defaultValue: 'Ngày hết hạn' })}
+                  </Typography>
+                  <Box className="stripe-field-input">
+                    <CardExpiryElement options={CARD_ELEMENT_OPTIONS} onChange={handleCardExpiryChange} />
+                  </Box>
+                </Box>
+                <Box className="stripe-field">
+                  <Typography variant="body2" className="stripe-field-label">
+                    {t('stripe.cvc', { defaultValue: 'CVC' })}
+                  </Typography>
+                  <Box className="stripe-field-input">
+                    <CardCvcElement options={CARD_ELEMENT_OPTIONS} onChange={handleCardCvcChange} />
+                  </Box>
+                </Box>
+              </Box>
+
+              {cardError && (
+                <Typography variant="body2" color="error" sx={{ mt: 1 }}>
+                  {cardError}
+                </Typography>
+              )}
+              {stripeSuccess && (
+                <Typography variant="body2" color="success.main" sx={{ mt: 1 }}>
+                  {stripeSuccess}
+                </Typography>
+              )}
+            </DialogContent>
+            <DialogActions>
+              <Button
+                variant="outlined"
+                onClick={() => {
+                  if (isSubmittingCard) return;
+                  setStripeDialogOpen(false);
+                }}
+              >
+                {t('profile.subscriptions.cancelChange')}
+              </Button>
+              <Button variant="contained" disabled={!cardComplete || isSubmittingCard} onClick={handleStripeMethodChange}>
+                {t('profile.subscriptions.savePaymentMethod')}
+              </Button>
+            </DialogActions>
+          </Dialog>
         </Box>
       </TabPanel>
-
-      <Snackbar
-        anchorOrigin={{ vertical: 'top', horizontal: 'right' }}
-        open={Boolean(toast)}
-        autoHideDuration={3000}
-        onClose={() => setToast(null)}
-      >
-        <Alert severity={toast?.severity ?? 'info'} onClose={() => setToast(null)} sx={{ width: '100%' }}>
-          {toast?.message ?? ''}
-        </Alert>
-      </Snackbar>
 
       <ChangePasswordDialog open={passwordDialogOpen} onClose={handleChangePasswordClose} />
     </Box>

@@ -2,27 +2,15 @@ import { useQuery } from '@tanstack/react-query';
 
 import { httpGet } from './httpClient';
 import type { PaginatedResponse, UserSubscriptionDetailRecord } from './types';
-
-const fetchSubscriptionDetails = () => httpGet<UserSubscriptionDetailRecord[]>('/subscriptions/details');
-
-export const useSubscriptionDetails = () => {
-  const query = useQuery({
-    queryKey: ['admin', 'subscriptionDetails'],
-    queryFn: fetchSubscriptionDetails,
-    staleTime: 1000 * 60,
-  });
-
-  return {
-    data: query.data ?? [],
-    isLoading: query.isLoading,
-    isError: query.isError,
-    refetch: query.refetch,
-  };
-};
+import type { subscriptionStatusOptions, planTypeOptions } from '../constant/config';
 
 type SubscriptionDetailsQuery = {
   search?: string;
-  status?: 'ACTIVE' | 'EXPIRED' | 'SUSPENDED';
+  user_code?: string;
+  full_name?: string;
+  plan_type?: typeof planTypeOptions[keyof typeof planTypeOptions];
+  payment_type?: 'FULL' | 'MONTHLY';
+  status?: typeof subscriptionStatusOptions[keyof typeof subscriptionStatusOptions];
   page: number;
   limit: number;
 };
@@ -30,6 +18,10 @@ type SubscriptionDetailsQuery = {
 const fetchSubscriptionDetailsPaginated = async (params: SubscriptionDetailsQuery) => {
   const search = new URLSearchParams();
   if (params.search) search.append('search', params.search);
+  if (params.user_code) search.append('user_code', params.user_code);
+  if (params.full_name) search.append('full_name', params.full_name);
+  if (params.plan_type) search.append('plan_type', params.plan_type);
+  if (params.payment_type) search.append('payment_type', params.payment_type);
   if (params.status) search.append('status', params.status);
   search.append('page', String(params.page));
   search.append('limit', String(params.limit));

@@ -4,7 +4,6 @@ from datetime import datetime
 import uuid
 from typing import Optional
 
-from app.models.roles import RolesRead
 from sqlalchemy import Column as SAColumn, String, Text
 from sqlmodel import Field, SQLModel
 
@@ -41,8 +40,8 @@ class UsersCreate(UsersBase):
 class UsersRead(UsersBase):
     user_code: str
     deleted_at: Optional[datetime]
-    created_at: datetime
-    updated_at: datetime
+    created_at: datetime | None = None
+    updated_at: datetime | None = None
 
 class RoleSummary(SQLModel):
     id: uuid.UUID

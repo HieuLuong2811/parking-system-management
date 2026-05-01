@@ -6,7 +6,6 @@ import type { PaginatedResponse, ParkingSessionAdminRow } from './types';
 export type ParkingSessionsQuery = {
   page: number;
   limit: number;
-  query?: string;
   user_code?: string;
   vehicle_type?: string;
   status?: 'ACTIVE' | 'DONE';
@@ -16,7 +15,6 @@ export type ParkingSessionsQuery = {
 
 const fetchParkingSessionsPaginated = async (params: ParkingSessionsQuery) => {
   const search = new URLSearchParams();
-  if (params.query) search.append('query', params.query);
   if (params.user_code) search.append('user_code', params.user_code);
   if (params.vehicle_type) search.append('vehicle_type', params.vehicle_type);
   if (params.status) search.append('status', params.status);

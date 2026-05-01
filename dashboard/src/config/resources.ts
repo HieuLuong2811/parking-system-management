@@ -104,7 +104,7 @@ export const resourceConfigs: ResourceConfig[] = [
       makeColumn('user_code', 'User code', 160),
       makeColumn('vehicle_type', 'Vehicle type', 160),
       makeColumn('license_plate', 'License plate', 160),
-      makeColumn('qr_code', 'QR code', 240, (value) => (value ? String(value).slice(0, 40) + (String(value).length > 40 ? '' : '') : '-')),
+      makeColumn('barcode_token', 'Barcode', 220, (value) => (value ? String(value) : '-')),
       makeColumn('created_at', 'Created at', 180),
       makeColumn('deleted_at', 'Deleted at', 180),
     ],
@@ -112,7 +112,7 @@ export const resourceConfigs: ResourceConfig[] = [
       makeField('user_code', 'User code', 'text', true),
       makeField('vehicle_type', 'Vehicle type', 'select', true, vehicleTypeOptions),
       makeField('license_plate', 'License plate', 'text', true),
-      makeField('qr_code', 'QR code', 'text'),
+      makeField('barcode_token', 'Barcode', 'text'),
     ],
     searchFields: [makeSearch('id', 'Vehicle ID')],
   },
@@ -301,7 +301,6 @@ export const resourceConfigs: ResourceConfig[] = [
     searchFields: [makeSearch('user_code', 'User code'), makeSearch('event_type', 'Event type')],
   },
 ];
-
 
 
 

@@ -3,13 +3,13 @@ import {
   clientHttp,
   requestWithContext,
   VehicleInfo,
+  PaginatedResponse,
 } from './clientApi';
 
 export type VehiclePayload = {
   user_code: string;
   vehicle_type: string;
-  license_plate: string;
-  qr_code?: string | null;
+  license_plate?: string | null;
 };
 
 export type UpdateVehicleArgs = {
@@ -33,6 +33,30 @@ export const useVehicles = () => {
     queryKey: ['vehicles'],
     queryFn: fetchVehicles,
     staleTime: 1000 * 60,
+  });
+};
+
+export type MyVehiclesQuery = {
+  page: number;
+  limit: number;
+  user_code?: string;
+  license_plate?: string;
+  has_plate?: boolean;
+};
+
+const fetchMyVehiclesPaginated = async (params: MyVehiclesQuery): Promise<PaginatedResponse<VehicleInfo>> => {
+  return requestWithContext(
+    clientHttp.get<PaginatedResponse<VehicleInfo>>('/vehicles/me/paginated', { params }),
+    'Load vehicles'
+  );
+};
+
+export const useMyVehiclesPaginated = (params: MyVehiclesQuery) => {
+  return useQuery({
+    queryKey: ['vehicles', 'me', 'paginated', params],
+    queryFn: () => fetchMyVehiclesPaginated(params),
+    staleTime: 1000 * 60,
+    placeholderData: (prev) => prev,
   });
 };
 

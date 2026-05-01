@@ -5,7 +5,7 @@ from app.api.controller.vehicles import VehicleController
 from app.authen.current_user import AuthUser, required_roles
 from app.db.session import get_db
 from app.models.responses import DeleteResponse, VehicleLookupResponse
-from app.models.vehicles import VehicleCreate, VehicleRead, VehicleUpdate, VehicleQRVerify
+from app.models.vehicles import VehicleCreate, VehicleRead, VehicleUpdate, VehicleBarcodeVerify
 from app.utils.pagination import PaginatedResponse
 
 router = APIRouter(prefix="/vehicles", tags=["vehicles"])
@@ -18,6 +18,7 @@ async def create_vehicle(payload: VehicleCreate, db: AsyncSession = Depends(get_
 
 @router.get("/", response_model=PaginatedResponse[VehicleRead])
 async def list_vehicles(
+    user_code: str | None = Query(None, description="Filter by user code (optional)"),
     search: str | None = None,
     is_deleted: bool | None = None,
     page: int = Query(1, ge=1, description="Page number"),
@@ -27,6 +28,7 @@ async def list_vehicles(
 ):
     return await VehicleController.get_vehicles_ctrl(
         db=db,
+        user_code=user_code,
         search=search,
         is_deleted=is_deleted,
         page=page,
@@ -41,13 +43,33 @@ async def list_my_vehicles(
 ):
     return await VehicleController.get_vehicles_by_user_ctrl(current_user.user_code, db)
 
+@router.get("/me/paginated", response_model=PaginatedResponse[VehicleRead])
+async def list_my_vehicles_paginated(
+    db: AsyncSession = Depends(get_db),
+    current_user: AuthUser = Depends(required_roles("USER", "ADMIN")),
+    page: int = Query(1, ge=1, description="Page number (1-based)"),
+    limit: int = Query(20, ge=1, le=100, description="Number of items per page"),
+    user_code: str | None = Query(None, description="Filter by user code (optional)"),
+    license_plate: str | None = Query(None, description="Filter by license plate (optional)"),
+    has_plate: bool | None = Query(None, description="Filter by vehicles that have license plate"),
+):
+    return await VehicleController.get_vehicles_by_user_paginated_ctrl(
+        current_user.user_code,
+        db,
+        page=page,
+        limit=limit,
+        user_code_filter=user_code,
+        license_plate=license_plate,
+        has_plate=has_plate,
+    )
 
-@router.post("/verify-qr", response_model=VehicleLookupResponse)
-async def verify_vehicle_qr(
-    payload: VehicleQRVerify,
+
+@router.post("/verify-barcode", response_model=VehicleLookupResponse)
+async def verify_vehicle_barcode(
+    payload: VehicleBarcodeVerify,
     db: AsyncSession = Depends(get_db)
 ):
-    return await VehicleController.verify_vehicle_qr_ctrl(payload, db)
+    return await VehicleController.verify_vehicle_barcode_ctrl(payload, db)
 
 
 @router.get("/{vehicle_id}", response_model=VehicleRead)

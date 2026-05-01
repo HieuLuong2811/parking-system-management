@@ -24,12 +24,12 @@ export const Layout: React.FC = () => {
       <Navbar
         onMenuClick={handleDrawerToggle}
         collapsed={collapsed}
-        onCollapseToggle={handleCollapseToggle}
-      />
+        />
       <Sidebar
         mobileOpen={mobileOpen}
         onClose={() => setMobileOpen(false)}
         collapsed={collapsed}
+        onCollapseToggle={handleCollapseToggle}
       />
       <Box
         component="main"

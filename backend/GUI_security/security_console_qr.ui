@@ -23,7 +23,7 @@
    </size>
   </property>
   <property name="windowTitle">
-   <string>Security Console QR</string>
+   <string>Security Console Barcode</string>
   </property>
   <widget class="QWidget" name="centralwidget">
    <widget class="QWidget" name="verticalLayoutWidget">
@@ -413,7 +413,7 @@
    </property>
    <widget class="QMenu" name="menuSecurity_screen_detect_QR_code">
     <property name="title">
-     <string>Security screen detect QR code</string>
+     <string>Security screen detect barcode</string>
     </property>
    </widget>
    <addaction name="menuSecurity_screen_detect_QR_code"/>

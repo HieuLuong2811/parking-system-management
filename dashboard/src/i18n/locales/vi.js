@@ -2,18 +2,53 @@ const vi = {
   translation: {
     sideBar: {
       title: "Hệ thống bãi đỗ xe",
+      subMenu: {
+        General: "Tổng quan",
+        Operations: "Cấu hình",
+        Billing: "Thanh toán",
+        Management: "Quản lý",
+        settings: "Cài đặt",
+      },
       children: {
-        home: "Trang chủ",
+        dashboard: "Dashboard",
         users: "Người dùng",
         parkingSessions: "Phiên gửi xe",
         resources: "Danh mục quản lý",
-        settings: "Cài đặt",
+        notifications: "Thông báo",
+        profile: "Hồ sơ",
       },
     },
     common: {
+      filters: {
+        search: "Tìm kiếm bằng :",
+        reset: "Đặt lại",
+      },
       tooltips: {
         user_code: "Mã người dùng",
         full_name: "Tên người dùng",
+      },
+      subscriptionStatus: {
+        ALL: "Tất cả",
+        ACTIVE: "Hoạt động",
+        EXPIRED: "Hết hạn",
+        SUSPENDED: "Đã tạm ngưng",
+        PENDING: "Đang chờ xử lý",
+      },
+      paymentPlan: {
+        ALL: "Tất cả",
+        MONTHLY: "Thanh toán hàng tháng",
+        FULL: "Thanh toán toàn bộ",
+      },
+      subscriptionPlans: {
+        ALL: "Tất cả",
+        LICENSED_VEHICLE: "Có biển số xe",
+        UNLICENSED_VEHICLE: "Không biển số xe",
+      },  
+      vehicleTypeOptions: {
+        ALL: "Tất cả",
+        MOTORBIKE: "Xe máy",
+        ELECTRIC_BICYCLE: "Xe đạp điện",
+        BICYCLE: "Xe đạp",
       },
     },
     pageTitle: {
@@ -87,9 +122,9 @@ const vi = {
         },
       },
       search: {
-        label: "Tìm kiếm phiên gửi xe theo mã phiên hoặc mã phương tiện",
-        userCode: "Tìm kiếm theo mã người dùng",
-        vehicleType: "Tìm kiếm theo loại phương tiện",
+        label: "Mã phiên hoặc mã phương tiện",
+        userCode: "Mã người dùng",
+        vehicleType: "Loại phương tiện",
       }
     },
     usersPage: {
@@ -103,8 +138,7 @@ const vi = {
       importModal: {
         title: "Nhập danh sách sinh viên / giảng viên",
         description: "Chọn tệp Excel để xem trước dữ liệu trước khi tạo tài khoản.",
-        searchPlaceholder: "Tìm theo mã, tên hoặc email",
-        statusLabel: "Trạng thái bản ghi",
+        statusLabel: "Trạng thái",
         statusOptions: {
           all: "Tất cả",
           valid: "Hợp lệ",
@@ -142,6 +176,10 @@ const vi = {
           noValidRows: "Không có dòng hợp lệ để import. Vui lòng kiểm tra lại file.",
           success: "Tạo {{count}} người dùng, bỏ qua {{skipped}} dòng lỗi.",
           error: "Import thất bại. {{message}}",
+        },
+        filters: {
+          userCode: "Mã người dùng",
+          nameOrEmail: "Tên hoặc email",
         },
       },
       actions: {
@@ -212,9 +250,9 @@ const vi = {
       filters: {
         role: "Vai trò",
         allRoles: "Tất cả vai trò",
-        userCode: "Tìm theo mã người dùng",
-        nameOrEmail: "Tìm theo tên hoặc email",
-        phoneNumber: "Tìm theo số điện thoại",
+        userCode: "Mã người dùng",
+        nameOrEmail: "Tên hoặc email",
+        phoneNumber: "Số điện thoại",
       },
       form: {
         userCode: "Mã người dùng",
@@ -237,7 +275,7 @@ const vi = {
         userCode: "Mã người dùng",
         type: "Loại phương tiện",
         licensePlate: "Biển số",
-        qrCode: "Mã QR",
+        qrCode: "Mã barcode",
         status: "Trạng thái",
         createdAt: "Thời điểm tạo",
         updatedAt: "Thời điểm cập nhật",
@@ -245,11 +283,6 @@ const vi = {
       status: {
         active: "Đang hoạt động",
         deleted: "Đã xoá",
-      },
-      vehicleTypes: {
-        motorbike: "Xe máy",
-        electricBicycle: "Xe đạp điện",
-        bicycle: "Xe đạp",
       },
     },
     rolesPage: {
@@ -262,7 +295,7 @@ const vi = {
       title: "Học kỳ",
       description: "Định nghĩa học kỳ và thời gian áp dụng.",
       searchTerm: {
-        name: "Tìm theo tên học kỳ"
+        name: "Tên học kỳ"
       },
       empty: "Chưa có học kỳ nào được đăng ký.",
       fields: {
@@ -284,20 +317,15 @@ const vi = {
          inUse: "Học kỳ đang được sử dụng và không thể xóa",
       },
     },
-    plansPage: {
-      title: "Gói đăng ký",
-      fields: {
-        planName: "Tên gói",
-        pricePerDay: "Giá mỗi ngày",
-        description: "Mô tả",
-      },
-    },
     subscriptionsPage: {
       title: "Đăng ký gửi xe",
       description: "Tổng quan các gói đăng ký đã triển khai trong hệ thống.",
-      searchPlaceholder: "Tìm theo người dùng, gói, hoặc học kỳ",
       filters: {
+        userCode: "Mã người dùng",
+        fullName: "Tên người dùng",
+        planType: "Loại gói",
         status: "Trạng thái",
+        paymentPlan: "Phương thức thanh toán",
       },
       periodLabels: {
         from: "Từ",
@@ -320,11 +348,9 @@ const vi = {
     },
     subscriptionPlansPage: {
       title: "Gói đăng ký gửi xe",
-      description: "Danh sách các gói đăng ký gửi xe có sẵn.",
-      searchPlaceholder: "Tìm theo tên gói hoặc id",
       empty: "Chưa có gói nào được định nghĩa.",
       columns: {
-        planName: "Tên gói",
+        planType: "Loại gói",
         pricePerDay: "Giá gửi xe / ngày",
         description: "Mô tả",
         createdAt: "Thời gian tạo",
@@ -338,7 +364,22 @@ const vi = {
       },
       button: {
         add: "Thêm gói gửi xe mới",
-      }
+      },
+      dialog: {
+        addTitle: "Thêm gói gửi xe",
+        editTitle: "Chỉnh sửa gói gửi xe",
+        fields: {
+          pricePerDay: "Giá gửi xe / ngày",
+          description: "Mô tả",
+          planType: "Loại gói",
+        },
+        cancel: "Hủy",
+        save: "Lưu",
+        warnings: {
+          typeChange: "Nếu bạn thay đổi loại gói, hệ thống có thể sẽ gửi thông báo đến những người dùng đang sử dụng gói này.",
+          priceLocked: "Giá bị khóa khi gói đang được sử dụng.",
+        },
+      },
     },
     subscriptionInvoicesPage: {
       title: "Hóa đơn đăng ký",
@@ -376,6 +417,22 @@ const vi = {
     settingsPage: {
       title: "⚙ Trang Cài Đặt",
       description: "Đây là nơi bạn có thể thiết lập các tùy chọn cho ứng dụng.",
+    },
+    notificationsPage: {
+      title: "Thông báo",
+      description: "Danh sách thông báo gần đây của bạn.",
+      empty: "Không có thông báo.",
+      error: "Không thể tải thông báo.",
+      columns: {
+        title: "Tiêu đề",
+        content: "Nội dung",
+        status: "Trạng thái",
+        createdAt: "Thời gian",
+      },
+      status: {
+        read: "Đã đọc",
+        unread: "Chưa đọc",
+      },
     },
     notifications: {
       sendBy: "Gửi bởi {{sender}}",

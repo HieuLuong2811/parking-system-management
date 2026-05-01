@@ -163,7 +163,7 @@ export default function SessionPage() {
     }
   };
 
-  const tableColumns = ['vehicle', 'checkIn', 'checkOut', 'status', 'amount'];
+  const tableColumns = ['checkIn', 'checkOut', 'status', 'amount'];
 
   const pagedSessions = useMemo(() => sessions, [sessions]);
 
@@ -173,7 +173,7 @@ export default function SessionPage() {
         {t('sessions.sectionTitle')}
       </Typography>
 
-      <Stack direction={{ xs: 'column', sm: 'row' }} spacing={2} mb={3} alignItems="flex-end">
+      <Stack direction={{ xs: 'column', sm: 'row' }} spacing={2} mb={3} gap={1}>
         {filterFields.map(({ key, type, value, setter, flex, placeholder }) => (
           <TextField
             key={key}
@@ -238,12 +238,6 @@ export default function SessionPage() {
                   )}
                   {pagedSessions.map((session) => (
                       <TableRow key={session.id}>
-                        <TableCell>
-                          <Typography fontWeight={600}>{session.license_plate ?? session.vehicle_id}</Typography>
-                          <Typography variant="caption" color="text.secondary">
-                            {t('sessions.sessionId', { id: session.id })}
-                          </Typography>
-                        </TableCell>
                         <TableCell>{formatDateValue(session.check_in_time) ?? t('sessions.notProvided')}</TableCell>
                         <TableCell>{formatDateValue(session.check_out_time) ?? t('sessions.notProvided')}</TableCell>
                         <TableCell>

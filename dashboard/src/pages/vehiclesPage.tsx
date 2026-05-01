@@ -8,7 +8,7 @@ import type { PaginatedResponse, VehicleRecord } from '../api/types';
 import { formatDateTime } from '../ultis/format';
 import { vehicleTypeOptions } from '../constant/config';
 
-export const VehiclesPage: React.FC = () => {
+export const VehiclesPage: React.FC<{user_code?: string}> = ({user_code}) => {
   const [searchTerm, setSearchTerm] = useState('');
   const [page, setPage] = useState(0);
   const [rowsPerPage, setRowsPerPage] = useState(5);
@@ -17,6 +17,7 @@ export const VehiclesPage: React.FC = () => {
     search: searchTerm || undefined,
     page: page + 1,
     limit: rowsPerPage,
+    user_code: user_code || undefined,
   }) as unknown as { data: PaginatedResponse<VehicleRecord> | undefined; isLoading: boolean; isError: boolean; error: unknown };
   const { t } = useTranslation();
 
@@ -28,8 +29,8 @@ export const VehiclesPage: React.FC = () => {
     return String(error ?? '');
   }, [error, isError]);
 
-  const columns: GridColDef[] = useMemo(
-    () => [
+  const columns: GridColDef[] = useMemo(() => {
+    const base: GridColDef[] = [
       { field: 'user_code', headerName: t('vehiclesPage.columns.userCode'), width: 160, sortable: true },
       {
         field: 'vehicle_type',
@@ -37,21 +38,24 @@ export const VehiclesPage: React.FC = () => {
         width: 160,
         sortable: true,
         renderCell: (params) => {
-          switch (params.value) {
-            case vehicleTypeOptions.MOTORBIKE:
-              return <Chip size="small" label={t('vehiclesPage.vehicleTypes.motorbike')} color="primary" />;
-            case vehicleTypeOptions.ELECTRIC_BICYCLE:
-              return <Chip size="small" label={t('vehiclesPage.vehicleTypes.electricBicycle')} color="success" />;
-            case vehicleTypeOptions.BICYCLE:
-              return <Chip size="small" label={t('vehiclesPage.vehicleTypes.bicycle')} color="info" />;
-            default:
-              return <span>{String(params.value)}</span>;
-          }
+          return (
+            <Chip
+              size="small"
+              label={t(`common.vehicleTypeOptions.${params.value}`)}
+              color={
+                params.value === vehicleTypeOptions.MOTORBIKE
+                  ? 'primary'
+                  : params.value === vehicleTypeOptions.ELECTRIC_BICYCLE
+                    ? 'success'
+                    : 'info'
+              }
+            />
+          );
         },
       },
       { field: 'license_plate', headerName: t('vehiclesPage.columns.licensePlate'), width: 160, sortable: true },
       {
-        field: 'qr_code',
+        field: 'barcode_token',
         headerName: t('vehiclesPage.columns.qrCode'),
         flex: 1,
         sortable: true,
@@ -87,12 +91,13 @@ export const VehiclesPage: React.FC = () => {
         sortable: true,
         renderCell: (params) => formatDateTime(params.row.updated_at),
       },
-    ],
-    [t]
-  );
+    ];
+    return user_code ? base.filter((c) => c.field !== 'user_code') : base;
+  }, [t, user_code]);
 
   return (
     <Box sx={{ display: 'flex', flexDirection: 'column', gap: 2 }}>
+
       <Stack spacing={0.5}>
         <Typography variant="h5">{t('vehiclesPage.title')}</Typography>
         <Typography variant="body2" color="text.secondary">
@@ -100,21 +105,23 @@ export const VehiclesPage: React.FC = () => {
         </Typography>
       </Stack>
 
-      <Stack direction="row" justifyContent="space-between" alignItems="center" flexWrap="wrap" gap={2}>
-        <TextField
-          fullWidth
-          size="small"
-          variant="outlined"
-          value={searchTerm}
-          label={t('vehiclesPage.searchLabel', { defaultValue: 'Search' })}
-          placeholder={t('vehiclesPage.searchPlaceholder')}
-          onChange={(event) => {
-            setSearchTerm(event.target.value);
-            setPage(0);
-          }}
-          sx={{ maxWidth: 420 }}
-        />
-      </Stack>
+      {!user_code && (
+        <Stack direction="row" justifyContent="space-between" alignItems="center" flexWrap="wrap" gap={2}>
+          <TextField
+            fullWidth
+            size="small"
+            variant="outlined"
+            value={searchTerm}
+            label={t('vehiclesPage.searchLabel', { defaultValue: 'Search' })}
+            placeholder={t('vehiclesPage.searchPlaceholder')}
+            onChange={(event) => {
+              setSearchTerm(event.target.value);
+              setPage(0);
+            }}
+            sx={{ maxWidth: 420 }}
+          />
+        </Stack>
+      )}
 
       <Paper elevation={0}>
         <SoftDataGrid

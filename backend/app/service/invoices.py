@@ -1,4 +1,4 @@
-from datetime import date
+from datetime import date, datetime
 from typing import Any, Optional
 from uuid import UUID
 
@@ -9,9 +9,11 @@ from app.models.subscriptions import UserSubscriptionCreate, UserSubscriptionUpd
 from app.service.base import CRUDService
 from app.service.billing_event_logs import billingEventLogService
 from app.service.subscriptions import subscriptionService
+from app.utils.pagination_db import paginate_scalars
 from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
 
+from app.utils.pagination import PaginatedResponse
 
 class invoiceService:
     crud = CRUDService(Invoice)
@@ -109,3 +111,28 @@ class invoiceService:
         result = await db.execute(statement)
         return result.scalars().all()
 
+    @staticmethod
+    async def get_invoices_by_user_code_paginated(
+        user_code: str,
+        db: AsyncSession,
+        *,
+        page: int = 1,
+        limit: int = 20,
+        from_time: datetime | None = None,
+        to_time: datetime | None = None,
+    ) -> PaginatedResponse[Invoice]:
+        statement = select(Invoice).where(Invoice.user_code == user_code).order_by(Invoice.created_at.desc())
+
+        if from_time is not None:
+            statement = statement.where(Invoice.created_at >= from_time)
+        if to_time is not None:
+            statement = statement.where(Invoice.created_at <= to_time)
+
+        items, total, total_pages = await paginate_scalars(db, statement, page=page, limit=limit)
+        return {
+            "data": items,
+            "total": total,
+            "page": page,
+            "limit": limit,
+            "total_pages": total_pages,
+        }

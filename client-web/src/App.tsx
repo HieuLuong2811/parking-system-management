@@ -4,11 +4,11 @@ import { stripePromise } from "./lib/stripe";
 
 import HomePage from "./pages/HomePage";
 import SessionPage from "./pages/SessionPage";
-import VehiclePage from "./pages/VehiclePage";
 import PlanPage from "./pages/PlanPage";
 import ClientLayout from "./components/layout/ClientLayout";
 import ProfilePage from "./pages/profilePage";
 import InvoicesPage from "./pages/InvoicesPage";
+import CheckoutPage from "./pages/CheckoutPage";
 import { AppAuthProvider } from "./contexts/AppAuthContext";
 import "./App.css";
 
@@ -18,10 +18,10 @@ function App() {
       <BrowserRouter>
         <Routes>
           <Route
-            path="plan"
+            path="plan/checkout"
             element={
               <Elements stripe={stripePromise}>
-                <PlanPage />
+                <CheckoutPage />
               </Elements>
             }
           />
@@ -36,7 +36,7 @@ function App() {
                 </Elements>
               }
             />
-            <Route path="vehicle" element={<VehiclePage />} />
+            <Route path="plan" element={<PlanPage />} />
             <Route
               path="invoices"
               element={

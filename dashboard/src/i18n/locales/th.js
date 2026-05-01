@@ -2,17 +2,52 @@ const th = {
   translation: {
     sideBar: {
       title: "ระบบที่จอดรถ",
+      subMenu: {
+        General: "ทั่วไป",
+        Operations: "การควบคุม",
+        Billing: "การชําระเงิน",
+        Management: "การจัดการ",
+        settings: "การตั้งค่า",
+      },
       children: {
-        home: "หน้าแรก",
+        dashboard: "แดชบอร์ด",
         users: "ผู้ใช้งาน",
         resources: "หมวดหมู่การจัดการ",
-        settings: "ตั้งค่า",
+        notifications: "การแจ้งเตือน",
+        profile: "โปรไฟล์",
       },
     },
     common: {
+      filters: {
+        search: "ค้นหาโดย :",
+        reset: "ล้างตัวกรอง",
+      },
       tooltips: {
         user_code: "รหัสผู้ใช้",
         full_name: "ชื่อเต็ม",
+      },
+      subscriptionStatus: {
+        ALL: "ทั้งหมด",
+        ACTIVE: "ใช้งานอยู่",
+        EXPIRED: "หมดอายุ",
+        SUSPENDED: "ระงับ",
+        PENDING: "รอดำเนินการ",
+      },
+      paymentPlan: {
+        ALL: "ทั้งหมด",
+        MONTHLY: "รายเดือน",
+        FULL: "ชำระเงินครบ",
+      },
+      subscriptionPlans: {
+        ALL: "ทั้งหมด",
+        LICENSED_VEHICLE: "มีป้ายทะเบียน",
+        UNLICENSED_VEHICLE: "ไม่มีป้ายทะเบียน",
+      },
+      vehicleTypeOptions: {
+          ALL: 'ทั้งหมด',
+          MOTORBIKE: 'จักรยานยนต์',
+          BICYCLE: 'จักรยานยนต์',
+          ELECTRIC_BICYCLE: 'จักรยานยนต์',
       },
     },
     pageTitle: {
@@ -60,6 +95,36 @@ const th = {
     parkingEventsPage: {
       title: "เหตุการณ์การจอดรถ",
     },
+    parkingSessionsPage: {
+      title: "รายการจอดรถ",
+      tableHeaders: {
+        sessionId: "รหัสรายการ",
+        vehicleId: "ยานพาหนะ",
+        checkIn: "เวลาเข้า",
+        checkOut: "เวลาออก",
+        totalDays: "จำนวนวัน",
+        amount: "จำนวนเงิน",
+        paymentMethod: "วิธีชำระเงิน",
+      },
+      exportButton: "ส่งออกรายการจอดรถ",
+      exportModal: {
+        title: "ส่งออกรายการจอดรถ",
+        description: "เลือกช่วงเวลาเช็กอินเพื่อส่งออกตาราง ชื่อคอลัมน์จะเป็นไปตามภาษาปัจจุบัน",
+        fromLabel: "วันที่เริ่มต้น",
+        toLabel: "วันที่สิ้นสุด",
+        exportLabel: "ส่งออกไฟล์",
+        cancelLabel: "ยกเลิก",
+        note: "จะส่งออกเฉพาะรายการที่มีเวลาเช็กอินอยู่ในช่วงนี้เท่านั้น",
+        errors: {
+          invalidRange: "วันที่เริ่มต้นต้องมาก่อนหรือเป็นวันเดียวกับวันที่สิ้นสุด",
+        },
+      },
+      search: {
+        label: "รหัสรายการหรือรหัสยานพาหนะ",
+        userCode: "รหัสผู้ใช้",
+        vehicleType: "ประเภทยานพาหนะ",
+      }
+    },
     usersPage: {
       title: "การจัดการผู้ใช้งาน",
       importButton: "อิมพอร์ตรายการ {{role}}",
@@ -72,7 +137,11 @@ const th = {
         title: "อิมพอร์ตรายการ {{role}}",
         description: "เลือกไฟล์ Excel เพื่ออิมพอร์ตข้อมูลผู้ใช้งาน",
         searchPlaceholder: "ค้นหาตามรหัส ชื่อ หรืออีเมล",
-        statusLabel: "สถานะของแถวข้อมูล",
+        statusLabel: "สถานะ",
+        filters: {
+          userCode: "รหัสผู้ใช้",
+          nameOrEmail: "ชื่อหรืออีเมล",
+        },
         statusOptions: {
           all: "ทั้งหมด",
           valid: "ถูกต้อง",
@@ -180,6 +249,9 @@ const th = {
       filters: {
         role: "บทบาท",
         allRoles: "ทุกบทบาท",
+        userCode: "รหัสผู้ใช้",
+        nameOrEmail: "ชื่อเต็มหรืออีเมล",
+        phoneNumber: "หมายเลขโทรศัพท์",
       },
       form: {
         userCode: "รหัสผู้ใช้",
@@ -201,7 +273,7 @@ const th = {
         userCode: "รหัสผู้ใช้",
         type: "ประเภท",
         licensePlate: "ป้ายทะเบียน",
-        qrCode: "QR code",
+        qrCode: "Barcode",
         status: "สถานะ",
         createdAt: "สร้างเมื่อ",
         updatedAt: "อัปเดตเมื่อ",
@@ -210,11 +282,6 @@ const th = {
         active: "ใช้งาน",
         deleted: "ถูกลบ",
       },
-      vehicleTypes: {
-        motorbike: "รถจักรยานยนต์",
-        electricBicycle: "รถจักรยานไฟฟ้า",
-        bicycle: "รถจักรยาน",
-      }
     },
     rolesPage: {
       title: "บทบาท",
@@ -226,7 +293,7 @@ const th = {
       title: "ภาคการศึกษา",
       description: "กำหนดภาคการศึกษาและช่วงเวลาการใช้งาน",
       searchTerm: {
-        name: "ค้นหาด้วยชื่อภาคการศึกษา"
+        name: "ชื่อภาคการศึกษา"
       },
       empty: "ยังไม่มีภาคการศึกษาที่ลงทะเบียน",
       fields: {
@@ -257,11 +324,14 @@ const th = {
       },
     },
     subscriptionsPage: {
-      title: "รายการการสมัครรับข้อมูลของผู้ใช้",
+      title: "การสมัครสมาชิกของผู้ใช้",
       description: "ภาพรวมของทุกการสมัครที่ลงทะเบียนในระบบ",
-      searchPlaceholder: "ค้นหาตามผู้ใช้ แพ็กเกจ หรือภาคเรียน",
       filters: {
+        userCode: "รหัสผู้ใช้",
+        fullName: "ชื่อเต็ม",
+        planType: "ประเภทแผน",
         status: "สถานะ",
+        paymentPlan: "แผนการชำระเงิน",
       },
       periodLabels: {
         from: "จาก",
@@ -284,8 +354,6 @@ const th = {
     },
     subscriptionPlansPage: {
       title: "แผนสมัครสมาชิก",
-      description: "รายการแผนสมัครสมาชิกที่มีอยู่",
-      searchPlaceholder: "ค้นหาตามชื่อแผนหรือรหัส",
       empty: "ยังไม่มีแผนที่ถูกกำหนด",
       columns: {
         planName: "ชื่อแพ็กเกจ",

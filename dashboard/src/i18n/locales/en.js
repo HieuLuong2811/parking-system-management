@@ -2,18 +2,57 @@ const en = {
   translation: {
     sideBar: {
       title: "Parking System",
+      subMenu: {
+        overview: "Overview",
+        subscriptions: "Subscriptions & Billing",
+        system: "System",
+      },
       children: {
-        home: "Home",
+        dashboard: "Dashboard",
+        parkingSessions: "Parking Sessions",
+        subscriptions: "Subscriptions",
+        plans: "Plans",
+        paymentTransactions: "Payment Transactions",
         users: "Users",
-        parkingSessions: "Parking sessions",
-        resources: "Management category",
-        settings: "Settings",
+        roles: "Roles",
+        vehicles: "Vehicles",
+        terms: "Terms",
+        notifications: "Notifications",
+        profile: "Profile",
+        logout: "Logout",
       },
     },
     common: {
+      filters: {
+        search: "Search by :",
+        reset: "Clear filters",
+      },
       tooltips: {
         user_code: "User code",
         full_name: "Full name",
+      },
+      subscriptionStatus: {
+        ALL: "All",
+        ACTIVE: "Active",
+        EXPIRED: "Expired",
+        SUSPENDED: "Suspended",
+        PENDING: "Pending",
+      },
+      paymentPlan: {
+        ALL: "All",
+        MONTHLY: "Monthly",
+        FULL: "Full payment",
+      },
+      subscriptionPlans: {
+        ALL: "All",
+        LICENSED_VEHICLE: "With license plate",
+        UNLICENSED_VEHICLE: "Without license plate",
+      },
+      vehicleTypeOptions: {
+        ALL: "All",
+        MOTORBIKE: "Motorbike",
+        BICYCLE: "Bicycle",
+        ELECTRIC_BICYCLE: "Electric bicycle",
       },
     },
     pageTitle: {
@@ -41,7 +80,7 @@ const en = {
       refresh: "Refresh",
       cancel: "Cancel",
       save: "Save",
-      clear: "Clear filters",
+      clear: "Clear",
     },
     validation: {
       requiredField: "{{field}} is required.",
@@ -126,9 +165,9 @@ const en = {
         },
       },
       search: {
-        label: "Search by session, vehicle, plate",
-        userCode: "Search by user code",
-        vehicleType: "Search by vehicle type",
+        label: "Session, vehicle, plate",
+        userCode: "User code",
+        vehicleType: "Vehicle type",
       }
     },
     usersPage: {
@@ -143,7 +182,11 @@ const en = {
         title: "Import students / lecturers list",
         description: "Choose an Excel file to preview the data before creating accounts.",
         searchPlaceholder: "Filter by code, name or email",
-        statusLabel: "Record status",
+        statusLabel: "Status",
+        filters: {
+          userCode: "User code",
+          nameOrEmail: "Name or email",
+        },
         statusOptions: {
           all: "All",
           valid: "Valid",
@@ -250,9 +293,9 @@ const en = {
       filters: {
         role: "Role",
         allRoles: "All roles",
-        userCode: "Search by user code",
-        nameOrEmail: "Search by full name or email",
-        phoneNumber: "Search by phone number",
+        userCode: "User code",
+        nameOrEmail: "Full name or email",
+        phoneNumber: "Phone number",
       },
       form: {
         userCode: "User code",
@@ -275,7 +318,7 @@ const en = {
         userCode: "User code",
         type: "Type",
         licensePlate: "License plate",
-        qrCode: "QR code",
+        qrCode: "Barcode",
         status: "Status",
         createdAt: "Created at",
         updatedAt: "Updated at",
@@ -283,11 +326,6 @@ const en = {
       status: {
         active: "Active",
         deleted: "Deleted",
-      },
-      vehicleTypes: {
-        motorbike: "Motorbike",
-        electricBicycle: "Electric bicycle",
-        bicycle: "Bicycle",
       },
     },
     rolesPage: {
@@ -297,7 +335,7 @@ const en = {
       title: "Academic terms",
       description: "Define academic terms and their application periods.",
       searchTerm: {
-        name: "Search by term name"
+        name: "Term name"
       },
       empty: "No academic terms registered.",
       fields: {
@@ -328,11 +366,15 @@ const en = {
       },
     },
     subscriptionsPage: {
-      title: "User subscriptions list",
+      title: "User subscriptions",
       description: "Overview of every registered subscription processed through the system.",
-      searchPlaceholder: "Search user, plan, or term",
       filters: {
+        userCode: "User code",
+        fullName: "Full name",
+        planType: "Plan type",
         status: "Status",
+        paymentPlan: "Payment plan",
+
       },
       periodLabels: {
         from: "From",
@@ -355,8 +397,6 @@ const en = {
     },
     subscriptionPlansPage: {
       title: "Subscription plans",
-      description: "List of available subscription plans",
-      searchPlaceholder: "Search by plan name or id",
       empty: "No plans defined yet.",
       columns: {
         planName: "Plan name",
@@ -414,6 +454,22 @@ const en = {
     settingsPage: {
       title: "⚙ Settings",
       description: "This is where you can configure global preferences for the application.",
+    },
+    notificationsPage: {
+      title: "Notifications",
+      description: "Your latest notifications.",
+      empty: "No notifications.",
+      error: "Unable to load notifications.",
+      columns: {
+        title: "Title",
+        content: "Content",
+        status: "Status",
+        createdAt: "Created at",
+      },
+      status: {
+        read: "Read",
+        unread: "Unread",
+      },
     },
     notifications: {
       sendBy: "Sent by {{sender}}",

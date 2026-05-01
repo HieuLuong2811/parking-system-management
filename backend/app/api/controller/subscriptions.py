@@ -1,6 +1,6 @@
 from sqlalchemy.ext.asyncio import AsyncSession
 
-from app.enums.parking import SubscriptionStatus
+from app.enums.parking import PaymentType, SubscriptionPlanType, SubscriptionStatus
 from app.models.responses import DeleteResponse
 from app.models.subscriptions import (
     UserSubscriptionCreate,
@@ -40,6 +40,23 @@ class SubscriptionController:
         return await subscriptionService.get_user_subscriptions_with_details(user_code, db)
 
     @staticmethod
+    async def get_user_subscriptions_by_user_paginated_ctrl(
+        user_code: str,
+        db: AsyncSession,
+        *,
+        status: SubscriptionStatus | None = None,
+        page: int = 1,
+        limit: int = 20,
+    ) -> PaginatedResponse[UserSubscriptionDetail]:
+        return await subscriptionService.get_user_subscriptions_with_details_paginated(
+            db,
+            user_code=user_code,
+            status=status,
+            page=page,
+            limit=limit,
+        )
+
+    @staticmethod
     async def get_all_subscription_details_ctrl(db: AsyncSession) -> list[UserSubscriptionDetail]:
         return await subscriptionService.get_all_subscriptions_with_details(db)
 
@@ -48,12 +65,24 @@ class SubscriptionController:
         db: AsyncSession,
         *,
         search: str | None = None,
+        user_code: str | None = None,
+        full_name: str | None = None,
+        plan_type: SubscriptionPlanType | None = None,
+        payment_type: PaymentType | None = None,
         status: SubscriptionStatus | None = None,
         page: int = 1,
         limit: int = 20,
     ) -> PaginatedResponse[UserSubscriptionDetail]:
         return await subscriptionService.get_all_subscriptions_with_details_paginated(
-            db, search=search, status=status, page=page, limit=limit
+            db,
+            search=search,
+            user_code=user_code,
+            full_name=full_name,
+            plan_type=plan_type,
+            payment_type=payment_type,
+            status=status,
+            page=page,
+            limit=limit,
         )
 
     @staticmethod

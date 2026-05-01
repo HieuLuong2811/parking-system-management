@@ -15,16 +15,16 @@ export const mockUsers = [
 ].map((user) => ({ ...user, deleted_at: null }));
 
 export const mockVehicles = [
-  { id: 'veh-101', user_code: 'USR001', vehicle_type: 'MOTORBIKE', license_plate: '29A-123.45', qr_code: 'QR-101', created_at: shiftDays(-60), updated_at: shiftDays(-10) },
-  { id: 'veh-102', user_code: 'USR002', vehicle_type: 'BICYCLE', license_plate: '30B-678.90', qr_code: 'QR-102', created_at: shiftDays(-90), updated_at: shiftDays(-5) },
-  { id: 'veh-103', user_code: 'USR003', vehicle_type: 'MOTORBIKE', license_plate: '11C-222.33', qr_code: 'QR-103', created_at: shiftDays(-120), updated_at: shiftDays(-7) },
-  { id: 'veh-104', user_code: 'USR004', vehicle_type: 'ELECTRIC_BICYCLE', license_plate: '22D-444.55', qr_code: 'QR-104', created_at: shiftDays(-45), updated_at: shiftDays(-3) },
-  { id: 'veh-105', user_code: 'USR005', vehicle_type: 'MOTORBIKE', license_plate: '33E-555.66', qr_code: 'QR-105', created_at: shiftDays(-33), updated_at: shiftDays(-2) },
-  { id: 'veh-106', user_code: 'USR006', vehicle_type: 'BICYCLE', license_plate: '44F-777.88', qr_code: 'QR-106', created_at: shiftDays(-75), updated_at: shiftDays(-4) },
-  { id: 'veh-107', user_code: 'USR007', vehicle_type: 'MOTORBIKE', license_plate: '55G-888.99', qr_code: 'QR-107', created_at: shiftDays(-15), updated_at: shiftDays(-1) },
-  { id: 'veh-108', user_code: 'USR008', vehicle_type: 'BICYCLE', license_plate: '66H-999.00', qr_code: 'QR-108', created_at: shiftDays(-180), updated_at: shiftDays(-30) },
-  { id: 'veh-109', user_code: 'USR009', vehicle_type: 'MOTORBIKE', license_plate: '77I-111.22', qr_code: 'QR-109', created_at: shiftDays(-210), updated_at: shiftDays(-40) },
-  { id: 'veh-110', user_code: 'USR010', vehicle_type: 'BICYCLE', license_plate: '88K-333.44', qr_code: 'QR-110', created_at: shiftDays(-27), updated_at: shiftDays(-11) },
+  { id: 'veh-101', user_code: 'USR001', vehicle_type: 'MOTORBIKE', license_plate: '29A-123.45', barcode_token: 'BARCODE-101', created_at: shiftDays(-60), updated_at: shiftDays(-10) },
+  { id: 'veh-102', user_code: 'USR002', vehicle_type: 'BICYCLE', license_plate: '30B-678.90', barcode_token: 'BARCODE-102', created_at: shiftDays(-90), updated_at: shiftDays(-5) },
+  { id: 'veh-103', user_code: 'USR003', vehicle_type: 'MOTORBIKE', license_plate: '11C-222.33', barcode_token: 'BARCODE-103', created_at: shiftDays(-120), updated_at: shiftDays(-7) },
+  { id: 'veh-104', user_code: 'USR004', vehicle_type: 'ELECTRIC_BICYCLE', license_plate: '22D-444.55', barcode_token: 'BARCODE-104', created_at: shiftDays(-45), updated_at: shiftDays(-3) },
+  { id: 'veh-105', user_code: 'USR005', vehicle_type: 'MOTORBIKE', license_plate: '33E-555.66', barcode_token: 'BARCODE-105', created_at: shiftDays(-33), updated_at: shiftDays(-2) },
+  { id: 'veh-106', user_code: 'USR006', vehicle_type: 'BICYCLE', license_plate: '44F-777.88', barcode_token: 'BARCODE-106', created_at: shiftDays(-75), updated_at: shiftDays(-4) },
+  { id: 'veh-107', user_code: 'USR007', vehicle_type: 'MOTORBIKE', license_plate: '55G-888.99', barcode_token: 'BARCODE-107', created_at: shiftDays(-15), updated_at: shiftDays(-1) },
+  { id: 'veh-108', user_code: 'USR008', vehicle_type: 'BICYCLE', license_plate: '66H-999.00', barcode_token: 'BARCODE-108', created_at: shiftDays(-180), updated_at: shiftDays(-30) },
+  { id: 'veh-109', user_code: 'USR009', vehicle_type: 'MOTORBIKE', license_plate: '77I-111.22', barcode_token: 'BARCODE-109', created_at: shiftDays(-210), updated_at: shiftDays(-40) },
+  { id: 'veh-110', user_code: 'USR010', vehicle_type: 'BICYCLE', license_plate: '88K-333.44', barcode_token: 'BARCODE-110', created_at: shiftDays(-27), updated_at: shiftDays(-11) },
 ].map((vehicle) => ({ ...vehicle, deleted_at: null }));
 
 export const mockSubscriptionPlans = [

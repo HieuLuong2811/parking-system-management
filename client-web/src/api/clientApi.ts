@@ -81,7 +81,7 @@ export interface VehicleInfo {
   user_code?: string | null;
   vehicle_type: VehicleType;
   license_plate?: string | null;
-  qr_code?: string | null;
+  barcode_token?: string | null;
   created_at: string;
   updated_at: string;
   deleted_at?: string | null;
