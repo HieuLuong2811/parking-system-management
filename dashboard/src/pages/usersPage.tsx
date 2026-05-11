@@ -4,12 +4,8 @@ import {
   Box,
   Button,
   Chip,
-  FormControl,
   IconButton,
-  InputLabel,
-  MenuItem,
   Paper,
-  Select,
   Snackbar,
   Stack,
   Tab,
@@ -25,9 +21,11 @@ import VisibilityIcon from '@mui/icons-material/Visibility';
 import { useQueryClient } from '@tanstack/react-query';
 import { useNavigate } from 'react-router-dom';
 import { useTranslation } from 'react-i18next';
+import axios from 'axios';
 import FilterListIcon from '@mui/icons-material/FilterList';
 import { SoftDataGrid } from '../components/common/SoftDataGrid';
 import { RoleSelector } from '../components/users/RoleSelector';
+import { RoleSelectField } from '../components/users/RoleSelectField';
 import { ImportUsersDialog } from '../components/users/ImportUsersDialog';
 import { UserFormDialog } from '../components/users/UserFormDialog';
 import type { UserFormValues, UserFormMode } from '../components/users/UserFormDialog';
@@ -39,8 +37,10 @@ import {
 } from '../api/users';
 import type { AdminUser, RoleSummary } from '../api/types';
 import { useAdminRoles } from '../api/roles';
+import { useAssignUserRole } from '../api/userRoles';
 import { defaultUserFormValues } from '../constant/userForm';
 import { useDebouncedValue } from '../hooks/useDebouncedValue';
+import { PageHeader } from '../components/common/PageHeader';
 
 type ToastState = {
   severity: 'success' | 'error';
@@ -68,16 +68,18 @@ export const UsersPage: React.FC = () => {
   const createMutation = useCreateUser();
   const updateMutation = useUpdateUser();
   const deleteMutation = useDeleteUser();
+  const assignRoleMutation = useAssignUserRole();
   const navigate = useNavigate();
 
-  type RequiredUserFormField = 'user_code' | 'full_name' | 'email';
-  const requiredFieldKeys: RequiredUserFormField[] = ['user_code', 'full_name', 'email'];
+  type RequiredUserFormField = 'user_code' | 'full_name' | 'email' | 'password';
+  const requiredFieldKeys: RequiredUserFormField[] = ['user_code', 'full_name', 'email', 'password'];
 
   const fieldLabels = useMemo<Record<RequiredUserFormField, string>>(
     () => ({
       user_code: t('usersPage.form.userCode'),
       full_name: t('usersPage.form.fullName'),
       email: t('usersPage.form.email'),
+      password: t('usersPage.form.password', { defaultValue: 'Password' }),
     }),
     [t]
   );
@@ -183,6 +185,7 @@ export const UsersPage: React.FC = () => {
         full_name: user.full_name,
         email: user.email,
         phone_number: user.phone_number ?? "",
+        role_id: "",
       },
       errors: {},
       editingUser: user,
@@ -210,7 +213,9 @@ export const UsersPage: React.FC = () => {
 
   const handleFormSubmit = () => {
     const nextErrors: UserFormState['errors'] = {};
-    requiredFieldKeys.forEach((field) => {
+    requiredFieldKeys
+      .filter((field) => (form.mode === 'create' ? true : field !== 'password'))
+      .forEach((field) => {
       const value = form.values[field];
       const normalized = typeof value === 'string' ? value.trim() : String(value ?? '').trim();
       if (!normalized) {
@@ -231,8 +236,27 @@ export const UsersPage: React.FC = () => {
     };
 
     if (form.mode === 'create') {
+      (payload).password = form.values.password;
       createMutation.mutate(payload as Parameters<typeof createMutation.mutate>[0], {
-        onSuccess: () => {
+        onSuccess: async () => {
+          const roleId = String(form.values.role_id || '').trim();
+          if (roleId) {
+            try {
+              await assignRoleMutation.mutateAsync({
+                user_code: String(payload.user_code),
+                role_id: roleId,
+              });
+            } catch (error) {
+              setToast({
+                severity: 'error',
+                message:
+                  error instanceof Error
+                    ? error.message
+                    : t('usersPage.actions.error'),
+              });
+              // keep going; user already created
+            }
+          }
           queryClient.invalidateQueries({ queryKey: ['admin', 'users'] });
           setToast({
             severity: 'success',
@@ -241,6 +265,18 @@ export const UsersPage: React.FC = () => {
           closeForm();
         },
         onError: (error: unknown) => {
+          if (axios.isAxiosError(error)) {
+            const detail = (error.response?.data)?.detail;
+            const field = detail?.field as keyof UserFormValues | undefined;
+            const message = (detail?.message as string | undefined) ?? error.message;
+            if (field && message) {
+              setForm((prev) => ({
+                ...prev,
+                errors: { ...prev.errors, [field]: message },
+              }));
+              return;
+            }
+          }
           setToast({
             severity: 'error',
             message: error instanceof Error ? error.message : t('usersPage.actions.error'),
@@ -280,7 +316,12 @@ export const UsersPage: React.FC = () => {
 
   const handleDeleteUser = useCallback(
     (user: AdminUser) => {
-      if (!window.confirm(t('usersPage.actions.deleteConfirm', { user: user.user_code }))) {
+      const confirmMessage =
+        user.deleted_at == null
+          ? t('usersPage.actions.deleteConfirmActiveWarning', { user: user.user_code })
+          : t('usersPage.actions.deleteConfirm', { user: user.user_code });
+
+      if (!window.confirm(confirmMessage)) {
         return;
       }
       deleteMutation.mutate(user.user_code, {
@@ -404,9 +445,7 @@ export const UsersPage: React.FC = () => {
   return (
     <Box sx={{ display: 'flex', flexDirection: 'column', gap: 2 }}>
       <Stack direction="row" justifyContent="space-between" alignItems="center" flexWrap="wrap" gap={2}>
-        <Box>
-          <Typography variant="h5">{t('usersPage.title')}</Typography>
-        </Box>
+        <PageHeader title={t('usersPage.title')} subtitle={t('usersPage.description')} />
       </Stack>
 
       <Tabs
@@ -460,24 +499,15 @@ export const UsersPage: React.FC = () => {
               type="text"
               inputProps={{ inputMode: 'numeric', pattern: '[0-9]*' }}
             />
-            <FormControl sx={{ minWidth: 160 }} size="small">
-              <InputLabel shrink>{t('usersPage.filters.role')}</InputLabel>
-              <Select
-                value={filters.role}
-                displayEmpty
-                onChange={(event) => {
-                  updateFilters((prev) => ({ ...prev, role: String(event.target.value) }));
-                }}
-                label={t('usersPage.filters.role')}
-              >
-                <MenuItem value="">{t('usersPage.filters.allRoles')}</MenuItem>
-                {availableRoles.map((role) => (
-                  <MenuItem key={role.id} value={role.role_code}>
-                    {role.role_code}
-                  </MenuItem>
-                ))}
-              </Select>
-            </FormControl>
+            <RoleSelectField
+              label={t('usersPage.filters.role')}
+              value={filters.role}
+              options={availableRoles}
+              valueKey="role_code"
+              includeAllOption
+              allLabel={t('usersPage.filters.allRoles')}
+              onChange={(next) => updateFilters((prev) => ({ ...prev, role: next }))}
+            />
             <Button variant="text" onClick={handleClearFilters}>
               {t('common.filters.reset')}
             </Button>
@@ -538,6 +568,7 @@ export const UsersPage: React.FC = () => {
         mode={form.mode}
         values={form.values}
         loading={isLoading}
+        availableRoles={availableRoles}
         onClose={closeForm}
         onChange={handleFormChange}
         onSubmit={handleFormSubmit}

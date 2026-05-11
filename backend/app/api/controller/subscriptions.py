@@ -3,8 +3,9 @@ from sqlalchemy.ext.asyncio import AsyncSession
 from app.enums.parking import PaymentType, SubscriptionPlanType, SubscriptionStatus
 from app.models.responses import DeleteResponse
 from app.models.subscriptions import (
+    UserSubscriptionAdminView,
+    UserSubscriptionClientView,
     UserSubscriptionCreate,
-    UserSubscriptionDetail,
     UserSubscriptionRead,
     UserSubscriptionUpdate,
 )
@@ -21,33 +22,14 @@ class SubscriptionController:
         return await subscriptionService.create_subscription(payload, db)
 
     @staticmethod
-    async def get_subscription_ctrl(subscription_id: str, db: AsyncSession) -> UserSubscriptionRead:
-        return await subscriptionService.get_subscription(subscription_id, db)
-
-    @staticmethod
-    async def get_all_subscriptions_ctrl(db: AsyncSession) -> list[UserSubscriptionRead]:
-        return await subscriptionService.get_all_subscriptions(db)
-
-    @staticmethod
-    async def get_subscriptions_by_user_ctrl(user_code: str, db: AsyncSession) -> list[UserSubscriptionRead]:
-        subscriptions = await subscriptionService.get_subscriptions_by_user_code(user_code, db)
-        return subscriptions
-
-    @staticmethod
-    async def get_user_subscriptions_by_user_ctrl(
-        user_code: str, db: AsyncSession
-    ) -> list[UserSubscriptionDetail]:
-        return await subscriptionService.get_user_subscriptions_with_details(user_code, db)
-
-    @staticmethod
     async def get_user_subscriptions_by_user_paginated_ctrl(
         user_code: str,
         db: AsyncSession,
         *,
         status: SubscriptionStatus | None = None,
         page: int = 1,
-        limit: int = 20,
-    ) -> PaginatedResponse[UserSubscriptionDetail]:
+        limit: int = 5,
+    ) -> PaginatedResponse[UserSubscriptionClientView]:
         return await subscriptionService.get_user_subscriptions_with_details_paginated(
             db,
             user_code=user_code,
@@ -57,8 +39,17 @@ class SubscriptionController:
         )
 
     @staticmethod
-    async def get_all_subscription_details_ctrl(db: AsyncSession) -> list[UserSubscriptionDetail]:
-        return await subscriptionService.get_all_subscriptions_with_details(db)
+    async def get_user_subscriptions_by_user_ctrl(
+        user_code: str,
+        db: AsyncSession,
+        *,
+        status: SubscriptionStatus | None = None,
+    ) -> list[UserSubscriptionAdminView]:
+        return await subscriptionService.get_user_subscriptions_with_details(
+            db,
+            user_code=user_code,
+            status=status,
+        )
 
     @staticmethod
     async def get_all_subscription_details_paginated_ctrl(
@@ -71,8 +62,8 @@ class SubscriptionController:
         payment_type: PaymentType | None = None,
         status: SubscriptionStatus | None = None,
         page: int = 1,
-        limit: int = 20,
-    ) -> PaginatedResponse[UserSubscriptionDetail]:
+        limit: int = 5,
+    ) -> PaginatedResponse[UserSubscriptionAdminView]:
         return await subscriptionService.get_all_subscriptions_with_details_paginated(
             db,
             search=search,

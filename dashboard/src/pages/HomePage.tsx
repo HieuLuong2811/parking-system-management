@@ -15,6 +15,7 @@ import {
 import { useTranslation } from 'react-i18next';
 import { CalendarMonth, PeopleAlt, LocalAtm, ShowChart } from '@mui/icons-material';
 import { useAuth } from '../contexts/useAuth';
+import { PageHeader } from '../components/common/PageHeader';
 
 const termOptions = ['Spring', 'Summer', 'Fall'];
 const yearOptions = ['2023 - 2024', '2024 - 2025', '2025 - 2026'];
@@ -49,6 +50,7 @@ export const HomePage: React.FC = () => {
 
   return (
     <Box>
+      <PageHeader title={t('home.title')} subtitle={t('home.subtitle')} />
       <Typography color="text.secondary" sx={{ mb: 3 }}>
         {t('home.description', {
           name: displayName,

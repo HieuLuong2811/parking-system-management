@@ -109,3 +109,25 @@ class authVerificationRequestService:
         await db.commit()
         return True
 
+    @staticmethod
+    async def check_code(
+        db: AsyncSession,
+        *,
+        user_code: str,
+        verification_type: str,
+        raw_code: str,
+    ) -> bool:
+        """
+        Validate a code without consuming it. Intended for multi-step UIs where the
+        user verifies then proceeds to a final action (e.g. reset password).
+        """
+        now = datetime.utcnow()
+        existing = await authVerificationRequestService._get_latest_valid_request(
+            db,
+            user_code=user_code,
+            verification_type=verification_type,
+            now=now,
+        )
+        if not existing:
+            return False
+        return verify_password(raw_code, existing.code_hash)

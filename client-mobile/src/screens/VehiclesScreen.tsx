@@ -1,4 +1,4 @@
-import React, { useMemo, useState } from "react";
+import React, { useEffect, useState } from "react";
 import {
   ActivityIndicator,
   Alert,
@@ -14,11 +14,12 @@ import {
 import { useNavigation } from "@react-navigation/native";
 import type { NativeStackNavigationProp } from "@react-navigation/native-stack";
 import ScreenShell from "../component/ScreenShell";
-import { useVehicles } from "../api/vehicles";
+import { useMyVehiclesPaginated } from "../api/vehicles";
 import { useDeleteVehicle, useUpdateVehicle } from "../api/vehicles";
 import FormInput from "../component/FormInput";
 import type { VehicleInfo } from "../api/clientApi";
 import type { AppStackParamList } from "../navigation/AppStack";
+import PaginationBar from "../component/PaginationBar";
 
 const VEHICLE_TYPES = ["MOTORBIKE", "BICYCLE", "ELECTRIC_BICYCLE"] as const;
 type Nav = NativeStackNavigationProp<AppStackParamList>;
@@ -28,7 +29,17 @@ export default function VehiclesScreen() {
   const [userCodeFilter, setUserCodeFilter] = useState("");
   const [licenseFilter, setLicenseFilter] = useState("");
   const [tab, setTab] = useState<"withPlate" | "withoutPlate">("withPlate");
-  const { data: vehicles = [], isLoading, isError } = useVehicles();
+  const [page, setPage] = useState(1);
+  const limit = 5;
+  const { data: paginated, isLoading, isError } = useMyVehiclesPaginated({
+    page,
+    limit,
+    user_code: userCodeFilter.trim() || undefined,
+    license_plate: licenseFilter.trim() || undefined,
+    has_plate: tab === "withPlate",
+  });
+  const vehicles = paginated?.data ?? [];
+  const total = paginated?.total ?? 0;
   const updateVehicle = useUpdateVehicle();
   const deleteVehicle = useDeleteVehicle();
   const [editingVehicle, setEditingVehicle] = useState<VehicleInfo | null>(null);
@@ -36,25 +47,9 @@ export default function VehiclesScreen() {
   const [editLicensePlate, setEditLicensePlate] = useState("");
   const [editError, setEditError] = useState<string | null>(null);
 
-  const visibleVehicles = useMemo(() => {
-    return vehicles
-      .filter(
-        (v) =>
-          (!userCodeFilter ||
-            v.user_code
-              ?.toLowerCase()
-              .includes(userCodeFilter.toLowerCase())) &&
-          (!licenseFilter ||
-            v.license_plate
-              ?.toLowerCase()
-              .includes(licenseFilter.toLowerCase())),
-      )
-      .filter((v) =>
-        tab === "withPlate"
-          ? !!v.license_plate?.trim()
-          : !v.license_plate?.trim(),
-      );
-  }, [vehicles, userCodeFilter, licenseFilter, tab]);
+  useEffect(() => {
+    setPage(1);
+  }, [userCodeFilter, licenseFilter, tab]);
 
   const openEditModal = (vehicle: VehicleInfo) => {
     setEditError(null);
@@ -171,7 +166,7 @@ export default function VehiclesScreen() {
           <Text style={styles.error}>Failed to load vehicles.</Text>
         ) : (
           <ScrollView contentContainerStyle={styles.list}>
-            {visibleVehicles.map((vehicle) => (
+            {vehicles.map((vehicle) => (
               <View key={vehicle.id} style={styles.item}>
                 <Text style={styles.label}>
                   User code:{" "}
@@ -210,6 +205,7 @@ export default function VehiclesScreen() {
                 </View>
               </View>
             ))}
+            <PaginationBar page={page} limit={limit} total={total} onChangePage={setPage} />
           </ScrollView>
         )}
       </View>

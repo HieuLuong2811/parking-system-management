@@ -1,22 +1,22 @@
 import hashlib
 import hmac
+import json
 import logging
-import time
-from datetime import date, datetime
 from typing import Any
+import uuid
 
 import requests
 from fastapi import BackgroundTasks, HTTPException
-from sqlalchemy import select
+from sqlalchemy import func, select
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.core.config import settings
 from app.core.momo_verify_signature import verify_signature
 from app.enums.parking import InvoiceStatus, PaymentMethod, SubscriptionStatus
-from app.models.invoices import Invoice, InvoiceUpdate
+from app.models.invoices import InvoiceUpdate
 from app.models.momo_payment import MomoInfor
+from app.models.payment_transactions import PaymentTransaction
 from app.models.notifications import NotificationCreate
-from app.service.billing_event_logs import billingEventLogService
 from app.service.invoices import invoiceService
 from app.service.notifications import notificationService
 from app.service.payment_notifications import send_payment_confirmation_email
@@ -40,22 +40,51 @@ class MomoPaymentService:
         db: AsyncSession,
     ) -> dict[str, Any]:
         invoice = await invoiceService.crud.get(db, invoice_id)
+        if not invoice:
+            raise HTTPException(status_code=404, detail="Invoice not found")
+
         if invoice.user_code != user_code:
             raise HTTPException(status_code=403, detail="Forbidden")
+
         if invoice.payment_method != PaymentMethod.MOMO:
             raise HTTPException(status_code=400, detail="Invoice is not payable by MoMo")
-        if invoice.status != InvoiceStatus.PENDING:
-            raise HTTPException(status_code=400, detail="Invoice is not pending")
+
+        if invoice.status not in [InvoiceStatus.PENDING, InvoiceStatus.FAILED]:
+            raise HTTPException(status_code=400, detail="Invoice is not payable")
+
+        was_failed = invoice.status == InvoiceStatus.FAILED
+        if invoice.status == InvoiceStatus.FAILED:
+            invoice.status = InvoiceStatus.PENDING
+
+        # Prevent duplicate "create payment" for the same invoice.
+        # - If invoice is already in PENDING and has an order id, reuse it so email/web clicks converge.
+        # - If invoice was FAILED (or no order id yet), generate a new order id and persist it.
+        payment_order_id = invoice.payment_order_id
+        if not payment_order_id or was_failed:
+            payment_order_id = f"Momo-{uuid.uuid4().hex}"
+            invoice.payment_order_id = payment_order_id
+
+        db.add(invoice)
+        await db.commit()
+        await db.refresh(invoice)
 
         momo_info = MomoInfor(
             amount=invoice.amount,
-            orderId=str(invoice.id),
+            orderId=payment_order_id,
             orderInfo=order_info or f"Invoice {invoice.id}",
             redirectUrl=redirect_url,
             extraData=extra_data,
             lang=lang or "vi",
         )
-        return MomoPaymentService.create_momo_payment(momo_info)
+        try:
+            return MomoPaymentService.create_momo_payment(momo_info)
+        except HTTPException:
+            # If we cannot create a MoMo payment session/link, mark invoice as FAILED
+            # so user can retry later (and UI can reflect the failure).
+            invoice.status = InvoiceStatus.FAILED
+            db.add(invoice)
+            await db.commit()
+            raise
 
     @staticmethod
     def create_momo_payment(momo_infor: MomoInfor) -> dict[str, Any]:
@@ -109,78 +138,67 @@ class MomoPaymentService:
             "signature": signature,
         }
 
-        try:
-            response = requests.post(
-                settings.MOMO_ENDPOINT,
-                json=request_body,
-                headers={"Content-Type": "application/json"},
-                timeout=10,
-            )
-            response.raise_for_status()
-            data = response.json()
-            result_code = data.get("resultCode")
-            if result_code is not None and str(result_code) != "0":
-                message = data.get("message") or "MoMo payment creation failed"
-                logger.warning("[MoMo] CREATE FAILED: order_id=%s resultCode=%s message=%s", order_id, result_code, message)
-                raise HTTPException(status_code=502, detail=f"MoMo create failed ({result_code}): {message}")
-
-            has_any_link = any(
-                data.get(key)
-                for key in (
-                    "payUrl",
-                    "shortLink",
-                    "deeplink",
-                    "qrCodeUrl",
-                    "deeplinkWebInApp",
-                    "deeplinkMiniApp",
-                )
-            )
-            if not has_any_link:
-                logger.warning("[MoMo] CREATE NO LINK: order_id=%s data=%s", order_id, data)
-                raise HTTPException(status_code=502, detail="MoMo did not return a payment link")
-
-            return data
-        except requests.RequestException as exc:
-            logger.exception("Failed to create MoMo payment for order %s: %s", order_id, exc)
-            raise HTTPException(
-                status_code=500,
-                detail=f"Failed to connect to MoMo: {exc}",
-            )
-
-    @staticmethod
-    async def confirm_from_redirect(
-        payload: dict[str, Any],
-        *,
-        user_code: str,
-        db: AsyncSession,
-        background_tasks: BackgroundTasks | None = None,
-    ) -> dict[str, Any]:
-        order_id = payload.get("orderId")
-        if not order_id:
-            raise HTTPException(status_code=400, detail="Missing orderId")
-
-        invoice = await invoiceService.crud.get(db, order_id)
-        if invoice.user_code != user_code:
-            raise HTTPException(status_code=403, detail="Forbidden")
-
-        if invoice.status == InvoiceStatus.PAID:
-            return {
-                "message": "already paid",
-                "order_id": str(invoice.id),
-                "invoice_id": str(invoice.id),
-                "subscription_id": str(invoice.subscription_id) if invoice.subscription_id else None,
-            }
-
-        amount_value = payload.get("amount")
-        if amount_value is not None:
+        # MoMo sandbox occasionally times out on TLS handshake / slow responses.
+        # Retry a few times and return a user-friendly error if still failing.
+        last_exc: Exception | None = None
+        for attempt in range(1, 4):
             try:
-                incoming_amount = int(amount_value)
-            except (TypeError, ValueError):
-                raise HTTPException(status_code=400, detail="Invalid amount")
-            if incoming_amount != invoice.amount:
-                raise HTTPException(status_code=400, detail="Amount mismatch")
+                response = requests.post(
+                    settings.MOMO_ENDPOINT,
+                    json=request_body,
+                    headers={"Content-Type": "application/json"},
+                    # (connect timeout, read timeout)
+                    timeout=(10, 30),
+                )
+                response.raise_for_status()
+                data = response.json()
+                result_code = data.get("resultCode")
+                if result_code is not None and str(result_code) != "0":
+                    message = data.get("message") or "MoMo payment creation failed"
+                    logger.warning(
+                        "[MoMo] CREATE FAILED: order_id=%s resultCode=%s message=%s",
+                        order_id,
+                        result_code,
+                        message,
+                    )
+                    raise HTTPException(
+                        status_code=502,
+                        detail=f"MoMo create failed ({result_code}): {message}",
+                    )
 
-        return await MomoPaymentService.handle_momo_ipn(payload, db, background_tasks=background_tasks)
+                has_any_link = any(
+                    data.get(key)
+                    for key in (
+                        "payUrl",
+                        "shortLink",
+                        "deeplink",
+                        "qrCodeUrl",
+                        "deeplinkWebInApp",
+                        "deeplinkMiniApp",
+                    )
+                )
+                if not has_any_link:
+                    logger.warning("[MoMo] CREATE NO LINK: order_id=%s data=%s", order_id, data)
+                    raise HTTPException(status_code=502, detail="MoMo did not return a payment link")
+
+                return data
+            except HTTPException:
+                # Don't retry business errors from MoMo.
+                raise
+            except requests.RequestException as exc:
+                last_exc = exc
+                logger.warning(
+                    "[MoMo] CREATE TIMEOUT/NETWORK: attempt=%s order_id=%s error=%s",
+                    attempt,
+                    order_id,
+                    exc,
+                )
+
+        logger.exception("Failed to create MoMo payment for order %s: %s", order_id, last_exc)
+        raise HTTPException(
+            status_code=504,
+            detail="Failed to connect to MoMo (timeout). Please try again.",
+        )
 
     @staticmethod
     async def _transaction_exists(
@@ -196,9 +214,34 @@ class MomoPaymentService:
         statement = select(PaymentTransaction).where(
             PaymentTransaction.invoice_id == invoice_id,
             PaymentTransaction.transaction_code == transaction_code,
-        )
+        ).limit(1)
+        
         result = await db.execute(statement)
         return result.scalar_one_or_none() is not None
+    
+    @staticmethod
+    async def _determine_subscription_status(
+        db: AsyncSession, 
+        subscription_id: str
+    ) -> SubscriptionStatus:
+        # Count unpaid invoices for this subscription.
+        stmt = (
+            select(func.count())
+            .select_from(invoiceService.crud.model)
+            .where(invoiceService.crud.model.subscription_id == subscription_id)
+            .where(invoiceService.crud.model.status != InvoiceStatus.PAID)
+        )
+        result = await db.execute(stmt)
+        unpaid_count = int(result.scalar_one() or 0)
+
+        if unpaid_count == 0:
+            return SubscriptionStatus.ACTIVE
+        
+        subscription = await subscriptionService.crud.get(db, subscription_id)
+        if subscription and subscription.status in (SubscriptionStatus.OVERDUE, SubscriptionStatus.PAYMENT_DUE):
+            return subscription.status
+
+        return SubscriptionStatus.OVERDUE
 
     @staticmethod
     async def _create_payment_notification(*, receiver_id: str, order_id: str) -> None:
@@ -221,122 +264,132 @@ class MomoPaymentService:
         *,
         background_tasks: BackgroundTasks | None = None,
     ) -> dict[str, Any]:
+        """
+        Xử lý IPN từ MoMo - Logic Subscription Recurring
+        """
+        order_id = payload.get("orderId")
+        result_code = payload.get("resultCode")
+        message = payload.get("message")
+        trans_id = str(payload.get("transId") or "")
+        extra_data_raw = payload.get("extraData") or "{}"
+
         if not verify_signature(payload):
+            logger.warning("[MoMo IPN] Invalid signature - order_id=%s", order_id)
             raise HTTPException(status_code=400, detail="Invalid signature")
 
-        result_code = payload.get("resultCode")
-        order_id = payload.get("orderId")
-        message = payload.get("message")
         if not order_id:
-            raise HTTPException(status_code=400, detail="Missing orderId in MoMo notification")
+            raise HTTPException(status_code=400, detail="Missing orderId")
+        
+        try:
+            extra_data = json.loads(extra_data_raw)
+        except json.JSONDecodeError:
+            raise HTTPException(status_code=400, detail="Invalid extraData")
+
+        invoice_id = extra_data.get("invoice_id")
+
+        if not invoice_id:
+            raise HTTPException(status_code=400, detail="Missing invoice_id in extraData")
 
         try:
             result_code = int(result_code)
         except (TypeError, ValueError):
-            raise HTTPException(status_code=400, detail="Invalid resultCode in MoMo notification")
+            raise HTTPException(status_code=400, detail="Invalid resultCode")
 
-        invoice = await invoiceService.crud.get(db, order_id)
-
-        if invoice.status == InvoiceStatus.PAID:
-            return {
-                "message": "already paid",
-                "order_id": order_id,
-                "invoice_id": str(invoice.id),
-                "subscription_id": str(invoice.subscription_id) if invoice.subscription_id else None,
-            }
-
-        if result_code != 0:
-            await invoiceService.update_invoice(
-                order_id,
-                InvoiceUpdate(status=InvoiceStatus.FAILED),
-                db,
-            )
-            logger.info("[MoMo] FAILED: %s (%s)", order_id, result_code)
-            raise HTTPException(
-                status_code=400,
-                detail=message or f"MoMo payment failed with code {result_code}",
-            )
-
-        subscription_id = invoice.subscription_id
-        if not subscription_id:
-            raise HTTPException(
-                status_code=400,
-                detail="Invoice missing subscription_id",
-            )
-
-        log = await billingEventLogService.get_latest_log_by_subscription(str(subscription_id), db, event_type="invoice_created")
-        metadata = log.meta_data if log and isinstance(log.meta_data, dict) else None
-        if not isinstance(metadata, dict):
-            raise HTTPException(status_code=400, detail="Invalid invoice metadata")
-
-        required_keys = [
-            "sub_plan_id",
-            "term_id",
-            "vehicle_id",
-            "payment_plan_id",
-            "start_date",
-            "end_date",
-        ]
-        missing = [key for key in required_keys if not metadata.get(key)]
-        if missing:
-            raise HTTPException(
-                status_code=400,
-                detail=f"Invoice metadata missing {', '.join(missing)}",
-            )
-
-        trans_id = str(payload.get("transId") or "")
+        # Get invoice with row lock
 
         try:
-            subscription = await subscriptionService.crud.get(db, subscription_id)
-            subscription.status = SubscriptionStatus.ACTIVE
-            subscription.paid_amount = invoice.amount
-            db.add(subscription)
+            async with db.begin():
 
-            if trans_id and not await MomoPaymentService._transaction_exists(
-                invoice_id=invoice.id,
-                transaction_code=trans_id,
-                db=db,
-            ):
-                from app.models.payment_transactions import PaymentTransaction
+                invoice = await invoiceService.crud.get_for_update(db, invoice_id)
+                if not invoice:
+                    raise HTTPException(status_code=404, detail="Invoice not found")
 
-                db.add(
-                    PaymentTransaction(
+                # Ignore delayed IPN callbacks from older payment attempts.
+                # We only accept the IPN that matches the latest order id stored on the invoice.
+                if invoice.payment_order_id and order_id != invoice.payment_order_id:
+                    logger.info(
+                        "[MoMo IPN] Ignored outdated order - order_id=%s expected=%s invoice_id=%s",
+                        order_id,
+                        invoice.payment_order_id,
+                        invoice_id,
+                    )
+                    return {"message": "ignored outdated order", "order_id": order_id}
+
+                # Idempotency check
+                if invoice.status == InvoiceStatus.PAID:
+                    logger.info("[MoMo IPN] Already paid - order_id=%s", order_id)
+                    return {"message": "already paid", "order_id": order_id}
+
+                if result_code != 0:
+                    invoice.status = InvoiceStatus.FAILED
+                    db.add(invoice)
+                    
+                    logger.info("[MoMo IPN] FAILED - invoice_id=%s, code=%s", invoice_id, result_code)
+                    raise HTTPException(status_code=400, detail=message or f"Payment failed ({result_code})")
+
+                if not invoice.subscription_id:
+                    raise HTTPException(status_code=400, detail="Missing subscription_id")
+
+                subscription = await subscriptionService.crud.get_for_update(db, invoice.subscription_id)
+
+                # Create payment transaction
+                if trans_id and not await MomoPaymentService._transaction_exists(
+                    invoice_id=invoice.id, transaction_code=trans_id, db=db
+                ):
+                    db.add(PaymentTransaction(
                         invoice_id=invoice.id,
                         attempt_number=1,
                         transaction_code=trans_id,
                         response_message=str(message or "MoMo payment completed"),
+                    ))
+
+                # Mark current invoice as PAID
+                invoice.status = InvoiceStatus.PAID
+                db.add(invoice)
+                # Ensure subsequent queries (status determination) see updated invoice status
+                await db.flush()
+
+                old_status = subscription.status
+                
+                if old_status == SubscriptionStatus.CANCELED:
+                    new_status = SubscriptionStatus.CANCELED
+                else:
+                    new_status = await MomoPaymentService._determine_subscription_status(
+                        db, subscription.id
                     )
+
+                subscription.status = new_status
+                subscription.paid_amount = (subscription.paid_amount or 0) + invoice.amount
+
+                db.add(subscription)
+
+            # Post-commit tasks
+            user = await userService.crud.get(db, subscription.user_code)
+
+            if background_tasks is not None:
+                background_tasks.add_task(send_payment_confirmation_email, user, invoice, subscription)
+                background_tasks.add_task(
+                    MomoPaymentService._create_payment_notification,
+                    receiver_id=subscription.user_code,
+                    order_id=invoice_id,
+                )
+            else:
+                send_payment_confirmation_email(user, invoice, subscription)
+                await MomoPaymentService._create_payment_notification(
+                    receiver_id=subscription.user_code, order_id=order_id
                 )
 
-            invoice.status = InvoiceStatus.PAID
-            invoice.subscription_id = subscription.id
-            db.add(invoice)
+            logger.info("[MoMo IPN] SUCCESS - order_id=%s, new_status=%s", order_id, new_status.value)
 
-            await db.commit()
-        except Exception:
+            return {
+                "message": "payment recorded",
+                "order_id": order_id,
+                "invoice_id": str(invoice.id),
+                "subscription_id": str(subscription.id),
+                "subscription_status": new_status.value,
+            }
+
+        except Exception as e:
             await db.rollback()
-            raise
-
-        user = await userService.crud.get(db, subscription.user_code)
-
-        if background_tasks is not None:
-            background_tasks.add_task(send_payment_confirmation_email, user, invoice, subscription)
-            background_tasks.add_task(
-                MomoPaymentService._create_payment_notification,
-                receiver_id=subscription.user_code,
-                order_id=order_id,
-            )
-        else:
-            send_payment_confirmation_email(user, invoice, subscription)
-            await MomoPaymentService._create_payment_notification(
-                receiver_id=subscription.user_code,
-                order_id=order_id,
-            )
-
-        logger.info("[MoMo] SUCCESS: %s", order_id)
-        return {
-            "message": "payment recorded",
-            "order_id": order_id,
-            "invoice_id": str(invoice.id),
-            "subscription_id": str(subscription.id),
-        }
+            logger.exception("[MoMo IPN] Error processing order_id=%s", order_id)
+            raise HTTPException(status_code=500, detail="Internal error processing payment")

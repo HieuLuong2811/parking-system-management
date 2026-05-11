@@ -28,6 +28,7 @@ import { useNavigate } from 'react-router-dom';
 import FilterListIcon from '@mui/icons-material/FilterList';
 import { planTypeOptions, subscriptionStatusOptions } from '../constant/config';
 import { useDebouncedValue } from '../hooks/useDebouncedValue';
+import { PageHeader } from '../components/common/PageHeader';
 
 const statusOptions = ['ALL', ...Object.values(subscriptionStatusOptions)] as const;
 const planType = ['ALL', ...Object.values(planTypeOptions)] as const;
@@ -214,12 +215,7 @@ export const SubscriptionsPage: React.FC = () => {
   return (
     <Box>
       <Stack direction="row" flexDirection="column" gap={2} sx={{ mb: 2 }}>
-        <Box>
-          <Typography variant="h5">{t('subscriptionsPage.title')}</Typography>
-          <Typography variant="body2" color="text.secondary">
-            {t('subscriptionsPage.description')}
-          </Typography>
-        </Box>
+        <PageHeader title={t('subscriptionsPage.title')} subtitle={t('subscriptionsPage.description')} />
         <Stack direction="row" spacing={1} alignItems="center" sx={{ flexWrap: 'wrap' }}>
           <Box sx={{ display: 'flex', gap: 0.5, alignItems: 'center' }}>
             <FilterListIcon color="action" />

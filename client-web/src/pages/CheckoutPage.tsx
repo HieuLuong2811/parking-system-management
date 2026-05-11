@@ -1,35 +1,33 @@
-import { Box, Button, Typography } from '@mui/material';
-import { Link, useNavigate } from 'react-router-dom';
-import { useTranslation } from 'react-i18next';
-import PlanCheckoutPanel from '../components/plan/PlanCheckoutPanel';
-import ArrowBackIcon from '@mui/icons-material/ArrowBack';
-import { PlanType } from '../constant/config';
-import { useSearchParams } from 'react-router-dom';
-import { useSubscriptionPlans } from '../api/subscription_plans';
+import { Box, Button, Typography } from "@mui/material";
+import { Link, useNavigate } from "react-router-dom";
+import { useTranslation } from "react-i18next";
+import PlanCheckoutPanel from "../components/plan/PlanCheckoutPanel";
+import ArrowBackIcon from "@mui/icons-material/ArrowBack";
+import { PlanType } from "../constant/config";
+import { useSearchParams } from "react-router-dom";
+import { useSubscriptionPlans } from "../api/subscription_plans";
 
 export default function CheckoutPage() {
   const { t } = useTranslation();
   const navigate = useNavigate();
   const [searchParams] = useSearchParams();
 
-  const planId = searchParams.get('planId');
-  const planType = searchParams.get('type') as PlanType | null;
+  const planId = searchParams.get("planId");
+  const planType = searchParams.get("type") as PlanType | null;
 
   const { data: plans = [] } = useSubscriptionPlans();
 
-  const plan = plans.find(p => p.id === planId);
+  const plan = plans.find((p) => p.id === planId);
 
   if (!plan || !planType) {
     return (
       <Box className="checkout-page-shell">
         <Box className="checkout-page-container">
           <Box className="checkout-empty-state">
-            <Typography variant="h5">{t('plan.checkoutSubtitle')}</Typography>
-            <Typography variant="body2">
-              {t('plan.notChosen')}
-            </Typography>
-            <Button onClick={() => navigate('/plan')}>
-              {t('plan.registerPlanButton')}
+            <Typography variant="h5">{t("plan.checkoutSubtitle")}</Typography>
+            <Typography variant="body2">{t("plan.notChosen")}</Typography>
+            <Button onClick={() => navigate("/plan")}>
+              {t("plan.registerPlanButton")}
             </Button>
           </Box>
         </Box>
@@ -41,35 +39,29 @@ export default function CheckoutPage() {
     <Box className="checkout-page-shell">
       <Box className="checkout-page-container">
         <Box className="checkout-page-header">
-           <Button
+          <Button
             component={Link}
-            to="/vehicle"
+            to="/plan"
             startIcon={<ArrowBackIcon />}
             className="checkout-back-link"
           >
-            {t('plan.backToVehicles')}
+            {t("common.button.back")}
           </Button>
-          <Typography variant="h4" gutterBottom>
-            {t('plan.sectionTitle')}
-          </Typography>
-          <Typography variant="body2" color="text.secondary">
-            {t('plan.sectionDescription')}
+          <Typography variant="h4">{t("plan.checkoutTitle")}</Typography>
+          <Typography variant="body2">
+            {t("plan.checkoutSubtitle")}
           </Typography>
         </Box>
-        
-          {plan ? (
-            <Box className="plan-checkout-frame">
-              <Box className="plan-checkout-header">
-                <Typography variant="h5">{t('plan.checkoutTitle')}</Typography>
-                <Typography variant="body2">{t('plan.checkoutSubtitle')}</Typography>
-              </Box>
-              <PlanCheckoutPanel plan={plan} planType={planType} />
-            </Box>
-          ) : (
-            <Box className="plan-checkout-placeholder">
-              <Typography variant="body1">{t('plan.notChosen')}</Typography>
-            </Box>
-          )}
+
+        {plan ? (
+          <Box className="plan-checkout-frame">
+            <PlanCheckoutPanel plan={plan} planType={planType} />
+          </Box>
+        ) : (
+          <Box className="plan-checkout-placeholder">
+            <Typography variant="body1">{t("plan.notChosen")}</Typography>
+          </Box>
+        )}
       </Box>
     </Box>
   );

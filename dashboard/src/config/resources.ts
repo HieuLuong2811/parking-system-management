@@ -23,8 +23,9 @@ const paymentTypeOptions = [
 ];
 
 const planTypeOptions = [
-  { value: 'UNLICENSED_VEHICLE', label: 'Unlicensed vehicle' },
-  { value: 'LICENSED_VEHICLE', label: 'Licensed vehicle' },
+  { value: 'BASIC', label: 'Basic' },
+  { value: 'STARTUP', label: 'Startup' },
+  { value: 'ENTERPRISE', label: 'Enterprise' },
 ];
 
 
@@ -301,7 +302,6 @@ export const resourceConfigs: ResourceConfig[] = [
     searchFields: [makeSearch('user_code', 'User code'), makeSearch('event_type', 'Event type')],
   },
 ];
-
 
 
 

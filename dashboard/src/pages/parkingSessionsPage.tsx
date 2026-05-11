@@ -23,6 +23,7 @@ import { useParkingSessionsPaginated } from '../api/parkingSessions';
 import FilterListIcon from '@mui/icons-material/FilterList';
 import KeyboardArrowDownIcon from '@mui/icons-material/KeyboardArrowDown';
 import { userTypes, vehicleTypeOptions } from '../constant/config';
+import { PageHeader } from '../components/common/PageHeader';
 
 type TimePreset = 'CUSTOM' | 'TODAY' | 'YESTERDAY' | 'LAST_7_DAYS';
 
@@ -238,9 +239,7 @@ export const ParkingSessionsPage: React.FC = () => {
 
   return (
     <Box sx={{ display: 'flex', flexDirection: 'column', gap: 2 }}>
-      <Stack spacing={0.5}>
-        <Typography variant="h5">{t('parkingSessionsPage.title')}</Typography>
-      </Stack>
+      <PageHeader title={t('parkingSessionsPage.title')} subtitle={t('parkingSessionsPage.description')} />
 
       <Stack direction="row" flexWrap="wrap" gap={2} alignItems="center">
         <Box sx={{ display: 'flex', gap: 0.5, alignItems: 'center' }}>

@@ -1,6 +1,5 @@
 from fastapi import APIRouter
 
-import app.api.router.slash_patch  # noqa: F401
 from app.api.router import (
     auth,
     billing_event_logs,
@@ -20,9 +19,9 @@ from app.api.router import (
     user_roles,
     users,
     vehicles,
-    stripe,
     momo_payment,
-    email
+    email,
+    checkout,
 )
 router = APIRouter()
 
@@ -44,6 +43,6 @@ router.include_router(detect.router)
 router.include_router(training.router)
 router.include_router(holiday.router)
 router.include_router(plan_pricing.router)
-router.include_router(stripe.router)
 router.include_router(momo_payment.router)
 router.include_router(email.router)
+router.include_router(checkout.router)

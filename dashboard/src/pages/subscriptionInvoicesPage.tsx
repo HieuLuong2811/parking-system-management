@@ -25,6 +25,7 @@ import { format } from 'date-fns';
 import { useInvoiceSearch } from '../api/invoices';
 import type { InvoiceAdminRecord } from '../api/types';
 import { formatCurrency, formatDateTime } from '../ultis/format';
+import { PageHeader } from '../components/common/PageHeader';
 
 type InvoiceMetadataItem = {
   description?: string;
@@ -385,11 +386,9 @@ export const SubscriptionInvoicesPage: React.FC = () => {
   return (
     <Box>
       <Stack direction="row" alignItems="center" justifyContent="space-between" sx={{ mb: 2 }}>
-        <Typography variant="h5">
-          {t('subscriptionInvoicesPage.title')}
-        </Typography>
+        <PageHeader title={t('subscriptionInvoicesPage.title')} subtitle={t('subscriptionInvoicesPage.description')} />
         <Button variant="outlined" startIcon={<ArrowBackIcon />} onClick={() => navigate('/subscriptions')}>
-          {t('subscriptionInvoicesPage.common.back')}
+          {t('common.back')}
         </Button>
       </Stack>
 

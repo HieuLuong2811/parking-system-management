@@ -7,15 +7,18 @@ class PaymentType(str, Enum):
 
 
 class SubscriptionPlanType(str, Enum):
-    UNLICENSED_VEHICLE = "UNLICENSED_VEHICLE"
-    LICENSED_VEHICLE = "LICENSED_VEHICLE"
+    BASIC = "BASIC"
+    STARTUP = "STARTUP"
+    ENTERPRISE = "ENTERPRISE"
 
 
 class SubscriptionStatus(str, Enum):
-    PENDING = "PENDING"
     ACTIVE = "ACTIVE"
-    EXPIRED = "EXPIRED"
+    PAYMENT_DUE = "PAYMENT_DUE"
+    OVERDUE = "OVERDUE"
     SUSPENDED = "SUSPENDED"
+    CANCELED = "CANCELED"
+    INACTIVE = "INACTIVE"
 
 
 class VehicleType(str, Enum):
@@ -26,9 +29,7 @@ class VehicleType(str, Enum):
 
 class PaymentMethod(str, Enum):
     CASH = "CASH"
-    STRIPE = "STRIPE"
     MOMO = "MOMO"
-
 
 
 class InvoiceStatus(str, Enum):

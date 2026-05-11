@@ -25,6 +25,10 @@ class PlanController:
     @staticmethod
     async def get_all_plans_ctrl(db: AsyncSession) -> list[SubscriptionPlanRead]:
         return await planService.get_all_plans(db)
+    
+    @staticmethod
+    async def get_plans_me_ctrl(current_user: AuthUser, db: AsyncSession) -> list[SubscriptionPlanRead]:
+        return await planService.get_plans_me(current_user, db)
 
     @staticmethod
     async def update_plan_ctrl(

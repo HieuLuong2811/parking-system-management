@@ -1,3 +1,4 @@
+import { Platform } from 'react-native';
 import * as SecureStore from 'expo-secure-store';
 
 export type AuthUser = {
@@ -23,17 +24,57 @@ function isIsoDateString(value: string) {
   return !Number.isNaN(Date.parse(value));
 }
 
-export function isExpired(expiresAtIso: string, skewSeconds: number = EXPIRY_SKEW_SECONDS) {
+function getWebStorage() {
+  if (typeof window === 'undefined') {
+    return null;
+  }
+
+  return window.localStorage;
+}
+
+async function getStorageItem(key: string): Promise<string | null> {
+  if (Platform.OS === 'web') {
+    return getWebStorage()?.getItem(key) ?? null;
+  }
+
+  return SecureStore.getItemAsync(key);
+}
+
+async function setStorageItem(key: string, value: string): Promise<void> {
+  if (Platform.OS === 'web') {
+    getWebStorage()?.setItem(key, value);
+    return;
+  }
+
+  await SecureStore.setItemAsync(key, value);
+}
+
+async function deleteStorageItem(key: string): Promise<void> {
+  if (Platform.OS === 'web') {
+    getWebStorage()?.removeItem(key);
+    return;
+  }
+
+  await SecureStore.deleteItemAsync(key);
+}
+
+export function isExpired(
+  expiresAtIso: string,
+  skewSeconds: number = EXPIRY_SKEW_SECONDS
+) {
   if (!isIsoDateString(expiresAtIso)) return true;
+
   const nowMs = Date.now();
   const expMs = Date.parse(expiresAtIso);
+
   return expMs - nowMs <= skewSeconds * 1000;
 }
 
 export async function getStoredSession(): Promise<StoredAuthSession | null> {
   if (memorySession !== undefined) return memorySession;
 
-  const raw = await SecureStore.getItemAsync(AUTH_SESSION_KEY);
+  const raw = await getStorageItem(AUTH_SESSION_KEY);
+
   if (!raw) {
     memorySession = null;
     return null;
@@ -41,10 +82,12 @@ export async function getStoredSession(): Promise<StoredAuthSession | null> {
 
   try {
     const parsed = JSON.parse(raw) as StoredAuthSession;
+
     if (!parsed?.accessToken || !parsed?.expiresAt) {
       memorySession = null;
       return null;
     }
+
     memorySession = parsed;
     return parsed;
   } catch {
@@ -55,18 +98,22 @@ export async function getStoredSession(): Promise<StoredAuthSession | null> {
 
 export async function setStoredSession(session: StoredAuthSession) {
   memorySession = session;
-  await SecureStore.setItemAsync(AUTH_SESSION_KEY, JSON.stringify(session));
+
+  await setStorageItem(AUTH_SESSION_KEY, JSON.stringify(session));
 }
 
 export async function updateStoredUser(user: AuthUser | null) {
   const current = await getStoredSession();
+
   if (!current) return;
+
   await setStoredSession({ ...current, user });
 }
 
 export async function clearStoredSession() {
   memorySession = null;
-  await SecureStore.deleteItemAsync(AUTH_SESSION_KEY);
+
+  await deleteStorageItem(AUTH_SESSION_KEY);
 }
 
 export function peekStoredSession() {

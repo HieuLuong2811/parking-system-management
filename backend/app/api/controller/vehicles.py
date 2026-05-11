@@ -13,6 +13,7 @@ from app.models.vehicles import VehicleCreate, VehicleRead, VehicleUpdate, Vehic
 from app.service.parking_sessions import parkingSessionService
 from app.service.subscriptions import subscriptionService
 from app.service.vehicles import vehicleService
+from app.api.controller.parking_sessions import ParkingSessionController
 
 
 class VehicleController:
@@ -29,15 +30,21 @@ class VehicleController:
         db: AsyncSession,
         *,
         search: str | None = None,
+        license_plate: str | None = None,
+        vehicle_type: str | None = None,
+        barcode_token: str | None = None,
         is_deleted: bool | None = None,
         page: int = 1,
-        limit: int = 20,
+        limit: int = 5,
         user_code: str | None = None,
     ) -> PaginatedResponse[VehicleRead]:
         return await vehicleService.get_vehicles(
             db,
             user_code=user_code,
             search=search,
+            license_plate=license_plate,
+            vehicle_type=vehicle_type,
+            barcode_token=barcode_token,
             is_deleted=is_deleted,
             page=page,
             limit=limit,
@@ -54,7 +61,7 @@ class VehicleController:
         db: AsyncSession,
         *,
         page: int = 1,
-        limit: int = 20,
+        limit: int = 5,
         user_code_filter: str | None = None,
         license_plate: str | None = None,
         has_plate: bool | None = None,
@@ -96,21 +103,16 @@ class VehicleController:
 
     @staticmethod
     async def _build_vehicle_lookup_response(vehicle, user, db: AsyncSession) -> VehicleLookupResponse:
-        active_subscriptions = await subscriptionService.get_user_subscriptions_with_details(
-            user.user_code, db
-        )
+        subscription, plan, payment_plan = await subscriptionService.get_active_subscription_covering_vehicle(str(vehicle.id), db)
         subscription_info = None
-        if active_subscriptions:
-            active = next(
-                (item for item in active_subscriptions if item.status == "ACTIVE"),
-                active_subscriptions[0],
-            )
+        if subscription is not None:
             subscription_info = SubscriptionInfo(
-                plans_type=str(active.subscription_plan.plans_type) if active.subscription_plan else None,
-                payment_type=str(active.payment_plan.payment_type) if active.payment_plan else None,
-                status=active.status,
-                paid_amount=active.paid_amount,
-                total_amount=active.total_amount,
+                plans_type=str(getattr(plan, "plans_type", None)) if plan else None,
+                plan_code=None,
+                payment_type=str(payment_plan.payment_type) if payment_plan else None,
+                status=str(subscription.status) if getattr(subscription, "status", None) else None,
+                paid_amount=getattr(subscription, "paid_amount", None),
+                total_amount=getattr(subscription, "total_amount", None),
             )
         session = await parkingSessionService.get_active_session_by_vehicle(str(vehicle.id), db)
         if not session:
@@ -124,6 +126,15 @@ class VehicleController:
                 status=session.status.value,
                 total_amount=session.total_amount,
             )
+        fee_breakdown = None
+        if session and session.check_out_time is None:
+            fee_breakdown = await ParkingSessionController._calculate_fee_breakdown(
+                user.user_code,
+                str(vehicle.id),
+                session.check_in_time,
+                datetime.utcnow().replace(tzinfo=None),
+                db,
+            )
         return VehicleLookupResponse(
             id=str(vehicle.id),
             user_code=user.user_code,
@@ -134,4 +145,5 @@ class VehicleController:
             user_email=user.email,
             active_subscription=subscription_info,
             active_session=session_info,
+            fee_breakdown=fee_breakdown,
         )

@@ -1,5 +1,5 @@
 import React, { useMemo, useState } from 'react';
-import { Alert, Box, Chip, Paper, Snackbar, Stack, TablePagination, TextField, Typography } from '@mui/material';
+import { Alert, Box, Chip, Paper, Snackbar, Stack, TablePagination, TextField, FormControl, InputLabel, MenuItem, Select } from '@mui/material';
 import { type GridColDef } from '@mui/x-data-grid';
 import { useTranslation } from 'react-i18next';
 import { SoftDataGrid } from '../components/common/SoftDataGrid';
@@ -7,17 +7,25 @@ import { useVehicles } from '../api/vehicles';
 import type { PaginatedResponse, VehicleRecord } from '../api/types';
 import { formatDateTime } from '../ultis/format';
 import { vehicleTypeOptions } from '../constant/config';
+import { PageHeader } from '../components/common/PageHeader';
 
 export const VehiclesPage: React.FC<{user_code?: string}> = ({user_code}) => {
-  const [searchTerm, setSearchTerm] = useState('');
+  const [filters, setFilters] = useState({
+    user_code: '',
+    license_plate: '',
+    vehicle_type: '',
+    barcode_token: '',
+  });
   const [page, setPage] = useState(0);
   const [rowsPerPage, setRowsPerPage] = useState(5);
 
   const { data: paginated, isLoading, isError, error } = useVehicles({
-    search: searchTerm || undefined,
+    user_code: user_code || filters.user_code || undefined,
+    license_plate: filters.license_plate || undefined,
+    vehicle_type: filters.vehicle_type || undefined,
+    barcode_token: filters.barcode_token || undefined,
     page: page + 1,
     limit: rowsPerPage,
-    user_code: user_code || undefined,
   }) as unknown as { data: PaginatedResponse<VehicleRecord> | undefined; isLoading: boolean; isError: boolean; error: unknown };
   const { t } = useTranslation();
 
@@ -97,29 +105,67 @@ export const VehiclesPage: React.FC<{user_code?: string}> = ({user_code}) => {
 
   return (
     <Box sx={{ display: 'flex', flexDirection: 'column', gap: 2 }}>
-
-      <Stack spacing={0.5}>
-        <Typography variant="h5">{t('vehiclesPage.title')}</Typography>
-        <Typography variant="body2" color="text.secondary">
-          {t('vehiclesPage.description')}
-        </Typography>
-      </Stack>
+      <PageHeader title={t('vehiclesPage.title')} subtitle={t('vehiclesPage.description')} />
 
       {!user_code && (
         <Stack direction="row" justifyContent="space-between" alignItems="center" flexWrap="wrap" gap={2}>
-          <TextField
-            fullWidth
-            size="small"
-            variant="outlined"
-            value={searchTerm}
-            label={t('vehiclesPage.searchLabel', { defaultValue: 'Search' })}
-            placeholder={t('vehiclesPage.searchPlaceholder')}
-            onChange={(event) => {
-              setSearchTerm(event.target.value);
-              setPage(0);
-            }}
-            sx={{ maxWidth: 420 }}
-          />
+          <Stack direction="row" flexWrap="wrap" gap={1.5} alignItems="center">
+            <TextField
+              size="small"
+              variant="outlined"
+              value={filters.user_code}
+              label={t('vehiclesPage.filters.userCode', { defaultValue: 'User code' })}
+              onChange={(event) => {
+                setFilters((prev) => ({ ...prev, user_code: event.target.value }));
+                setPage(0);
+              }}
+              sx={{ width: 180 }}
+            />
+
+            <TextField
+              size="small"
+              variant="outlined"
+              value={filters.license_plate}
+              label={t('vehiclesPage.filters.licensePlate', { defaultValue: 'License plate' })}
+              onChange={(event) => {
+                setFilters((prev) => ({ ...prev, license_plate: event.target.value }));
+                setPage(0);
+              }}
+              sx={{ width: 180 }}
+            />
+
+            <FormControl sx={{ width: 180 }} size="small">
+              <InputLabel shrink>{t('vehiclesPage.filters.vehicleType', { defaultValue: 'Vehicle type' })}</InputLabel>
+              <Select
+                value={filters.vehicle_type}
+                displayEmpty
+                label={t('vehiclesPage.filters.vehicleType', { defaultValue: 'Vehicle type' })}
+                onChange={(event) => {
+                  setFilters((prev) => ({ ...prev, vehicle_type: String(event.target.value) }));
+                  setPage(0);
+                }}
+              >
+                <MenuItem value="">{t('vehiclesPage.filters.allVehicleTypes', { defaultValue: 'All' })}</MenuItem>
+                {Object.values(vehicleTypeOptions).map((type) => (
+                  <MenuItem key={type} value={type}>
+                    {t(`common.vehicleTypeOptions.${type}`, { defaultValue: type })}
+                  </MenuItem>
+                ))}
+              </Select>
+            </FormControl>
+
+            <TextField
+              size="small"
+              variant="outlined"
+              value={filters.barcode_token}
+              label={t('vehiclesPage.filters.barcode', { defaultValue: 'Barcode' })}
+              onChange={(event) => {
+                setFilters((prev) => ({ ...prev, barcode_token: event.target.value }));
+                setPage(0);
+              }}
+              sx={{ width: 220 }}
+            />
+          </Stack>
         </Stack>
       )}
 

@@ -57,33 +57,49 @@ class SecurityConsole(QtWidgets.QWidget):
         container.addWidget(lbl)
         container.addWidget(value)
         return container, value
+    
+    def _styled_label(self, text: str, color: str = "#f8fafc", size: int = 14, bold: bool = False) -> QtWidgets.QLabel:
+        label = QtWidgets.QLabel(text)
+        style = f"color:{color}; font-size:{size}px;"
+        if bold:
+            style += " font-weight:700;"
+        label.setStyleSheet(style)
+        return label
+
 
     def _build_ui(self):
         layout = QtWidgets.QVBoxLayout(self)
 
+        header_frame = QtWidgets.QFrame()
+        header_frame.setStyleSheet("background-color:#0f172a; border-radius:14px; padding:5px;")
+        header_layout = QtWidgets.QHBoxLayout(header_frame)
+        header_layout.addWidget(self._styled_label("BẢNG ĐIỀU KHIỂN BẢO VỆ", color="#f8fafc", size=15, bold=True))
+        layout.addWidget(header_frame)
+
         self.input = QtWidgets.QLineEdit()
-        self.input.setPlaceholderText("Scan barcode...")
+        self.input.setPlaceholderText("Quét barcode...")
         layout.addWidget(self.input)
 
         self.lbl_status = QtWidgets.QLabel("-")
+        row, self.lbl_status = self._row("Trạng thái:")
         layout.addWidget(self.lbl_status)
 
-        row, self.val_user = self._row("User:")
+        row, self.val_user = self._row("Người dùng:")
         layout.addLayout(row)
 
-        row, self.val_vehicle = self._row("Vehicle:")
+        row, self.val_vehicle = self._row("Phương tiện:")
         layout.addLayout(row)
 
-        row, self.val_plan = self._row("Subscription:")
+        row, self.val_plan = self._row("Gói gửi xe:")
         layout.addLayout(row)
 
-        row, self.val_checkin = self._row("Check-in:")
+        row, self.val_checkin = self._row("Thời điểm vào:")
         layout.addLayout(row)
 
-        row, self.val_checkout = self._row("Check-out:")
+        row, self.val_checkout = self._row("Thời điểm ra:")
         layout.addLayout(row)
 
-        self.btn = QtWidgets.QPushButton("Confirm")
+        self.btn = QtWidgets.QPushButton("Xác nhận")
         self.btn.setEnabled(False)
         layout.addWidget(self.btn)
 

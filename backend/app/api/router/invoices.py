@@ -14,30 +14,16 @@ from app.utils.pagination import PaginatedResponse
 
 router = APIRouter(prefix="/invoices", tags=["invoices"])
 
-
-@router.post("/", response_model=InvoiceRead)
-async def create_invoice(payload: InvoiceCreate, db: AsyncSession = Depends(get_db), current_user: AuthUser = Depends(required_roles("USER", "SECURITY"))):
-    return await InvoiceController.create_invoice_ctrl(payload, db)
-
-
 @router.get("/", response_model=list[InvoiceRead])
 async def list_invoices(db: AsyncSession = Depends(get_db), current_user: AuthUser = Depends(required_roles("ADMIN"))):
     return await InvoiceController.get_all_invoices_ctrl(db)
-
-
-@router.get("/me", response_model=list[InvoiceRead])
-async def list_user_invoices(
-    db: AsyncSession = Depends(get_db),
-    current_user: AuthUser = Depends(required_roles("USER", "ADMIN")),
-):
-    return await InvoiceController.get_invoices_by_user_ctrl(current_user.user_code, db)
 
 @router.get("/me/paginated", response_model=PaginatedResponse[InvoiceRead])
 async def list_user_invoices_paginated(
     db: AsyncSession = Depends(get_db),
     current_user: AuthUser = Depends(required_roles("USER", "ADMIN")),
     page: int = Query(1, ge=1, description="Page number (1-based)"),
-    limit: int = Query(20, ge=1, le=100, description="Number of items per page"),
+    limit: int = Query(5, ge=1, le=100, description="Number of items per page"),
     from_time: datetime | None = Query(None, description="Filter by created_at (from)"),
     to_time: datetime | None = Query(None, description="Filter by created_at (to)"),
 ):

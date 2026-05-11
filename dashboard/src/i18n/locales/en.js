@@ -3,9 +3,15 @@ const en = {
     sideBar: {
       title: "Parking System",
       subMenu: {
-        overview: "Overview",
+        General: "Overview",
         subscriptions: "Subscriptions & Billing",
         system: "System",
+      },
+      expand: "Expand sidebar",
+      collapse: "Collapse sidebar",
+      parents: {
+        userManagement: "User management",
+        billing: "Billing & transactions",
       },
       children: {
         dashboard: "Dashboard",
@@ -13,6 +19,8 @@ const en = {
         subscriptions: "Subscriptions",
         plans: "Plans",
         paymentTransactions: "Payment Transactions",
+        paymentPlans: "Payment plans",
+        paymentPlans: "Payment plans",
         users: "Users",
         roles: "Roles",
         vehicles: "Vehicles",
@@ -34,9 +42,11 @@ const en = {
       subscriptionStatus: {
         ALL: "All",
         ACTIVE: "Active",
-        EXPIRED: "Expired",
+        PAYMENT_DUE: "Payment due",
+        OVERDUE: "Overdue",
         SUSPENDED: "Suspended",
-        PENDING: "Pending",
+        CANCELED: "Canceled",
+        INACTIVE: "Inactive",
       },
       paymentPlan: {
         ALL: "All",
@@ -45,14 +55,31 @@ const en = {
       },
       subscriptionPlans: {
         ALL: "All",
-        LICENSED_VEHICLE: "With license plate",
-        UNLICENSED_VEHICLE: "Without license plate",
+        BASIC: "Basic",
+        STARTUP: "Startup",
+        ENTERPRISE: "Enterprise",
+      },
+      subscriptionBenefit: {
+        conflictInUse:
+          "Subscription is currently being used by another vehicle.",
+        applied: "Subscription benefit applied",
+        notApplied: "Subscription benefit not applied",
+        feeBreakdown: "Fee breakdown",
+        coveredVehicles: "Covered vehicles",
+        dailyFee: "Daily fee",
+        after18Fee: "After 18:00 fee",
+        after18Waived: "After 18:00 fee waived",
       },
       vehicleTypeOptions: {
         ALL: "All",
         MOTORBIKE: "Motorbike",
         BICYCLE: "Bicycle",
         ELECTRIC_BICYCLE: "Electric bicycle",
+      },
+      roleTypes: {
+        admin: "Administrator",
+        user: "User",
+        security: "Security Guard",
       },
     },
     pageTitle: {
@@ -68,6 +95,7 @@ const en = {
       parkingSessions: "Parking sessions",
       resources: "Resources",
       settings: "Settings",
+      userDetail: "User detail",
     },
     button: {
       login: "Login",
@@ -91,6 +119,7 @@ const en = {
     },
     home: {
       title: "Home",
+      subtitle: "A quick overview of key system metrics and shortcuts.",
       description:
         "Welcome {{name}}, this overview section helps you reach the most important datasets fast.",
       fallbackName: "there",
@@ -142,6 +171,7 @@ const en = {
     },
     parkingSessionsPage: {
       title: "Parking sessions",
+      description: "Browse and filter parking sessions recorded in the system.",
       tableHeaders: {
         sessionId: "Session ID",
         vehicleId: "Vehicle",
@@ -154,7 +184,8 @@ const en = {
       exportButton: "Export sessions",
       exportModal: {
         title: "Export parking sessions",
-        description: "Pick the check-in range to export, the sheet will include localized column headers.",
+        description:
+          "Pick the check-in range to export, the sheet will include localized column headers.",
         fromLabel: "From date",
         toLabel: "To date",
         exportLabel: "Export file",
@@ -168,10 +199,11 @@ const en = {
         label: "Session, vehicle, plate",
         userCode: "User code",
         vehicleType: "Vehicle type",
-      }
+      },
     },
     usersPage: {
       title: "User management",
+      description: "Manage user accounts, roles, and account status.",
       importButton: "Import {{role}} list",
       importProcessing: "Processing...",
       importSuccess: "Imported {{count}} users into {{role}}.",
@@ -180,7 +212,8 @@ const en = {
         "The XLSX file must include user_code, full_name, and email columns; other columns will be ignored.",
       importModal: {
         title: "Import students / lecturers list",
-        description: "Choose an Excel file to preview the data before creating accounts.",
+        description:
+          "Choose an Excel file to preview the data before creating accounts.",
         searchPlaceholder: "Filter by code, name or email",
         statusLabel: "Status",
         filters: {
@@ -239,6 +272,8 @@ const en = {
         deleted: "Deleted user {{user}}.",
         error: "Unable to save changes.",
         deleteConfirm: "Delete user {{user}}? This cannot be undone.",
+        deleteConfirmActiveWarning:
+          "If you delete this user while still ACTIVE, the account and any related subscriptions/vehicles will be disabled.\nAre you sure you want to delete {{user}}?",
       },
       roleSelector: {
         label: "Assign roles",
@@ -252,7 +287,6 @@ const en = {
         removeTooltip: "Remove {{role}}",
         removeSuccess: "Removed {{role}} role.",
         removeError: "Unable to remove {{role}} role.",
-        optionLabel: "{{role}}",
       },
       subscriptionDrawer: {
         title: "Latest parking package",
@@ -304,8 +338,10 @@ const en = {
         language: "Language",
         password: "Password",
         phoneNumber: "Phone number",
-        passwordHelper: "Leave blank to keep the existing password when editing.",
+        passwordHelper:
+          "Leave blank to keep the existing password when editing.",
         status: "Account active",
+        role: "Role",
       },
     },
     vehiclesPage: {
@@ -330,12 +366,16 @@ const en = {
     },
     rolesPage: {
       title: "Roles",
+      description: "Review available roles and their identifiers.",
+      searchLabel: "Search",
+      searchPlaceholder: "Search by code",
+      empty: "No roles configured yet.",
     },
     termsPage: {
       title: "Academic terms",
       description: "Define academic terms and their application periods.",
       searchTerm: {
-        name: "Term name"
+        name: "Term name",
       },
       empty: "No academic terms registered.",
       fields: {
@@ -349,12 +389,18 @@ const en = {
         add: "Add new term",
       },
       warnings: {
-        rename: "If you change the term name, the system will notify (and email) all users who are currently using this term."
+        rename:
+          "If you change the term name, the system will notify (and email) all users who are currently using this term.",
       },
       tooltips: {
-         edit: "Edit term",
-         delete: "Delete term",
-         inUse: "Term is in use and cannot be deleted",
+        edit: "Edit term",
+        delete: "Delete term",
+        inUse: "Term is in use and cannot be deleted",
+      },
+      dialog: {
+        addTitle: "Create new academic term",
+        editTitle: "Edit academic term",
+        saving: "Saving...",
       },
     },
     plansPage: {
@@ -367,14 +413,14 @@ const en = {
     },
     subscriptionsPage: {
       title: "User subscriptions",
-      description: "Overview of every registered subscription processed through the system.",
+      description:
+        "Overview of every registered subscription processed through the system.",
       filters: {
         userCode: "User code",
         fullName: "Full name",
         planType: "Plan type",
         status: "Status",
         paymentPlan: "Payment plan",
-
       },
       periodLabels: {
         from: "From",
@@ -397,27 +443,46 @@ const en = {
     },
     subscriptionPlansPage: {
       title: "Subscription plans",
+      description: "Configure available subscription plans and pricing rules.",
       empty: "No plans defined yet.",
       columns: {
         planName: "Plan name",
         pricePerDay: "Parking fee per day",
+        allowMonthly: "Monthly",
+        allowFull: "Full",
+        maxLicensed: "Max plate",
+        maxUnlicensed: "Max no-plate",
+        after18Fee: "After 18 fee",
+        waiveAfter18: "Waive 18+",
+        status: "Status",
         description: "Description",
         createdAt: "Created at",
         updatedAt: "Updated at",
         actions: "Actions",
       },
+      dialog: {
+        fields: {
+          allowMonthly: "Allow monthly payment",
+          allowFull: "Allow full payment",
+          waiveAfter18: "Waive after 18 fee",
+          maxLicensed: "Max licensed vehicles",
+          maxUnlicensed: "Max unlicensed vehicles",
+          after18Fee: "After 18 fee (VND)",
+          status: "Status",
+        },
+      },
       tooltips: {
-        locked: 'Plan is in use',
-        delete: 'Delete plan',
-        edit: 'Edit plan',
-
+        locked: "Plan is in use",
+        delete: "Delete plan",
+        edit: "Edit plan",
       },
       button: {
         add: "Add new Plan",
-      }
+      },
     },
     subscriptionInvoicesPage: {
       title: "Subscription invoices",
+      description: "Inspect invoices generated for the selected subscription.",
       noSubscription: "Subscription ID is missing.",
       error: "Unable to load invoices.",
       empty: "No invoices were generated for this subscription yet.",
@@ -426,9 +491,6 @@ const en = {
       payerTitle: "Payer",
       recipientTitle: "Recipient",
       amountDueLabel: "Amount due",
-      common: {
-        back: "Back"
-      }
     },
     billingEventLogsPage: {
       title: "Billing events",
@@ -436,8 +498,10 @@ const en = {
     resource: {
       dialogTitleAdd: "{{action}} {{resource}}",
       dialogTitleUpdate: "{{action}} {{resource}}",
-      notFound: "No resource was found for the requested table. Please pick a different one.",
-      underConstruction: "The {{resource}} section is being refactored. Visit a different table for now.",
+      notFound:
+        "No resource was found for the requested table. Please pick a different one.",
+      underConstruction:
+        "The {{resource}} section is being refactored. Visit a different table for now.",
     },
     accessDenied: {
       title: "You do not have access",
@@ -448,12 +512,14 @@ const en = {
     },
     notFound: {
       title: "404 - Page not found",
-      description: "The path you requested does not exist. Back to the home page to continue managing data.",
+      description:
+        "The path you requested does not exist. Back to the home page to continue managing data.",
       backToHome: "Back to Home",
     },
     settingsPage: {
       title: "⚙ Settings",
-      description: "This is where you can configure global preferences for the application.",
+      description:
+        "This is where you can configure global preferences for the application.",
     },
     notificationsPage: {
       title: "Notifications",
@@ -484,7 +550,8 @@ const en = {
       items: {
         permissions: {
           title: "Permission update",
-          detail: "The Student role has been adjusted to reflect the new structure.",
+          detail:
+            "The Student role has been adjusted to reflect the new structure.",
         },
         vehicles: {
           title: "Vehicle data synced",
@@ -525,6 +592,58 @@ const en = {
       tooltips: {
         invoice_id: "Invoice ID",
         invoice_createdAt: "Invoice created at",
+      },
+    },
+    invoicesPage: {
+      description:
+        "Browse invoices stored in the system and quickly search by identifiers.",
+    },
+    userProfilePage: {
+      title: "User detail",
+      description: "Review the selected user's profile and related records.",
+    },
+    paymentPlansPage: {
+      title: "Payment plans",
+      description: "Manage payment plan options (monthly/full) and discounts.",
+      empty: "No payment plans found.",
+      columns: {
+        paymentType: "Payment type",
+        discountPercent: "Discount (%)",
+        active: "Active",
+        createdAt: "Created at",
+        updatedAt: "Updated at",
+        actions: "Actions",
+      },
+      status: {
+        active: "Active",
+        inactive: "Inactive",
+      },
+      button: {
+        add: "Add payment plan",
+      },
+      tooltips: {
+        edit: "Edit",
+        delete: "Delete",
+      },
+      toast: {
+        created: "Created payment plan.",
+        updated: "Updated payment plan.",
+        deleted: "Deleted payment plan.",
+        saveError: "Unable to save payment plan.",
+        deleteError: "Unable to delete payment plan.",
+        deleteConfirm: "Delete this payment plan?",
+      },
+      dialog: {
+        addTitle: "Add payment plan",
+        editTitle: "Edit payment plan",
+        cancel: "Cancel",
+        save: "Save",
+        saving: "Saving...",
+        fields: {
+          paymentType: "Payment type",
+          discountPercent: "Discount percent",
+          isActive: "Active",
+        },
       },
     },
   },

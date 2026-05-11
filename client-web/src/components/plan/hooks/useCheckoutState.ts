@@ -8,7 +8,8 @@ export type CheckoutState = {
   selectedPaymentMode: PaymentModeId | null;
   cardComplete: boolean;
   cardError: string | null;
-  selectedVehicleId: string;
+  selectedLicensedVehicleId: string;
+  selectedUnlicensedVehicleId: string;
   isProcessing: boolean;
   processingError: string | null;
 };
@@ -17,7 +18,8 @@ export type CheckoutActions = {
   setActiveStep: (step: number) => void;
   selectTerm: (termId: string) => void;
   selectPaymentMode: (paymentMode: PaymentModeId | null) => void;
-  setVehicleId: (vehicleId: string) => void;
+  setLicensedVehicleId: (vehicleId: string) => void;
+  setUnlicensedVehicleId: (vehicleId: string) => void;
   setCardComplete: (complete: boolean) => void;
   setCardError: (message: string | null) => void;
   setProcessing: (isProcessing: boolean) => void;
@@ -29,7 +31,8 @@ type CheckoutAction =
   | { type: 'setActiveStep'; payload: number }
   | { type: 'selectTerm'; payload: string }
   | { type: 'setPaymentMode'; payload: PaymentModeId | null }
-  | { type: 'setVehicleId'; payload: string }
+  | { type: 'setLicensedVehicleId'; payload: string }
+  | { type: 'setUnlicensedVehicleId'; payload: string }
   | { type: 'setCardComplete'; payload: boolean }
   | { type: 'setCardError'; payload: string | null }
   | { type: 'setProcessing'; payload: boolean }
@@ -41,7 +44,8 @@ const createInitialState = (): CheckoutState => ({
   selectedPaymentMode: null,
   cardComplete: false,
   cardError: null,
-  selectedVehicleId: '',
+  selectedLicensedVehicleId: '',
+  selectedUnlicensedVehicleId: '',
   isProcessing: false,
   processingError: null,
 });
@@ -70,10 +74,15 @@ const checkoutReducer = (state: CheckoutState, action: CheckoutAction): Checkout
         ...state,
         selectedPaymentMode: action.payload,
       };
-    case 'setVehicleId':
+    case 'setLicensedVehicleId':
       return {
         ...state,
-        selectedVehicleId: action.payload,
+        selectedLicensedVehicleId: action.payload,
+      };
+    case 'setUnlicensedVehicleId':
+      return {
+        ...state,
+        selectedUnlicensedVehicleId: action.payload,
       };
     case 'setCardComplete':
       return {
@@ -103,7 +112,7 @@ const checkoutReducer = (state: CheckoutState, action: CheckoutAction): Checkout
 export const useCheckoutState = (
   planId: string | undefined,
   academicTermOptions: AcademicTermOption[],
-  vehicles: VehicleInfo[],
+  filteredVehicles: VehicleInfo[],
   initialVehicleId?: string
 ) => {
   const [state, dispatch] = useReducer(checkoutReducer, undefined, createInitialState);
@@ -119,31 +128,44 @@ export const useCheckoutState = (
   }, [academicTermOptions, state.selectedTermId]);
 
   useEffect(() => {
-    if (vehicles.length === 0) {
-      return;
-    }
+    if (filteredVehicles.length === 0) return;
 
     const preferredVehicleId = initialVehicleId?.trim() || '';
-    const preferredExists = preferredVehicleId
-      ? vehicles.some((vehicle) => vehicle.id === preferredVehicleId)
-      : false;
 
-    if (preferredExists && state.selectedVehicleId !== preferredVehicleId) {
-      dispatch({ type: 'setVehicleId', payload: preferredVehicleId });
+    if (preferredVehicleId && filteredVehicles.some(v => v.id === preferredVehicleId)) {
+      // Backward compat: if a deep link specifies a single vehicle, prefer selecting it in the right bucket.
+      const preferred = filteredVehicles.find(v => v.id === preferredVehicleId);
+      const hasPlate = Boolean((preferred as any)?.license_plate?.trim?.() || (preferred as any)?.license_plate);
+      if (hasPlate) {
+        if (state.selectedLicensedVehicleId !== preferredVehicleId) {
+          dispatch({ type: 'setLicensedVehicleId', payload: preferredVehicleId });
+        }
+      } else {
+        if (state.selectedUnlicensedVehicleId !== preferredVehicleId) {
+          dispatch({ type: 'setUnlicensedVehicleId', payload: preferredVehicleId });
+        }
+      }
       return;
     }
 
-    if (!state.selectedVehicleId) {
-      dispatch({ type: 'setVehicleId', payload: vehicles[0].id });
+    const firstLicensed = filteredVehicles.find(v => Boolean((v as any)?.license_plate?.trim?.() || (v as any)?.license_plate));
+    const firstUnlicensed = filteredVehicles.find(v => !Boolean((v as any)?.license_plate?.trim?.() || (v as any)?.license_plate));
+
+    if (!state.selectedLicensedVehicleId && firstLicensed) {
+      dispatch({ type: 'setLicensedVehicleId', payload: firstLicensed.id });
     }
-  }, [initialVehicleId, state.selectedVehicleId, vehicles]);
+    if (!state.selectedUnlicensedVehicleId && firstUnlicensed) {
+      dispatch({ type: 'setUnlicensedVehicleId', payload: firstUnlicensed.id });
+    }
+  }, [initialVehicleId, filteredVehicles, state.selectedLicensedVehicleId, state.selectedUnlicensedVehicleId]);
 
   const actions = useMemo<CheckoutActions>(
     () => ({
       setActiveStep: (payload) => dispatch({ type: 'setActiveStep', payload }),
       selectTerm: (payload) => dispatch({ type: 'selectTerm', payload }),
       selectPaymentMode: (payload) => dispatch({ type: 'setPaymentMode', payload }),
-      setVehicleId: (payload) => dispatch({ type: 'setVehicleId', payload }),
+      setLicensedVehicleId: (payload) => dispatch({ type: 'setLicensedVehicleId', payload }),
+      setUnlicensedVehicleId: (payload) => dispatch({ type: 'setUnlicensedVehicleId', payload }),
       setCardComplete: (payload) => dispatch({ type: 'setCardComplete', payload }),
       setCardError: (payload) => dispatch({ type: 'setCardError', payload }),
       setProcessing: (payload) => dispatch({ type: 'setProcessing', payload }),

@@ -39,6 +39,13 @@ TEST_SUBJECTS = {
     "th": "{project_name} - อีเมลทดสอบ",
 }
 
+PASSWORD_RESET_CODE_SUBJECTS = {
+    "en": "{project_name} - Password reset code for {email}",
+    "vi": "{project_name} - Mã xác minh đặt lại mật khẩu cho {email}",
+    "ja": "{project_name} - ăƒ¦ăƒ¼ă‚¶ăƒ¼ {email} のパスワード再設定コード",
+    "th": "{project_name} - รหัสยืนยันตั้งรหัสผ่านใหม่สำหรับ {email}",
+}
+
 
 def normalize_lang(lang: str | None) -> str:
     if not lang:
@@ -247,6 +254,39 @@ def generate_subscription_plan_updated_email(
             "user_name": user_name,
             "old_plan_type": old_plan_type,
             "new_plan_type": new_plan_type,
+        },
+    )
+
+    return EmailData(html_content=html_content, subject=subject)
+
+
+def generate_password_reset_code_email(
+    *,
+    email_to: str,
+    user_name: str,
+    user_code: str,
+    code: str,
+    ttl_seconds: int,
+    lang: str | None = None,
+) -> EmailData:
+    project_name = settings.APP_NAME
+    selected_lang = normalize_lang(lang)
+
+    subject_template = PASSWORD_RESET_CODE_SUBJECTS.get(selected_lang, PASSWORD_RESET_CODE_SUBJECTS["en"])
+    subject = subject_template.format(project_name=project_name, email=email_to)
+
+    ttl_minutes = max(1, int(ttl_seconds // 60))
+
+    html_content = render_email_template(
+        template_name="password_reset_code.html",
+        lang=selected_lang,
+        context={
+            "project_name": project_name,
+            "email": email_to,
+            "user_name": user_name,
+            "user_code": user_code,
+            "code": code,
+            "ttl_minutes": ttl_minutes,
         },
     )
 

@@ -34,7 +34,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
       setUser(me);
 
       const roles = (me.roles || []).map(r => r?.trim().toUpperCase());
-      if (!roles.includes('ADMIN')) {
+      if (!roles.includes('ADMIN') && !roles.includes('SECURITY')) {
         setStatus(AUTH_STATUS.FORBIDDEN);
       } else {
         setStatus(AUTH_STATUS.AUTHENTICATED);

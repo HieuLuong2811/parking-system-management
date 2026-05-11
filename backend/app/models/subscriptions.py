@@ -15,7 +15,6 @@ class UserSubscriptionBase(SQLModel):
     user_code: str = Field(foreign_key="users.user_code", max_length=50)
     sub_plan_id: uuid.UUID = Field(foreign_key="subscription_plans.id")
     term_id: uuid.UUID = Field(foreign_key="academic_terms.id")
-    vehicle_id: uuid.UUID = Field(foreign_key="vehicles.id")
     payment_plan_id: uuid.UUID = Field(foreign_key="payment_plans.id")
     total_amount: int = Field(sa_column=SAColumn(Integer, nullable=False))
     paid_amount: int = Field(default=0, sa_column=SAColumn(Integer, nullable=False))
@@ -32,7 +31,10 @@ class UserSubscription(UserSubscriptionBase, TimestampMixin, table=True):
 
 
 class UserSubscriptionCreate(UserSubscriptionBase):
-    pass
+    # Backward compatible single-vehicle field (not persisted on `user_subscriptions` table).
+    vehicle_id: uuid.UUID | None = None
+    # New API path: attach multiple vehicles to a subscription.
+    vehicle_ids: list[uuid.UUID] | None = None
 
 
 class UserSubscriptionRead(UserSubscriptionBase):
@@ -42,7 +44,10 @@ class UserSubscriptionRead(UserSubscriptionBase):
 
 
 class UserSubscriptionUpdate(SQLModel):
+    # Backward compatible: allow switching licensed vehicle on an ACTIVE subscription.
+    # This field is not persisted on `user_subscriptions` table; it is applied to `user_subscription_vehicles` mappings.
     vehicle_id: Optional[uuid.UUID] = None
+    vehicle_ids: list[uuid.UUID] | None = None
     sub_plan_id: Optional[uuid.UUID] = None
     payment_plan_id: Optional[uuid.UUID] = None
     status: Optional[SubscriptionStatus] = None
@@ -53,27 +58,23 @@ class UserSubscriptionUpdate(SQLModel):
 
 
 class VehicleSummary(SQLModel):
-    id: uuid.UUID
-    license_plate: Optional[str]
+    id: Optional[uuid.UUID] = None
     vehicle_type: VehicleType
+    license_plate: Optional[str] = None
+    # Mobile client expects `qr_code`; backend stores it as `barcode_payload` on Vehicle.
+    qr_code: Optional[str] = None
 
 
 class SubscriptionPlanSummary(SQLModel):
-    id: uuid.UUID
     plans_type: SubscriptionPlanType
-    price_per_day: int
 
 
 class PaymentPlanSummary(SQLModel):
-    id: uuid.UUID
     payment_type: PaymentType
 
 
 class AcademicTermSummary(SQLModel):
-    id: uuid.UUID
     term_name: str
-    start_date: date
-    end_date: date
 
 
 class UserSummary(SQLModel):
@@ -82,19 +83,43 @@ class UserSummary(SQLModel):
     email: str
     phone_number: Optional[str] = None
 
-
 class UserSubscriptionDetail(SQLModel):
+    subscription_plan: Optional[SubscriptionPlanSummary] = None
+    payment_plan: Optional[PaymentPlanSummary] = None
+    term: Optional[AcademicTermSummary] = None
+    vehicle: Optional[VehicleSummary] = None
+    covered_vehicles: list[VehicleSummary] | None = None
+
+class UserSubscriptionClientView(SQLModel):
     id: uuid.UUID
-    user_code: str
-    user: Optional[UserSummary] = None
     status: SubscriptionStatus
     start_date: date
     end_date: date
     total_amount: int
     paid_amount: int
     created_at: datetime
-    updated_at: datetime
-    subscription_plan: Optional[SubscriptionPlanSummary]
-    payment_plan: Optional[PaymentPlanSummary]
-    term: Optional[AcademicTermSummary]
-    vehicle: Optional[VehicleSummary]
+    # Backward compatible fields used by `client-web`
+    vehicle: Optional[VehicleSummary] = None
+    plan: Optional[SubscriptionPlanType] = None
+    payment: Optional[PaymentPlanSummary] = None
+    term: Optional[AcademicTermSummary] = None
+    covered_vehicles: list[VehicleSummary] | None = None
+
+class UserSubscriptionAdminView(SQLModel): 
+    id: uuid.UUID 
+    user_code: str 
+    user: Optional[UserSummary] = None 
+    status: SubscriptionStatus 
+    start_date: date 
+    end_date: date 
+    total_amount: int 
+    paid_amount: int 
+    created_at: datetime 
+    updated_at: datetime 
+    # Backward compatible fields used by `dashboard` + `client-mobile`
+    subscription_plan: Optional[SubscriptionPlanSummary] = None
+    payment_plan: Optional[PaymentPlanSummary] = None
+    term: Optional[AcademicTermSummary] = None
+    vehicle: Optional[VehicleSummary] = None
+    covered_vehicles: list[VehicleSummary] | None = None
+    

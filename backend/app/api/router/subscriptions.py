@@ -8,7 +8,8 @@ from app.enums.parking import PaymentType, SubscriptionPlanType, SubscriptionSta
 from app.models.responses import DeleteResponse
 from app.models.subscriptions import (
     UserSubscriptionCreate,
-    UserSubscriptionDetail,
+    UserSubscriptionClientView,
+    UserSubscriptionAdminView,
     UserSubscriptionRead,
     UserSubscriptionUpdate,
 )
@@ -21,33 +22,13 @@ router = APIRouter(prefix="/subscriptions", tags=["user_subscriptions"])
 async def create_subscription(payload: UserSubscriptionCreate, db: AsyncSession = Depends(get_db)):
     return await SubscriptionController.create_subscription_ctrl(payload, db)
 
-
-@router.get("/", response_model=list[UserSubscriptionRead])
-async def list_subscriptions(
-    db: AsyncSession = Depends(get_db),
-    current_user: AuthUser = Depends(required_roles("USER", "ADMIN")),
-):
-    if is_admin_user(current_user):
-        return await SubscriptionController.get_all_subscriptions_ctrl(db)
-    return await SubscriptionController.get_subscriptions_by_user_ctrl(current_user.user_code, db)
-
-
-@router.get("/me", response_model=list[UserSubscriptionDetail])
-async def get_current_user_subscriptions(
-    current_user: AuthUser = Depends(required_roles("USER")),
-    db: AsyncSession = Depends(get_db),
-):
-    return await SubscriptionController.get_user_subscriptions_by_user_ctrl(
-        current_user.user_code, db
-    )
-
-@router.get("/me/paginated", response_model=PaginatedResponse[UserSubscriptionDetail])
+@router.get("/me/paginated", response_model=PaginatedResponse[UserSubscriptionClientView])
 async def get_current_user_subscriptions_paginated(
     current_user: AuthUser = Depends(required_roles("USER")),
     db: AsyncSession = Depends(get_db),
     status: SubscriptionStatus | None = Query(None, description="Filter by subscription status"),
     page: int = Query(1, ge=1, description="Page number (1-based)"),
-    limit: int = Query(20, ge=1, le=100, description="Number of items per page"),
+    limit: int = Query(5, ge=1, le=100, description="Number of items per page"),
 ):
     return await SubscriptionController.get_user_subscriptions_by_user_paginated_ctrl(
         current_user.user_code,
@@ -57,16 +38,19 @@ async def get_current_user_subscriptions_paginated(
         limit=limit,
     )
 
-
-@router.get("/details", response_model=list[UserSubscriptionDetail])
-async def get_subscription_details(
-    current_user: AuthUser = Depends(required_roles("ADMIN")),
+@router.get("/me", response_model=list[UserSubscriptionAdminView])
+async def get_current_user_subscriptions(
+    current_user: AuthUser = Depends(required_roles("USER")),
     db: AsyncSession = Depends(get_db),
+    status: SubscriptionStatus | None = Query(None, description="Filter by subscription status"),
 ):
-    return await SubscriptionController.get_all_subscription_details_ctrl(db)
+    return await SubscriptionController.get_user_subscriptions_by_user_ctrl(
+        current_user.user_code,
+        db,
+        status=status,
+    )
 
-
-@router.get("/details/paginated", response_model=PaginatedResponse[UserSubscriptionDetail])
+@router.get("/details/paginated", response_model=PaginatedResponse[UserSubscriptionAdminView])
 async def get_subscription_details_paginated(
     current_user: AuthUser = Depends(required_roles("ADMIN")),
     db: AsyncSession = Depends(get_db),
@@ -77,7 +61,7 @@ async def get_subscription_details_paginated(
     payment_type: PaymentType | None = Query(None, description="Filter by payment plan"),
     status: SubscriptionStatus | None = Query(None, description="Filter by subscription status"),
     page: int = Query(1, ge=1, description="Page number (1-based)"),
-    limit: int = Query(20, ge=1, le=100, description="Number of items per page"),
+    limit: int = Query(5, ge=1, le=100, description="Number of items per page"),
 ):
     return await SubscriptionController.get_all_subscription_details_paginated_ctrl(
         db,
@@ -90,12 +74,6 @@ async def get_subscription_details_paginated(
         page=page,
         limit=limit,
     )
-
-
-@router.get("/{subscription_id}", response_model=UserSubscriptionRead)
-async def get_subscription(subscription_id: str, db: AsyncSession = Depends(get_db)):
-    return await SubscriptionController.get_subscription_ctrl(subscription_id, db)
-
 
 @router.patch("/{subscription_id}", response_model=UserSubscriptionRead)
 async def update_subscription(

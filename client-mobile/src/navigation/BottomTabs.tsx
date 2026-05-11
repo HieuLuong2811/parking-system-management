@@ -3,14 +3,16 @@ import { createBottomTabNavigator } from '@react-navigation/bottom-tabs';
 import { Ionicons } from '@expo/vector-icons';
 
 import HomeScreen from '../screens/HomeScreen';
-import VehiclesScreen from '../screens/VehiclesScreen';
-import CheckInOutScreen from '../screens/CheckInOutScreen';
+import ParkingSessionsScreen from '../screens/ParkingSessionsScreen';
+import PlansScreen from '../screens/PlansScreen';
+import InvoicesScreen from '../screens/InvoicesScreen';
 import ProfileScreen from '../screens/ProfileScreen';
 
 export type RootTabParamList = {
   Home: undefined;
-  Vehicles: undefined;
-  CheckInOut: undefined;
+  Plan: undefined;
+  Sessions: undefined;
+  Invoices: undefined;
   Profile: undefined;
 };
 
@@ -37,18 +39,22 @@ export default function BottomTabs() {
             return <Ionicons name={focused ? 'home' : 'home-outline'} size={size} color={color} />;
           }
 
-          if (route.name === 'Vehicles') {
+          if (route.name === 'Plan') {
             return (
               <Ionicons
-                name={focused ? 'car-sport' : 'car-sport-outline'}
+                name={focused ? 'pricetag' : 'pricetag-outline'}
                 size={size}
                 color={color}
               />
             );
           }
 
-          if (route.name === 'CheckInOut') {
-            return <Ionicons name={focused ? 'scan' : 'scan-outline'} size={size} color={color} />;
+          if (route.name === 'Sessions') {
+            return <Ionicons name={focused ? 'time' : 'time-outline'} size={size} color={color} />;
+          }
+
+          if (route.name === 'Invoices') {
+            return <Ionicons name={focused ? 'receipt' : 'receipt-outline'} size={size} color={color} />;
           }
 
           return <Ionicons name={focused ? 'person' : 'person-outline'} size={size} color={color} />;
@@ -56,8 +62,9 @@ export default function BottomTabs() {
       })}
     >
       <Tab.Screen name="Home" component={HomeScreen} options={{ title: 'Home' }} />
-      <Tab.Screen name="Vehicles" component={VehiclesScreen} options={{ title: 'Vehicles' }} />
-      <Tab.Screen name="CheckInOut" component={CheckInOutScreen} options={{ title: 'Check in/out' }} />
+      <Tab.Screen name="Plan" component={PlansScreen} options={{ title: 'Plan' }} />
+      <Tab.Screen name="Sessions" component={ParkingSessionsScreen} options={{ title: 'Sessions' }} />
+      <Tab.Screen name="Invoices" component={InvoicesScreen} options={{ title: 'Invoices' }} />
       <Tab.Screen name="Profile" component={ProfileScreen} options={{ title: 'Profile' }} />
     </Tab.Navigator>
   );

@@ -23,6 +23,7 @@ export const FormInput: React.FC<FormInputProps> = ({
   label,
   name,
   required = false,
+  type = 'text',
   value,
   onChange,
   error,
@@ -77,7 +78,7 @@ export const FormInput: React.FC<FormInputProps> = ({
           <input
             id={name}
             name={name}
-            type={'text'}
+            type={type}
             value={value}
             onChange={onChange}
             disabled={disabled}

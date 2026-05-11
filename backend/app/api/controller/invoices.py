@@ -21,17 +21,12 @@ class InvoiceController:
         return await invoiceService.get_all_invoices(db)
 
     @staticmethod
-    async def get_invoices_by_user_ctrl(user_code: str, db: AsyncSession) -> list[InvoiceRead]:
-        invoices = await invoiceService.get_invoices_by_user_code(user_code, db)
-        return [invoice for invoice in invoices]
-
-    @staticmethod
     async def get_invoices_by_user_paginated_ctrl(
         user_code: str,
         db: AsyncSession,
         *,
         page: int = 1,
-        limit: int = 20,
+        limit: int = 5,
         from_time: datetime | None = None,
         to_time: datetime | None = None,
     ) -> PaginatedResponse[InvoiceRead]:

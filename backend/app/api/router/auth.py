@@ -9,6 +9,10 @@ from app.models.auth import (
     AuthUser,
     ChangePasswordRequest,
     ExchangeCodeRequest,
+    ForgotPasswordRequest,
+    ForgotPasswordRequestResponse,
+    ForgotPasswordResetRequest,
+    ForgotPasswordVerifyRequest,
     LoginRequest,
     TokenResponse,
 )
@@ -53,3 +57,27 @@ async def change_password(
     db: AsyncSession = Depends(get_db),
 ):
     return await AuthController.change_password_ctrl(current_user, payload, db)
+
+
+@router.post("/auth/forgot-password/request", response_model=ForgotPasswordRequestResponse)
+async def forgot_password_request(
+    payload: ForgotPasswordRequest,
+    db: AsyncSession = Depends(get_db),
+):
+    return await AuthController.forgot_password_request_ctrl(payload, db)
+
+
+@router.post("/auth/forgot-password/verify")
+async def forgot_password_verify(
+    payload: ForgotPasswordVerifyRequest,
+    db: AsyncSession = Depends(get_db),
+):
+    return await AuthController.forgot_password_verify_ctrl(payload, db)
+
+
+@router.post("/auth/forgot-password/reset")
+async def forgot_password_reset(
+    payload: ForgotPasswordResetRequest,
+    db: AsyncSession = Depends(get_db),
+):
+    return await AuthController.forgot_password_reset_ctrl(payload, db)

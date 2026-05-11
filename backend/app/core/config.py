@@ -45,11 +45,6 @@ class Settings(BaseSettings):
     JWT_SECRET: str
     AUTH_CODE_EXPIRE_SECONDS: int = 60
 
-    # Stripe
-    STRIPE_SECRET_KEY: str | None = None
-    STRIPE_WEBHOOK_SECRET: str | None = None
-    STRIPE_API_URL: str = "https://api.stripe.com"
-
     # Superuser
     FIRST_SUPERUSER: EmailStr
     FIRST_SUPERUSER_PASSWORD: str
@@ -114,7 +109,7 @@ class Settings(BaseSettings):
     # Note: MoMo calls ipnUrl from their servers, so this must be publicly reachable
     # (use ngrok / public domain if you run locally).
     # This project runs the FastAPI app with root_path=/api/v1, so routes are served under /api/v1.
-    MOMO_IPN_URL: str = "http://localhost:8000/api/v1/payment/momo/ipn"
+    MOMO_IPN_URL: str = "https://hjzhlhh8-8000.asse.devtunnels.ms/api/v1/payment/momo/ipn"
 
     CAMERA_RTSP_URL: str | None = None
     QR_CAMERA_SOURCE: str | None = None

@@ -5,7 +5,6 @@ import {
   ScrollView,
   StyleSheet,
   Text,
-  TextInput,
   TouchableOpacity,
   View,
 } from 'react-native';
@@ -20,9 +19,14 @@ import { useAuth } from '../auth/AuthContext';
 
 type Props = NativeStackScreenProps<AuthStackParamList, 'Login'>;
 
+const PRIMARY_COLOR = '#43B14B';
+const PRIMARY_DARK = '#248A31';
+const ACCENT_COLOR = '#F6C343';
+
 export default function LoginScreen({ navigation }: Props) {
   const { t, i18n } = useTranslation();
   const { signIn } = useAuth();
+
   const [userCode, setUserCode] = useState('');
   const [password, setPassword] = useState('');
   const [userCodeError, setUserCodeError] = useState('');
@@ -30,7 +34,7 @@ export default function LoginScreen({ navigation }: Props) {
   const [submitError, setSubmitError] = useState('');
   const [submitting, setSubmitting] = useState(false);
   const [languageOpen, setLanguageOpen] = useState(false);
-  
+
   const currentLanguage = useMemo(
     () => languageOptions.find((item) => item.code === i18n.language) ?? languageOptions[0],
     [i18n.language]
@@ -64,15 +68,19 @@ export default function LoginScreen({ navigation }: Props) {
     }
 
     setSubmitting(true);
+
     try {
       await signIn({ user_code: userCode.trim(), password });
     } catch (err: any) {
       const rawMessage =
-        err?.response?.data?.detail || err?.response?.data?.message || err?.message || 'Login failed';
+        err?.response?.data?.detail ||
+        err?.response?.data?.message ||
+        err?.message ||
+        'Login failed';
 
       if (String(rawMessage).toLowerCase().includes('network')) {
         setSubmitError(
-          'Network error: không gọi được API. Nếu chạy trên điện thoại/Android emulator, đừng dùng localhost; hãy dùng IP máy (vd 192.168.x.x) hoặc 10.0.2.2 (Android emulator).'
+          'Network error: không gọi được API. Nếu chạy trên điện thoại/Android emulator, đừng dùng localhost; hãy dùng IP máy hoặc 10.0.2.2.'
         );
         return;
       }
@@ -85,9 +93,11 @@ export default function LoginScreen({ navigation }: Props) {
 
   const handleUserCodeChange = (value: string) => {
     setUserCode(value);
+
     if (userCodeError) {
       setUserCodeError('');
     }
+
     if (submitError) {
       setSubmitError('');
     }
@@ -95,58 +105,87 @@ export default function LoginScreen({ navigation }: Props) {
 
   const handlePasswordChange = (value: string) => {
     setPassword(value);
+
     if (passwordError) {
       setPasswordError('');
     }
+
     if (submitError) {
       setSubmitError('');
     }
   };
 
   return (
-    <SafeAreaView style={styles.container} edges={['top', 'left', 'right']}>
-      <ScrollView contentContainerStyle={styles.content} keyboardShouldPersistTaps="handled">
-        <View style={styles.card}>
-          <Image source={require('../../assets/Logo.png')} style={styles.logo} resizeMode="contain" />
+    <SafeAreaView style={styles.container} edges={['top', 'bottom', 'left', 'right']}>
+      <View style={styles.backgroundTop} />
+      <View style={styles.circleLarge} />
+      <View style={styles.circleSmall} />
 
-          <Text style={styles.title}>{t('auth.loginTitle')}</Text>
-          <Text style={styles.subtitle}>{t('auth.loginSubtitle')}</Text>
+      <View style={styles.languageArea}>
+        <Pressable
+          style={styles.languageTrigger}
+          onPress={() => setLanguageOpen((prev) => !prev)}
+        >
+          <Image source={{ uri: currentLanguage.flag }} style={styles.flag} />
+          <Text style={styles.languageTriggerText}>
+            {currentLanguage.code.toUpperCase()}
+          </Text>
+          <Text style={styles.dropdownArrow}>⌄</Text>
+        </Pressable>
 
-          <View style={styles.formGroup}>
-            <Text style={styles.label}>{t('auth.language')}</Text>
+        {languageOpen && (
+          <View style={styles.languageDropdown}>
+            {languageOptions.map((item) => {
+              const selected = item.code === currentLanguage.code;
 
-            <View style={styles.languageWrapper}>
-              <Pressable style={styles.languageTrigger} onPress={() => setLanguageOpen((prev) => !prev)}>
-                <View style={styles.languageTriggerLeft}>
-                  <Image source={{ uri: currentLanguage.flag }} style={styles.flag} />
-                  <Text style={styles.languageTriggerText}>{currentLanguage.name}</Text>
-                </View>
-                <Text style={styles.dropdownArrow}>{languageOpen ? '▲' : '▼'}</Text>
-              </Pressable>
+              return (
+                <TouchableOpacity
+                  key={item.code}
+                  style={[
+                    styles.languageItem,
+                    selected && styles.languageItemActive,
+                  ]}
+                  onPress={() => handleChangeLanguage(item.code)}
+                  activeOpacity={0.8}
+                >
+                  <Image source={{ uri: item.flag }} style={styles.flag} />
+                  <Text
+                    style={[
+                      styles.languageItemText,
+                      selected && styles.languageItemTextActive,
+                    ]}
+                  >
+                    {item.name}
+                  </Text>
 
-              {languageOpen && (
-                <View style={styles.languageDropdown}>
-                  {languageOptions.map((item) => {
-                    const selected = item.code === currentLanguage.code;
-
-                    return (
-                      <TouchableOpacity
-                        key={item.code}
-                        style={[styles.languageItem, selected && styles.languageItemActive]}
-                        onPress={() => handleChangeLanguage(item.code)}
-                        activeOpacity={0.8}
-                      >
-                        <Image source={{ uri: item.flag }} style={styles.flag} />
-                        <Text style={[styles.languageItemText, selected && styles.languageItemTextActive]}>
-                          {item.name}
-                        </Text>
-                      </TouchableOpacity>
-                    );
-                  })}
-                </View>
-              )}
-            </View>
+                  {selected && <Text style={styles.checkIcon}>✓</Text>}
+                </TouchableOpacity>
+              );
+            })}
           </View>
+        )}
+      </View>
+
+      <ScrollView
+        contentContainerStyle={styles.content}
+        keyboardShouldPersistTaps="handled"
+        showsVerticalScrollIndicator={false}
+      >
+        <View style={styles.header}>
+          <View style={styles.logoBox}>
+            <Image
+              source={require('../../assets/Logo.png')}
+              style={styles.logo}
+              resizeMode="contain"
+            />
+          </View>
+
+          <Text style={styles.appName}>UTEHY STUDENT PARKING</Text>
+          <Text style={styles.subtitle}>{t('auth.loginSubtitle')}</Text>
+        </View>
+
+        <View style={styles.formCard}>
+          <Text style={styles.title}>{t('auth.loginTitle')}</Text>
 
           <View style={styles.formGroup}>
             <FormInput
@@ -177,15 +216,18 @@ export default function LoginScreen({ navigation }: Props) {
           <TouchableOpacity
             style={[styles.loginButton, submitting && styles.loginButtonDisabled]}
             onPress={handleLogin}
-            activeOpacity={0.85}
+            activeOpacity={0.88}
             disabled={submitting}
           >
             <Text style={styles.loginButtonText}>
-              {submitting ? t('auth.loginButton') + '...' : t('auth.loginButton')}
+              {submitting ? `${t('auth.loginButton')}...` : t('auth.loginButton')}
             </Text>
           </TouchableOpacity>
 
-          <TouchableOpacity onPress={() => navigation.navigate('ForgotPassword')} activeOpacity={0.8}>
+          <TouchableOpacity
+            onPress={() => navigation.navigate('ForgotPassword')}
+            activeOpacity={0.8}
+          >
             <Text style={styles.forgotPassword}>{t('auth.forgotPassword')}</Text>
           </TouchableOpacity>
         </View>
@@ -197,159 +239,236 @@ export default function LoginScreen({ navigation }: Props) {
 const styles = StyleSheet.create({
   container: {
     flex: 1,
-    backgroundColor: '#f5f7fb',
+    backgroundColor: 'rgb(227 227 227)',
   },
-  content: {
-    flexGrow: 1,
-    padding: 20,
-    justifyContent: 'center',
+
+  backgroundTop: {
+    position: 'absolute',
+    top: 0,
+    left: 0,
+    right: 0,
+    height: 450,
+    backgroundColor: PRIMARY_COLOR,
+    borderBottomLeftRadius: 20,
+    borderBottomRightRadius: 20,
   },
-  
-  languageWrapper: {
-    position: 'relative',
-    zIndex: 20,
+
+  circleLarge: {
+    position: 'absolute',
+    width: 220,
+    height: 220,
+    borderRadius: 110,
+    backgroundColor: 'rgba(255,255,255,0.12)',
+    top: -70,
+    right: -70,
+  },
+
+  circleSmall: {
+    position: 'absolute',
+    width: 120,
+    height: 120,
+    borderRadius: 60,
+    backgroundColor: 'rgba(246,195,67,0.28)',
+    top: 150,
+    left: -36,
+  },
+
+  languageArea: {
+    position: 'absolute',
+    top: 14,
+    right: 18,
+    zIndex: 100,
   },
 
   languageTrigger: {
-    backgroundColor: '#ffffff',
-    borderRadius: 5,
-    borderWidth: 1,
-    borderColor: '#dbe2ea',
-    paddingHorizontal: 14,
-    paddingVertical: 12,
+    height: 38,
+    paddingHorizontal: 12,
+    borderRadius: 999,
+    backgroundColor: 'rgba(255,255,255,0.95)',
     flexDirection: 'row',
     alignItems: 'center',
-    justifyContent: 'space-between',
-  },
-
-  languageTriggerLeft: {
-    flexDirection: 'row',
-    alignItems: 'center',
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 8 },
+    shadowOpacity: 0.12,
+    shadowRadius: 16,
+    elevation: 8,
   },
 
   languageTriggerText: {
-    fontSize: 14,
-    fontWeight: '600',
-    color: '#0f172a',
-    marginLeft: 10,
+    marginLeft: 7,
+    fontSize: 13,
+    fontWeight: '800',
+    color: '#0F172A',
   },
 
   dropdownArrow: {
-    fontSize: 12,
-    color: '#475569',
+    marginLeft: 6,
+    fontSize: 13,
+    color: '#334155',
   },
 
   languageDropdown: {
     position: 'absolute',
-    top: 54,
-    left: 0,
+    top: 48,
     right: 0,
-    backgroundColor: '#ffffff',
-    borderRadius: 14,
-    borderWidth: 1,
-    borderColor: '#dbe2ea',
+    width: 190,
+    backgroundColor: '#FFFFFF',
+    borderRadius: 18,
     overflow: 'hidden',
-    zIndex: 99,
+    borderWidth: 1,
+    borderColor: '#E2E8F0',
     shadowColor: '#000',
-    shadowOffset: { width: 0, height: 8 },
-    shadowOpacity: 0.08,
-    shadowRadius: 16,
-    elevation: 6,
+    shadowOffset: { width: 0, height: 10 },
+    shadowOpacity: 0.14,
+    shadowRadius: 22,
+    elevation: 10,
   },
 
   languageItem: {
+    minHeight: 48,
+    paddingHorizontal: 14,
     flexDirection: 'row',
     alignItems: 'center',
-    paddingHorizontal: 14,
-    paddingVertical: 12,
   },
 
   languageItemActive: {
-    backgroundColor: '#eff6ff',
+    backgroundColor: '#EAF7EC',
   },
 
   languageItemText: {
-    fontSize: 14,
-    color: '#0f172a',
+    flex: 1,
     marginLeft: 10,
+    fontSize: 14,
+    color: '#0F172A',
   },
 
   languageItemTextActive: {
-    fontWeight: '700',
-    color: '#1d4ed8',
-  },
-  card: {
-    backgroundColor: '#ffffff',
-    borderRadius: 24,
-    padding: 24,
-    borderWidth: 1,
-    borderColor: '#e2e8f0',
-  },
-  logo: {
-    width: 72,
-    height: 72,
-    alignSelf: 'center',
-    marginBottom: 16,
-  },
-  title: {
-    fontSize: 28,
     fontWeight: '800',
-    color: '#111827',
-    textAlign: 'center',
+    color: PRIMARY_DARK,
   },
-  subtitle: {
-    marginTop: 8,
+
+  checkIcon: {
     fontSize: 15,
-    lineHeight: 22,
-    color: '#64748b',
-    textAlign: 'center',
-    marginBottom: 24,
+    fontWeight: '900',
+    color: PRIMARY_COLOR,
   },
-  formGroup: {
-    marginBottom: 16,
-  },
-  label: {
-    fontSize: 14,
-    fontWeight: '700',
-    color: '#334155',
-    marginBottom: 8,
-  },
-  error: {
-    color: 'red',
-    fontSize: 12,
-  },
-  submitError: {
-    color: '#dc2626',
-    fontSize: 13,
-    fontWeight: '600',
-    marginBottom: 12,
-  },
-  forgotPassword: {
-    fontSize: 14,
-    fontWeight: '600',
-    color: '#2563eb',
-    textAlign: 'right',
-    marginBottom: 20,
-  },
-  loginButton: {
-    height: 50,
-    borderRadius: 5,
-    backgroundColor: '#f59e0b',
-    alignItems: 'center',
-    justifyContent: 'center',
-    marginBottom: 20,
-  },
-  loginButtonDisabled: {
-    opacity: 0.7,
-  },
-  loginButtonText: {
-    fontSize: 16,
-    fontWeight: '800',
-    color: '#ffffff',
-  },
+
   flag: {
     width: 22,
     height: 16,
-    borderRadius: 2,
+    borderRadius: 3,
+  },
+
+  content: {
+    flexGrow: 1,
+    paddingHorizontal: 22,
+    paddingTop: 76,
+    paddingBottom: 28,
+  },
+
+  header: {
+    alignItems: 'center',
+    marginBottom: 28,
+  },
+
+  logoBox: {
+    width: 132,
+    height: 132,
+    borderRadius: 34,
+    backgroundColor: '#FFFFFF',
+    alignItems: 'center',
+    justifyContent: 'center',
+    marginBottom: 18,
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 12 },
+    shadowOpacity: 0.16,
+    shadowRadius: 22,
+    elevation: 10,
+  },
+
+  logo: {
+    width: 112,
+    height: 112,
+  },
+
+  appName: {
+    fontSize: 22,
+    fontWeight: '900',
+    color: '#FFFFFF',
+    textAlign: 'center',
+    letterSpacing: 0.4,
+  },
+
+  subtitle: {
+    marginTop: 8,
+    fontSize: 14,
+    lineHeight: 21,
+    color: 'rgba(255,255,255,0.9)',
+    textAlign: 'center',
+  },
+
+  formCard: {
+    backgroundColor: '#FFFFFF',
+    borderRadius: 28,
+    paddingHorizontal: 22,
+    paddingTop: 26,
+    paddingBottom: 22,
+    shadowColor: '#14532D',
+    shadowOffset: { width: 0, height: 16 },
+    shadowOpacity: 0.12,
+    shadowRadius: 26,
+    elevation: 10,
+  },
+
+  title: {
+    fontSize: 27,
+    fontWeight: '900',
+    color: '#0F172A',
+    textAlign: 'center',
+    marginBottom: 24,
+  },
+
+  formGroup: {
+    marginBottom: 16,
+  },
+
+  submitError: {
+    color: '#DC2626',
+    fontSize: 13,
+    fontWeight: '600',
+    marginBottom: 12,
+    lineHeight: 19,
+  },
+
+  loginButton: {
+    height: 52,
+    borderRadius: 14,
+    backgroundColor: PRIMARY_COLOR,
+    alignItems: 'center',
+    justifyContent: 'center',
+    marginTop: 4,
+    marginBottom: 16,
+    shadowColor: PRIMARY_DARK,
+    shadowOffset: { width: 0, height: 8 },
+    shadowOpacity: 0.22,
+    shadowRadius: 14,
+    elevation: 6,
+  },
+
+  loginButtonDisabled: {
+    opacity: 0.7,
+  },
+
+  loginButtonText: {
+    fontSize: 16,
+    fontWeight: '900',
+    color: '#FFFFFF',
+  },
+
+  forgotPassword: {
+    fontSize: 14,
+    fontWeight: '700',
+    color: PRIMARY_DARK,
+    textAlign: 'right',
   },
 });

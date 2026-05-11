@@ -16,6 +16,7 @@ import {
 } from '../api/terms';
 import type { AcademicTermRecord } from '../api/types';
 import { formatDateTime } from '../ultis/format';
+import { PageHeader } from '../components/common/PageHeader';
 
 type ToastSeverity = 'success' | 'error';
 
@@ -166,12 +167,10 @@ export const TermsPage: React.FC = () => {
   return (
     <>
       <Box sx={{ display: 'flex', flexDirection: 'column', gap: 2 }}>
-        <Stack spacing={0.5}>
-          <Typography variant="h5">{t('termsPage.title', 'Academic Terms')}</Typography>
-          <Typography variant="body2" color="text.secondary">
-            {t('termsPage.description', 'Define academic terms and their application periods.')}
-          </Typography>
-        </Stack>
+        <PageHeader
+          title={t('termsPage.title', 'Academic Terms')}
+          subtitle={t('termsPage.description', 'Define academic terms and their application periods.')}
+        />
 
         <Stack direction="row" justifyContent="space-between" alignItems="center" flexWrap="wrap" gap={2}>
           <Box display="flex" alignItems="center" gap={1}>

@@ -42,18 +42,3 @@ async def create_momo_payment_for_invoice(
         db,
         current_user,
     )
-
-
-@router.post("/confirm")
-async def momo_confirm(
-    payload: dict,
-    background_tasks: BackgroundTasks,
-    db: AsyncSession = Depends(get_db),
-    current_user: AuthUser = Depends(required_roles("USER", "ADMIN")),
-):
-    return await MomoPaymentController.momo_confirm_with_background_ctrl(
-        payload,
-        db,
-        current_user,
-        background_tasks,
-    )

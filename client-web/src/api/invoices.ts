@@ -9,18 +9,6 @@ import {
   PaginatedResponse,
 } from './clientApi';
 
-const fetchInvoices = async (): Promise<InvoiceInfo[]> => {
-  return requestWithContext(clientHttp.get<InvoiceInfo[]>('/invoices/me'), 'Load invoices');
-};
-
-export const useInvoices = () => {
-  return useQuery({
-    queryKey: ['invoices'],
-    queryFn: fetchInvoices,
-    staleTime: 1000 * 60,
-  });
-};
-
 export type InvoicesMeQuery = {
   page: number;
   limit: number;
@@ -53,7 +41,6 @@ export interface InvoiceCreatePayload {
   payment_method: PaymentMethod;
   status: InvoiceStatus;
   metadata?: Record<string, unknown>;
-  stripe_invoice_id?: string | null;
 }
 
 const createInvoice = async (payload: InvoiceCreatePayload): Promise<InvoiceInfo> => {

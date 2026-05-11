@@ -1,4 +1,4 @@
-import {
+﻿import {
   Box,
   Button,
   Chip,
@@ -9,7 +9,6 @@ import {
   FormControl,
   FormControlLabel,
   FormLabel,
-  Pagination,
   Paper,
   Radio,
   RadioGroup,
@@ -19,93 +18,83 @@ import {
   TableCell,
   TableContainer,
   TableHead,
+  TablePagination,
   TableRow,
   TextField,
   Typography,
-} from '@mui/material';
-import React, { useEffect, useMemo, useState } from 'react';
-import { useTranslation } from 'react-i18next';
-import SectionCard from '../components/shared/SectionCard';
-import { exportMyParkingSessionsXlsx, useParkingSessions } from '../api/parking_sessions';
-import useDebouncedValue from '../hooks/useDebouncedValue';
-
-const formatDateValue = (value?: string | null) =>
-  value ? new Date(value).toLocaleString('vi-VN', { hour12: false }) : null;
-
-const currencyFormat = (amount?: number | null) =>
-  amount ? new Intl.NumberFormat('vi-VN', { style: 'currency', currency: 'VND' }).format(amount) : '-';
-
-const statusColor = (status?: string | null) => {
-  switch (status) {
-    case 'ACTIVE':
-      return 'info';
-    case 'DONE':
-      return 'success';
-    default:
-      return 'default';
-  }
-};
+} from "@mui/material";
+import { useEffect, useMemo, useState } from "react";
+import { useTranslation } from "react-i18next";
+import SectionCard from "../components/shared/SectionCard";
+import {
+  exportMyParkingSessionsXlsx,
+  useParkingSessions,
+} from "../api/parking_sessions";
+import theme from "../theme";
+import {
+  formatCurrency,
+  formatDateTime,
+  formatLocalDateTimeInput,
+  toEndOfDay,
+  toStartOfDay,
+} from "../ultis/formatters";
+import { statusColor } from "../ultis/status";
+import { LAST_7_DAYS } from "../constant/config";
+import FilterListIcon from "@mui/icons-material/FilterList";
+import useDebouncedValue from "../hooks/useDebouncedValue";
+import LocalParkingIcon from '@mui/icons-material/LocalParking';
+import AccessTimeIcon from "@mui/icons-material/AccessTime";
+import FileDownloadIcon from "@mui/icons-material/FileDownload";
 
 export default function SessionPage() {
   const { t } = useTranslation();
-  const [fromDate, setFromDate] = useState('');
-  const [toDate, setToDate] = useState('');
-  const [query, setQuery] = useState('');
-  const debouncedQuery = useDebouncedValue(query, 420);
-  const [page, setPage] = useState(1);
-  const pageSize = 5;
-  const { data: paginated, isLoading, isError } = useParkingSessions({
-    page,
-    limit: pageSize,
-    query: debouncedQuery.trim() || undefined,
-    from_time: fromDate || undefined,
-    to_time: toDate || undefined,
+  const [fromDate, setFromDate] = useState("");
+  const [toDate, setToDate] = useState("");
+  const debouncedFromDate = useDebouncedValue(fromDate, 500);
+  const debouncedToDate = useDebouncedValue(toDate, 500);
+  const [page, setPage] = useState(0);
+  const [rowsPerPage, setRowsPerPage] = useState(5);
+  const {
+    data: paginated,
+    isLoading,
+    isError,
+  } = useParkingSessions({
+    page: page + 1,
+    limit: rowsPerPage,
+    from_time: toStartOfDay(debouncedFromDate) || undefined,
+    to_time: toEndOfDay(debouncedToDate) || undefined,
   });
   const sessions = useMemo(() => paginated?.data ?? [], [paginated]);
-  const totalPages = paginated?.total_pages ?? 0;
+  const total = paginated?.total ?? 0;
 
   useEffect(() => {
-    setPage(1);
-  }, [fromDate, toDate, debouncedQuery]);
+    setPage(0);
+  }, [debouncedFromDate, debouncedToDate]);
 
   const filterFields = [
-    { key: 'from', type: 'datetime-local', value: fromDate, setter: setFromDate },
-    { key: 'to', type: 'datetime-local', value: toDate, setter: setToDate },
-    {
-      key: 'search',
-      type: 'text',
-      value: query,
-      setter: setQuery,
-      flex: 1,
-      placeholder: t('sessions.filters.searchPlaceholder'),
-    },
+    { key: "from", type: "date", value: fromDate, setter: setFromDate },
+    { key: "to", type: "date", value: toDate, setter: setToDate },
   ];
 
   const clearFilters = () => {
-    setFromDate('');
-    setToDate('');
-    setQuery('');
-    setPage(1);
+    setFromDate("");
+    setToDate("");
+    setPage(0);
   };
 
   const [exportOpen, setExportOpen] = useState(false);
-  const [exportRange, setExportRange] = useState<'today' | 'last7' | 'custom'>('today');
-  const [exportFrom, setExportFrom] = useState('');
-  const [exportTo, setExportTo] = useState('');
+  const [exportRange, setExportRange] = useState<"today" | "last7" | "custom">(
+    "today",
+  );
+  const [exportFrom, setExportFrom] = useState("");
+  const [exportTo, setExportTo] = useState("");
   const [exportBusy, setExportBusy] = useState(false);
   const [exportError, setExportError] = useState<string | null>(null);
-
-  const formatLocalDateTime = (date: Date) => {
-    const pad = (value: number) => String(value).padStart(2, '0');
-    return `${date.getFullYear()}-${pad(date.getMonth() + 1)}-${pad(date.getDate())}T${pad(date.getHours())}:${pad(
-      date.getMinutes()
-    )}`;
-  };
 
   const openExportDialog = () => {
     setExportError(null);
     setExportBusy(false);
-    setExportRange('today');
+    setExportRange("today");
     setExportFrom(fromDate);
     setExportTo(toDate);
     setExportOpen(true);
@@ -124,30 +113,32 @@ export default function SessionPage() {
       let resolvedFrom = exportFrom;
       let resolvedTo = exportTo;
 
-      if (exportRange === 'today') {
+      if (exportRange === "today") {
         const start = new Date(now);
         start.setHours(0, 0, 0, 0);
-        resolvedFrom = formatLocalDateTime(start);
-        resolvedTo = formatLocalDateTime(now);
-      } else if (exportRange === 'last7') {
-        const start = new Date(now.getTime() - 7 * 24 * 60 * 60 * 1000);
-        resolvedFrom = formatLocalDateTime(start);
-        resolvedTo = formatLocalDateTime(now);
-      } else if (exportRange === 'custom') {
+        resolvedFrom = formatLocalDateTimeInput(start);
+        resolvedTo = formatLocalDateTimeInput(now);
+      } else if (exportRange === "last7") {
+        const start = new Date(now.getTime() - LAST_7_DAYS);
+        resolvedFrom = formatLocalDateTimeInput(start);
+        resolvedTo = formatLocalDateTimeInput(now);
+      } else if (exportRange === "custom") {
         if (!resolvedFrom || !resolvedTo) {
-          setExportError(t('common.error'));
+          setExportError(t("common.error"));
           return;
         }
+
+        resolvedFrom = toStartOfDay(resolvedFrom) ?? "";
+        resolvedTo = toEndOfDay(resolvedTo) ?? "";
       }
 
       const { blob, filename } = await exportMyParkingSessionsXlsx({
-        query: debouncedQuery.trim() || undefined,
-        from_time: resolvedFrom || undefined,
-        to_time: resolvedTo || undefined,
+        from_time: resolvedFrom,
+        to_time: resolvedTo,
       });
 
       const url = window.URL.createObjectURL(blob);
-      const link = document.createElement('a');
+      const link = document.createElement("a");
       link.href = url;
       link.download = filename;
       document.body.appendChild(link);
@@ -157,120 +148,279 @@ export default function SessionPage() {
 
       setExportOpen(false);
     } catch (error) {
-      setExportError(error instanceof Error ? error.message : t('common.error'));
+      setExportError(
+        error instanceof Error ? error.message : t("common.error"),
+      );
     } finally {
       setExportBusy(false);
     }
   };
 
-  const tableColumns = ['checkIn', 'checkOut', 'status', 'amount'];
+  const tableColumns = ["checkIn", "checkOut", "status", "amount"];
 
   const pagedSessions = useMemo(() => sessions, [sessions]);
 
   return (
     <SectionCard>
-      <Typography variant="h5" gutterBottom>
-        {t('sessions.sectionTitle')}
-      </Typography>
-
-      <Stack direction={{ xs: 'column', sm: 'row' }} spacing={2} mb={3} gap={1}>
-        {filterFields.map(({ key, type, value, setter, flex, placeholder }) => (
-          <TextField
-            key={key}
-            label={t(`sessions.filters.${key}`)}
-            type={type}
-            value={value}
-            onChange={(event) => setter(event.target.value)}
-            InputLabelProps={{ shrink: true }}
-            sx={flex ? { flex } : undefined}
-            placeholder={placeholder}
-            disabled={isLoading || isError}
-          />
-        ))}
-        <Button
-          variant="outlined"
-          color="primary"
-          onClick={clearFilters}
-          disabled={!fromDate && !toDate && !query}
-          sx={{ height: 40, alignSelf: 'flex-start' }}
+      <Box sx={{ mb: 3 }}>
+        <Typography
+          variant="h5"
+          sx={{
+            fontWeight: 700,
+            color: "text.primary",
+            mb: 0.5,
+          }}
         >
-          {t('sessions.filters.clear')}
-        </Button>
-        <Button
-          variant="contained"
-          color="primary"
-          onClick={openExportDialog}
-          sx={{ height: 40, alignSelf: 'flex-start' }}
-        >
-          {t('sessions.actions.exportExcel', { defaultValue: 'Export Excel' })}
-        </Button>
-      </Stack>
+          {t("sessions.sectionTitle")}
+        </Typography>
 
-      {pagedSessions.length === 0 ? (
-        <Typography color="text.secondary">{t('sessions.empty')}</Typography>
-      ) : (
-        <>
-          <TableContainer component={Paper} elevation={0}>
-            {isLoading ? (
-              <SectionCard>
-                <Typography>{t('sessions.loading')}</Typography>
-              </SectionCard>
-            ) : isError ? (
-              <SectionCard>
-                <Typography color="error">{t('sessions.error')}</Typography>
-              </SectionCard>
-            ) : (
-              <Table>
-                <TableHead>
-                      <TableRow>
-                        {tableColumns.map((column) => (
-                          <TableCell key={column}>{t(`sessions.table.${column}`)}</TableCell>
-                        ))}
-                      </TableRow>
-                </TableHead>
-                <TableBody>
-                  {pagedSessions.length === 0 && (
-                    <TableRow>
-                      <TableCell colSpan={6} align="center">
-                        <Typography color="text.secondary">{t('sessions.empty')}</Typography>
-                      </TableCell>
-                    </TableRow>
-                  )}
-                  {pagedSessions.map((session) => (
-                      <TableRow key={session.id}>
-                        <TableCell>{formatDateValue(session.check_in_time) ?? t('sessions.notProvided')}</TableCell>
-                        <TableCell>{formatDateValue(session.check_out_time) ?? t('sessions.notProvided')}</TableCell>
-                        <TableCell>
-                          <Chip
-                            label={session.status ?? t('sessions.statusUnknown')}
-                            color={statusColor(session.status)}
-                            size="small"
-                            sx={{ textTransform: 'capitalize' }}
-                          />
-                        </TableCell>
-                        <TableCell>{currencyFormat(session.total_amount)}</TableCell>
-                      </TableRow>
-                  ))}
-                </TableBody>
-              </Table>
-            )}
-          </TableContainer>
-          {totalPages > 1 && (
-            <Box display="flex" justifyContent="center" mt={2}>
-              <Pagination
-                count={totalPages}
-                page={page}
-                color="primary"
-                onChange={(_, value) => setPage(value)}
-                sx={{ '& .MuiPaginationItem-root': { minWidth: 32 } }}
-              />
+        <Typography variant="body2" fontSize='medium' color="text.secondary">
+          {t("sessions.subtitle", {
+            defaultValue:
+              "Theo dõi lịch sử gửi xe, thời điểm vào/ra và trạng thái phiên gửi xe của bạn.",
+          })}
+        </Typography>
+      </Box>
+      <Box
+        sx={{
+          mb: 3,
+          p: 2,
+          borderRadius: 3,
+          bgcolor: "#F8FAFC",
+          border: "1px solid #E5E7EB",
+        }}
+      >
+        <Stack
+          direction={{ xs: "column", sm: "row" }}
+          alignItems="center"
+          spacing={2}
+          display="flex"
+          justifyContent="space-between"
+          gap={1}
+        >
+          <Stack
+            direction={{ xs: "column", sm: "row" }}
+            gap={2}
+            alignItems={{ xs: "stretch", md: "center" }}
+          >
+
+            <Box
+              sx={{
+                display: "flex",
+                gap: 1,
+                alignItems: "center",
+                minWidth: 130,
+              }}
+            >
+              <FilterListIcon color="primary" fontSize="small" />
+              <Typography variant="body2" fontWeight={600}>
+                {t("common.filters.search")}
+              </Typography>
             </Box>
-          )}
-        </>
-      )}
+            {filterFields.map(({ key, type, value, setter }) => (
+              <TextField
+                key={key}
+                label={t(`sessions.filters.${key}`)}
+                type={type}
+                value={value}
+                onChange={(event) => setter(event.target.value)}
+                InputLabelProps={{ shrink: true }}
+                disabled={isLoading || isError}
+                size="small"
+                sx={{
+                  minWidth: { xs: "100%", sm: 180 },
+                  bgcolor: "#FFFFFF",
+                  "& .MuiOutlinedInput-root": {
+                    borderRadius: 2,
+                  },
+                }}
+              />
+            ))}
+            <Button
+              onClick={clearFilters}
+              disabled={!fromDate && !toDate}
+              variant="outlined"
+              sx={{
+                borderRadius: 2,
+                textTransform: "none",
+                px: 2.5,
+                bgcolor: "#FFFFFF",
+              }}
+            >
+              {t("common.filters.reset")}
+            </Button>
+          </Stack>
+          <Button
+            variant="contained"
+            color="primary"
+            onClick={openExportDialog}
+            startIcon={<FileDownloadIcon />}
+            sx={{
+              borderRadius: 2,
+              textTransform: "none",
+              px: 2.5,
+              fontWeight: 600,
+              boxShadow: "0 4px 10px rgba(25, 118, 210, 0.25)",
+            }}
+          >
+            {t("sessions.actions.exportExcel", {
+              defaultValue: "Export Excel",
+            })}
+          </Button>
+        </Stack>
+      </Box>
 
-      <Dialog open={exportOpen} onClose={closeExportDialog} fullWidth maxWidth="sm">
-        <DialogTitle>{t('sessions.actions.exportTitle', { defaultValue: 'Export check in/out history' })}</DialogTitle>
+      <TableContainer
+        component={Paper}
+        elevation={0}
+        sx={{
+          borderRadius: 3,
+          border: "1px solid #E5E7EB",
+          overflow: "hidden",
+          bgcolor: "#FFFFFF",
+        }}
+      >
+        {isLoading ? (
+          <SectionCard>
+            <Typography>{t("sessions.loading")}</Typography>
+          </SectionCard>
+        ) : isError ? (
+          <SectionCard>
+            <Typography color="error">{t("sessions.error")}</Typography>
+          </SectionCard>
+        ) : (
+          <Table>
+            <TableHead>
+              <TableRow
+                sx={{
+                  bgcolor: "#F8FAFC",
+                  "& th": {
+                    fontWeight: 700,
+                    color: "#334155",
+                    fontSize: 14,
+                    py: 1.75,
+                    borderBottom: "1px solid #E5E7EB",
+                  },
+                }}
+              >
+                {tableColumns.map((column) => (
+                  <TableCell key={column}>
+                    {t(`sessions.table.${column}`)}
+                  </TableCell>
+                ))}
+              </TableRow>
+            </TableHead>
+            <TableBody>
+              {pagedSessions.length === 0 && (
+                <TableRow>
+                  <TableCell colSpan={tableColumns.length} align="center">
+                    <Box sx={{ py: 6 }}>
+                      <LocalParkingIcon
+                        sx={{ fontSize: 48, color: "#CBD5E1", mb: 1 }}
+                      />
+                      <Typography fontWeight={700} color="text.primary">
+                        {t("sessions.empty")}
+                      </Typography>
+                    </Box>
+                  </TableCell>
+                </TableRow>
+              )}
+              {pagedSessions.map((session) => (
+                <TableRow
+                  key={session.id}
+                  sx={{
+                    transition: "0.2s",
+                    "&:hover": {
+                      bgcolor: "#F9FAFB",
+                    },
+                    "& td": {
+                      py: 1.8,
+                      fontSize: 14,
+                      borderBottom: "1px solid #EEF2F7",
+                    },
+                  }}
+                >
+                  <TableCell>
+                    <Stack direction="row" spacing={1} alignItems="center">
+                      <AccessTimeIcon fontSize="small" color="action" />
+                      <Typography fontWeight={500}>
+                        {formatDateTime(session.check_in_time) ??
+                          t("sessions.notProvided")}
+                      </Typography>
+                    </Stack>
+                  </TableCell>
+
+                  <TableCell>
+                    {session.check_out_time ? (
+                      <Stack direction="row" spacing={1} alignItems="center">
+                        <AccessTimeIcon fontSize="small" color="action" />
+                        <Typography fontWeight={500}>
+                          {formatDateTime(session.check_out_time)}
+                        </Typography>
+                      </Stack>
+                    ) : (
+                      <Typography color="text.secondary" fontStyle="italic">
+                        {t("common.none", { defaultValue: "Chưa có" })}
+                      </Typography>
+                    )}
+                  </TableCell>
+                  <TableCell>
+                    <Chip
+                      label={session.status ?? t("sessions.statusUnknown")}
+                      color={statusColor(session.status)}
+                      size="small"
+                      sx={{ textTransform: "capitalize" }}
+                    />
+                  </TableCell>
+                  <TableCell>
+                    <Typography
+                      fontWeight={700}
+                      color={
+                        session.total_amount ? "text.primary" : "text.secondary"
+                      }
+                    >
+                      {session.total_amount
+                        ? formatCurrency(session.total_amount)
+                        : "-"}
+                    </Typography>
+                  </TableCell>
+                </TableRow>
+              ))}
+            </TableBody>
+          </Table>
+        )}
+      </TableContainer>
+      <TablePagination
+        component="div"
+        count={total}
+        page={page}
+        onPageChange={(_event, newPage) => setPage(newPage)}
+        rowsPerPage={rowsPerPage}
+        onRowsPerPageChange={(event) => {
+          setRowsPerPage(parseInt(event.target.value, 10));
+          setPage(0);
+        }}
+        rowsPerPageOptions={[5, 10, 20, 50, 100]}
+        sx={{
+          "& .MuiTablePagination-toolbar": { justifyContent: "flex-end" },
+          "& .MuiTablePagination-selectLabel, & .MuiTablePagination-displayedRows":
+            {
+              color: theme.palette.text.secondary,
+            },
+        }}
+      />
+
+      <Dialog
+        open={exportOpen}
+        onClose={closeExportDialog}
+        fullWidth
+        maxWidth="sm"
+      >
+        <DialogTitle>
+          {t("sessions.actions.exportTitle", {
+            defaultValue: "Export check in/out history",
+          })}
+        </DialogTitle>
         <DialogContent>
           {exportError ? (
             <Typography color="error" sx={{ mb: 1 }}>
@@ -279,34 +429,48 @@ export default function SessionPage() {
           ) : null}
 
           <FormControl component="fieldset" sx={{ mt: 1 }}>
-            <FormLabel>{t('sessions.actions.rangeLabel', { defaultValue: 'Time range' })}</FormLabel>
+            <FormLabel>
+              {t("sessions.actions.rangeLabel", { defaultValue: "Time range" })}
+            </FormLabel>
             <RadioGroup
               value={exportRange}
-              onChange={(event) => setExportRange(event.target.value as 'today' | 'last7' | 'custom')}
+              onChange={(event) =>
+                setExportRange(
+                  event.target.value as "today" | "last7" | "custom",
+                )
+              }
             >
               <FormControlLabel
                 value="today"
                 control={<Radio />}
-                label={t('sessions.actions.today', { defaultValue: 'Today' })}
+                label={t("sessions.actions.today", { defaultValue: "Today" })}
               />
               <FormControlLabel
                 value="last7"
                 control={<Radio />}
-                label={t('sessions.actions.last7Days', { defaultValue: 'Last 7 days' })}
+                label={t("sessions.actions.last7Days", {
+                  defaultValue: "Last 7 days",
+                })}
               />
               <FormControlLabel
                 value="custom"
                 control={<Radio />}
-                label={t('sessions.actions.customRange', { defaultValue: 'Custom range' })}
+                label={t("sessions.actions.customRange", {
+                  defaultValue: "Custom range",
+                })}
               />
             </RadioGroup>
           </FormControl>
 
-          {exportRange === 'custom' ? (
-            <Stack direction={{ xs: 'column', sm: 'row' }} spacing={2} sx={{ mt: 1 }}>
+          {exportRange === "custom" ? (
+            <Stack
+              direction={{ xs: "column", sm: "row" }}
+              spacing={2}
+              sx={{ mt: 1 }}
+            >
               <TextField
-                label={t('sessions.filters.from')}
-                type="datetime-local"
+                label={t("sessions.filters.from")}
+                type="date"
                 value={exportFrom}
                 onChange={(event) => setExportFrom(event.target.value)}
                 InputLabelProps={{ shrink: true }}
@@ -314,8 +478,8 @@ export default function SessionPage() {
                 sx={{ flex: 1 }}
               />
               <TextField
-                label={t('sessions.filters.to')}
-                type="datetime-local"
+                label={t("sessions.filters.to")}
+                type="date"
                 value={exportTo}
                 onChange={(event) => setExportTo(event.target.value)}
                 InputLabelProps={{ shrink: true }}
@@ -327,14 +491,18 @@ export default function SessionPage() {
         </DialogContent>
         <DialogActions>
           <Button onClick={closeExportDialog} disabled={exportBusy}>
-            {t('common.cancel', { defaultValue: 'Cancel' })}
+            {t("common.cancel", { defaultValue: "Cancel" })}
           </Button>
-          <Button onClick={handleExport} variant="contained" disabled={exportBusy}>
-            {t('sessions.actions.export', { defaultValue: 'Export' })}
+          <Button
+            onClick={handleExport}
+            variant="contained"
+            disabled={exportBusy}
+          >
+            {t("sessions.actions.export", { defaultValue: "Export" })}
           </Button>
         </DialogActions>
       </Dialog>
-
     </SectionCard>
   );
 }
+

@@ -11,8 +11,15 @@ export type AdminUser = {
 
 export type SubscriptionPlanRecord = {
   id: string;
-  plans_type: 'UNLICENSED_VEHICLE' | 'LICENSED_VEHICLE';
+  plans_type: 'BASIC' | 'STARTUP' | 'ENTERPRISE';
   price_per_day: number;
+  allow_monthly_payment?: boolean | null;
+  allow_full_payment?: boolean | null;
+  max_licensed_vehicle?: number | null;
+  max_unlicensed_vehicle?: number | null;
+  after_18_fee?: number | null;
+  waive_after_18_fee?: boolean | null;
+  status?: string | null;
   deleted_at?: string | null;
   created_at: string;
   updated_at: string;
@@ -87,6 +94,9 @@ export type UserSubscriptionDetailRecord = {
   payment_plan?: PaymentPlanRecord | null;
   term?: AcademicTermRecord | null;
   vehicle?: VehicleRecord | null;
+  detail?: {
+    covered_vehicles?: VehicleRecord[] | null;
+  } | null;
 };
 
 export type InvoiceAdminRecord = {

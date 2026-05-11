@@ -11,7 +11,8 @@ export const payment_plan = {
 
 export const invoices_status = {
   PAID: 'PAID',
-  PENDING: 'PENDING'
+  PENDING: 'PENDING',
+  FAILED: 'FAILED'
 }
 
 export const vehicles_tab = {
@@ -25,9 +26,28 @@ export const vehicleTypeOptions = {
   BICYCLE: 'BICYCLE',
 };
 
+export const userSubscriptionTypes = {
+  ACTIVE: "ACTIVE",
+  PAYMENT_DUE: "PAYMENT_DUE",
+  OVERDUE: "OVERDUE",
+  SUSPENDED: "SUSPENDED",
+  CANCELED: "CANCELED",
+  INACTIVE: "INACTIVE",
+}
+
+export const subscriptionPlanTypes = {
+  BASIC: "BASIC",
+  STARTUP: "STARTUP",
+  ENTERPRISE: "ENTERPRISE",
+}
+
 export const PLAN_TYPES = {
-  LICENSED_VEHICLE: 'LICENSED_VEHICLE',
-  UNLICENSED_VEHICLE: 'UNLICENSED_VEHICLE',
+  BASIC: 'BASIC',
+  STARTUP: 'STARTUP',
+  ENTERPRISE: 'ENTERPRISE',
 } as const;
 
+
 export type PlanType = typeof PLAN_TYPES[keyof typeof PLAN_TYPES];
+
+export const LAST_7_DAYS = 7 * 24 * 60 * 60 * 1000; 

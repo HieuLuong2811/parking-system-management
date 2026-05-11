@@ -60,3 +60,25 @@ class UserImportEntry(BaseModel):
 
 class UserBulkImportRequest(BaseModel):
     entries: List[UserImportEntry]
+
+
+class ForgotPasswordRequest(BaseModel):
+    user_code: str
+    email: EmailStr
+
+
+class ForgotPasswordRequestResponse(BaseModel):
+    expires_at: datetime
+    ttl_seconds: int
+    throttle_seconds: int
+
+
+class ForgotPasswordVerifyRequest(BaseModel):
+    user_code: str
+    code: str
+
+
+class ForgotPasswordResetRequest(BaseModel):
+    user_code: str
+    code: str
+    new_password: str

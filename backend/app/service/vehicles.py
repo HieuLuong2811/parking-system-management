@@ -67,9 +67,12 @@ class vehicleService:
         *,
         user_code: str | None = None,
         search: str | None = None,
+        license_plate: str | None = None,
+        vehicle_type: str | None = None,
+        barcode_token: str | None = None,
         is_deleted: bool | None = None,
         page: int = 1,
-        limit: int = 20,
+        limit: int = 5,
     ) -> PaginatedResponse[Vehicle]:
         statement = select(Vehicle).order_by(Vehicle.created_at.desc())
 
@@ -92,8 +95,20 @@ class vehicleService:
                         func.lower(func.coalesce(Vehicle.license_plate, "")).ilike(like),
                         func.lower(func.cast(Vehicle.id, String)).ilike(like),
                         func.lower(func.cast(Vehicle.vehicle_type, String)).ilike(like),
+                        func.lower(func.coalesce(Vehicle.barcode_token, "")).ilike(like),
                     )
                 )
+
+        if license_plate and license_plate.strip():
+            like = f"%{license_plate.strip().lower()}%"
+            statement = statement.where(func.lower(func.coalesce(Vehicle.license_plate, "")).ilike(like))
+
+        if vehicle_type and vehicle_type.strip():
+            statement = statement.where(func.cast(Vehicle.vehicle_type, String) == vehicle_type.strip())
+
+        if barcode_token and barcode_token.strip():
+            like = f"%{barcode_token.strip().lower()}%"
+            statement = statement.where(func.lower(func.coalesce(Vehicle.barcode_token, "")).ilike(like))
 
         items, total, total_pages = await paginate_scalars(db, statement, page=page, limit=limit)
         return {
@@ -119,7 +134,7 @@ class vehicleService:
         db: AsyncSession,
         *,
         page: int = 1,
-        limit: int = 20,
+        limit: int = 5,
         user_code_filter: str | None = None,
         license_plate: str | None = None,
         has_plate: bool | None = None,

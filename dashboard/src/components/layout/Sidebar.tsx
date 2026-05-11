@@ -1,33 +1,33 @@
-import React from 'react';
+import React, { useEffect } from 'react';
 import {
   Box,
   Divider,
   Drawer,
   List,
-  ListItem,
-  ListItemButton,
-  ListItemIcon,
-  ListItemText,
   Toolbar,
   Typography,
   useMediaQuery,
   useTheme,
-  Tooltip,
 } from '@mui/material';
-import { Link as RouterLink, useLocation } from 'react-router-dom';
+import { useLocation } from 'react-router-dom';
 import { useTranslation } from 'react-i18next';
+import { useAuth } from '../../contexts/useAuth';
 
 import { COLLAPSED_SIDEBAR_WIDTH, EXPANDED_SIDEBAR_WIDTH } from '../../constant/config';
 import {
   logoutItem,
   overviewItems,
-  subscriptionItems,
+  billingGroup,
+  userManagementGroup,
   systemItems,
+  footerItems,
   type SidebarItemConfig,
+  type SidebarGroupConfig,
 } from './menu';
-import { ActiveIndicator } from '../ActiveIndicator';
 import FirstPageIcon from '@mui/icons-material/FirstPage';
 import LastPageIcon from '@mui/icons-material/LastPage';
+import { buildItems } from '../../ultis/format';
+import { SidebarGroup, SidebarItem } from './sidebarItem';
 
 interface SidebarProps {
   mobileOpen: boolean;
@@ -36,113 +36,12 @@ interface SidebarProps {
   onCollapseToggle: () => void; 
 }
 
-interface SidebarItemProps {
-  text: string;
-  icon: React.ReactNode;
-  path: string;
-  onClick: () => void;
-  collapsed: boolean;
-  active: boolean;
-  isDanger?: boolean;
-}
-
-const SidebarItem = ({
-  text,
-  icon,
-  path,
-  onClick,
-  collapsed,
-  active,
-  isDanger = false,
-}: SidebarItemProps) => {
-  const [hover, setHover] = React.useState(false);
-
-  return (
-    <ListItem disablePadding sx={{ mb: 0.5 }}>
-      <Tooltip title={collapsed ? text : ''} placement="right">
-        <ListItemButton
-          component={path !== '#' ? RouterLink : 'button'}
-          to={path !== '#' ? path : undefined}
-          onClick={onClick}
-          onMouseEnter={() => isDanger && setHover(true)}
-          onMouseLeave={() => isDanger && setHover(false)}
-          sx={{
-            position: 'relative',
-            px: collapsed ? 1.5 : 2,
-            py: 1,
-            justifyContent: collapsed ? 'center' : 'flex-start',
-            borderRadius: 2,
-
-            color: isDanger
-              ? '#dc2626'
-              : active
-              ? '#1e1b4b'
-              : '#475569',
-
-            backgroundColor: active
-              ? 'rgba(107,79,208,0.08)'
-              : isDanger && hover
-              ? 'rgba(220,38,38,0.08)'
-              : 'transparent',
-
-            '&:hover': {
-              backgroundColor: isDanger
-                ? 'rgba(220,38,38,0.08)'
-                : active
-                ? 'rgba(107,79,208,0.12)'
-                : 'rgba(15,23,42,0.04)',
-            },
-          }}
-        >
-          <ActiveIndicator
-            active={active || (isDanger && hover)}
-            color={isDanger ? '#dc2626' : '#6b4fd0'}
-          />
-
-          <ListItemIcon
-            sx={{
-              minWidth: 0,
-              mr: collapsed ? 0 : 2,
-              justifyContent: 'center',
-              color: isDanger
-                ? '#dc2626'
-                : active
-                ? '#6b4fd0'
-                : '#64748b',
-            }}
-          >
-            {icon}
-          </ListItemIcon>
-
-          {!collapsed && (
-            <ListItemText
-              primary={text}
-              primaryTypographyProps={{
-                noWrap: true,
-                fontSize: 14,
-                fontWeight: active ? 600 : 500,
-              }}
-            />
-          )}
-        </ListItemButton>
-      </Tooltip>
-    </ListItem>
-  );
-};
-
-const buildItems = (items: SidebarItemConfig[], t: (key: string) => string) =>
-  items.map((item) => ({
-    id: item.id,
-    text: t(item.translationKey),
-    icon: item.icon,
-    path: item.path,
-  }));
-
 export const Sidebar: React.FC<SidebarProps> = ({ mobileOpen, onClose, collapsed, onCollapseToggle }) => {
   const theme = useTheme();
   const isDesktop = useMediaQuery(theme.breakpoints.up('md'));
   const { t } = useTranslation();
   const location = useLocation();
+  const { user } = useAuth();
   const drawerWidth = collapsed ? COLLAPSED_SIDEBAR_WIDTH : EXPANDED_SIDEBAR_WIDTH;
 
   const isPathActive = (target: string) => {
@@ -150,26 +49,30 @@ export const Sidebar: React.FC<SidebarProps> = ({ mobileOpen, onClose, collapsed
     return location.pathname === target || location.pathname.startsWith(`${target}/`);
   };
 
+  const isGroupActive = (group: SidebarGroupConfig) =>
+    group.children.some((child) => isPathActive(child.path));
+
+  const [openGroups, setOpenGroups] = React.useState<Record<string, boolean>>(() => ({
+    [billingGroup.id]: isGroupActive(billingGroup),
+    [userManagementGroup.id]: isGroupActive(userManagementGroup),
+  }));
+
+  useEffect(() => {
+    setOpenGroups((prev) => {
+      const next = { ...prev };
+      if (isGroupActive(billingGroup)) next[billingGroup.id] = true;
+      if (isGroupActive(userManagementGroup)) next[userManagementGroup.id] = true;
+      return next;
+    });
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [location.pathname]);
+
   const logout = () => {
     window.location.href = '/logout';
   };
 
-  const renderSection = (titleKey: string, items: SidebarItemConfig[]) => (
-    <List sx={{ px: collapsed ? 0 : 1 }}>
-      {!collapsed && (
-        <ListItem sx={{ px: 2, py: 0.5 }}>
-          <ListItemText
-            primary={t(titleKey)}
-            primaryTypographyProps={{
-              fontSize: 12,
-              color: '#94a3b8',
-              fontWeight: 600,
-              textTransform: 'uppercase',
-            }}
-          />
-        </ListItem>
-      )}
-
+  const renderSection = (items: SidebarItemConfig[]) => (
+    <>
       {buildItems(items, t).map((item) => (
         <SidebarItem
           key={item.id}
@@ -181,11 +84,48 @@ export const Sidebar: React.FC<SidebarProps> = ({ mobileOpen, onClose, collapsed
           active={isPathActive(item.path)}
         />
       ))}
-    </List>
+    </>
   );
 
+
+  const renderGroup = (group: SidebarGroupConfig) => (
+    <SidebarGroup
+      key={group.id}
+      group={group}
+      collapsed={collapsed}
+      open={!!openGroups[group.id]}
+      onToggle={() =>
+        setOpenGroups((prev) => ({
+          ...prev,
+          [group.id]: !prev[group.id],
+        }))
+      }
+      onClose={onClose}
+      isPathActive={isPathActive}
+      isGroupActive={isGroupActive}
+      t={t}
+    />
+  );
+  
+  const roles = (user?.roles || []).map((r) => String(r || '').trim().toUpperCase());
+  const isSecurityOnly = roles.includes('SECURITY') && !roles.includes('ADMIN');
+
+  const visibleOverviewItems = isSecurityOnly
+    ? overviewItems.filter((item) => item.id === 'parking_sessions')
+    : overviewItems;
+
+  const visibleBillingGroup = isSecurityOnly
+    ? null
+    : billingGroup;
+
+  const visibleUserManagementGroup = isSecurityOnly
+    ? null
+    : userManagementGroup;
+
+  const visibleSystemItems = isSecurityOnly ? [] : systemItems;
+
   const drawerContent = (
-    <Box sx={{ width: drawerWidth, minHeight: '100%', display: 'flex', flexDirection: 'column' }}>
+    <Box sx={{ width: drawerWidth, minHeight: '100%', display: 'flex', flexDirection: 'column', borderRight: '1px solid', borderColor: '#e2e8f0' }}>
       
       <Toolbar sx={{ justifyContent: collapsed ? 'center' : 'flex-start', gap: 1 }}>
         <img src="/Logo.png" alt="Logo" width={36} height={36} />
@@ -209,12 +149,18 @@ export const Sidebar: React.FC<SidebarProps> = ({ mobileOpen, onClose, collapsed
         />
       </List>
 
-      {renderSection('sideBar.subMenu.General', overviewItems)}
-      {renderSection('sideBar.subMenu.Subscriptions', subscriptionItems)}
-      {renderSection('sideBar.subMenu.System', systemItems)}
+      <List disablePadding sx={{ px: collapsed ? 0 : 1, py: 0 }}>
+        {renderSection(visibleOverviewItems)}
+        {visibleBillingGroup ? renderGroup(visibleBillingGroup) : null}
+        {visibleUserManagementGroup ? renderGroup(visibleUserManagementGroup) : null}
+        {renderSection(visibleSystemItems)}
+      </List>
 
 
       <List sx={{ mt: 'auto', px: collapsed ? 0 : 1 }}>
+        <Divider sx={{ mb: 1 }} />
+        {renderSection(footerItems)}
+        <Divider sx={{ my: 1 }} />
         <SidebarItem
           text={t(logoutItem.translationKey)}
           icon={logoutItem.icon}

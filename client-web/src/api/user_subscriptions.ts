@@ -4,7 +4,7 @@ import {
   clientHttp,
   PaginatedResponse,
   requestWithContext,
-  UserSubscriptionDetail,
+  UserSubscriptionClientView,
   UserSubscriptionInfo,
   UserSubscriptionPayload,
 } from './clientApi';
@@ -28,22 +28,6 @@ export const useCreateUserSubscription = () => {
   });
 };
 
-const fetchUserSubscriptions = async (): Promise<UserSubscriptionDetail[]> => {
-  return requestWithContext(
-    clientHttp.get<UserSubscriptionDetail[]>('/subscriptions/me'),
-    'Load user subscriptions'
-  );
-};
-
-export const useUserSubscriptions = () => {
-  return useQuery({
-    queryKey: ['userSubscriptions'],
-    queryFn: fetchUserSubscriptions,
-    staleTime: 1000 * 60 * 2,
-    refetchOnWindowFocus: false,
-  });
-};
-
 export type UserSubscriptionsMeQuery = {
   page: number;
   limit: number;
@@ -52,9 +36,9 @@ export type UserSubscriptionsMeQuery = {
 
 const fetchUserSubscriptionsPaginated = async (
   params: UserSubscriptionsMeQuery
-): Promise<PaginatedResponse<UserSubscriptionDetail>> => {
+): Promise<PaginatedResponse<UserSubscriptionClientView>> => {
   return requestWithContext(
-    clientHttp.get<PaginatedResponse<UserSubscriptionDetail>>('/subscriptions/me/paginated', { params }),
+    clientHttp.get<PaginatedResponse<UserSubscriptionClientView>>('/subscriptions/me/paginated', { params }),
     'Load user subscriptions'
   );
 };
@@ -73,6 +57,7 @@ type UpdateSubscriptionArgs = {
   subscriptionId: string;
   payload: {
     vehicle_id?: string;
+    vehicle_ids?: string[];
   };
 };
 

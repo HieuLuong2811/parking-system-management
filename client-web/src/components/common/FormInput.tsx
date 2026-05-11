@@ -11,6 +11,8 @@ export type FormInputProps = {
   value: string;
   onChange: (value: string) => void;
   error?: string;
+  invalid?: boolean;
+  showErrorText?: boolean;
   disabled?: boolean;
   readOnly?: boolean;
   placeholder?: string;
@@ -21,6 +23,9 @@ export type FormInputProps = {
   inputClassName?: string;
   requiredMarkerClassName?: string;
   requiredFirst?: string;
+  onFocus?: () => void;
+  onBlur?: () => void;
+  inputRef?: React.Ref<HTMLInputElement>;
 };
 
 export const FormInput: React.FC<FormInputProps> = ({
@@ -31,6 +36,8 @@ export const FormInput: React.FC<FormInputProps> = ({
   value,
   onChange,
   error,
+  invalid,
+  showErrorText = true,
   disabled = false,
   readOnly = false,
   placeholder,
@@ -41,9 +48,13 @@ export const FormInput: React.FC<FormInputProps> = ({
   inputClassName = 'plain-input',
   requiredMarkerClassName,
   requiredFirst,
+  onFocus,
+  onBlur,
+  inputRef,
 }) => {
   const [showPassword, setShowPassword] = useState(false);
   const isPassword = type === 'password';
+  const isInvalid = Boolean(error) || Boolean(invalid);
 
   const resolvedType = useMemo(() => {
     if (!isPassword) return type;
@@ -72,10 +83,13 @@ export const FormInput: React.FC<FormInputProps> = ({
           readOnly={readOnly}
           placeholder={placeholder}
           autoComplete={autoComplete}
-          aria-invalid={Boolean(error) || undefined}
+          aria-invalid={isInvalid || undefined}
           aria-describedby={error ? `${id}-error` : undefined}
           data-required-first={requiredFirst}
-          className={`${inputClassName}${error ? ' input-error' : ''}`}
+          className={`${inputClassName}${isInvalid ? ' input-error' : ''}`}
+          onFocus={onFocus}
+          onBlur={onBlur}
+          ref={inputRef ?? undefined}
         />
 
         {isPassword && (
@@ -89,7 +103,7 @@ export const FormInput: React.FC<FormInputProps> = ({
               }
             }}
             role="button"
-            tabIndex={0}
+            tabIndex={-1}
             aria-label={showPassword ? 'Hide password' : 'Show password'}
           >
             {showPassword ? <VisibilityOff fontSize="small" /> : <Visibility fontSize="small" />}
@@ -97,7 +111,7 @@ export const FormInput: React.FC<FormInputProps> = ({
         )}
       </Box>
 
-      {error && (
+      {showErrorText && error && (
         <span id={`${id}-error`} className="required-error-msg">
           {error}
         </span>

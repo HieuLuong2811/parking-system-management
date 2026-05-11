@@ -3,7 +3,6 @@ import {
   Box,
   Button,
   CircularProgress,
-  Divider,
   Paper,
   Snackbar,
   Stack,
@@ -17,15 +16,13 @@ import {
   Typography,
   Tooltip,
   IconButton,
+  TextField,
 } from '@mui/material';
-import React, { useEffect, useMemo, useState } from 'react';
+import { useEffect, useMemo, useState } from 'react';
 import { useTranslation } from 'react-i18next';
 import { useNavigate } from 'react-router-dom';
-import SectionCard from '../components/shared/SectionCard';
 import VehicleRegistrationModal from '../components/vehicle/VehicleRegistrationModal';
 import { VehicleInfo } from '../api/clientApi';
-// import { useSubscriptionPlans } from '../api/subscription_plans';
-import { useUserSubscriptions } from '../api/user_subscriptions';
 import { useDeleteVehicle, useMyVehiclesPaginated } from '../api/vehicles';
 import useDebouncedValue from '../hooks/useDebouncedValue';
 import useModal from '../hooks/useModal';
@@ -34,13 +31,14 @@ import type { GridColDef } from '@mui/x-data-grid';
 import DeleteIcon from '@mui/icons-material/Delete';
 import EditIcon from '@mui/icons-material/Edit';
 import DownloadIcon from '@mui/icons-material/Download';
+import FilterListIcon from "@mui/icons-material/FilterList";
 
 const vehicleColumns: GridColDef[] = [
-  { field: 'vehicle_type', headerName: 'Vehicle Type', width: 200 },
-  { field: 'license_plate', headerName: 'License Plate', width: 200 },
-  { field: 'barcode_token', headerName: 'Barcode', width: 220 },
-  { field: 'created_at', headerName: 'Created At', width: 250 },
-  { field: 'actions', headerName: 'Actions', width: 30 },
+  { field: 'vehicle_type', width: 200 },
+  { field: 'license_plate', width: 200 },
+  { field: 'barcode_token', width: 220 },
+  { field: 'created_at', width: 250 },
+  { field: 'actions', width: 30 },
 ];
 
 export default function VehiclePage() {
@@ -49,7 +47,7 @@ export default function VehiclePage() {
   const [userCodeFilter, setUserCodeFilter] = useState('');
   const [licenseFilter, setLicenseFilter] = useState('');
   const [page, setPage] = useState(0);
-  const [rowsPerPage, setRowsPerPage] = useState(10);
+  const [rowsPerPage, setRowsPerPage] = useState(5);
   const [editingVehicle, setEditingVehicle] = useState<VehicleInfo | null>(null);
   const [snackbar, setSnackbar] = useState<{ message: string; severity: 'success' | 'info' | 'error' } | null>(null);
   const debouncedUserCodeFilter = useDebouncedValue(userCodeFilter, 420);
@@ -62,11 +60,8 @@ export default function VehiclePage() {
   });
   const vehicles = useMemo(() => paginated?.data ?? [], [paginated]);
   const total = paginated?.total ?? 0;
-  // const { data: plans = [] } = useSubscriptionPlans();
-  const { data: subscriptions = [], isLoading: subscriptionsLoading } = useUserSubscriptions();
   const deleteVehicle = useDeleteVehicle();
   const registerModal = useModal();
-
   
   useEffect(() => {
     setPage(0);
@@ -95,23 +90,7 @@ export default function VehiclePage() {
     setSnackbar({ message, severity });
   };
 
-  const hasActiveSubscription = useMemo(() => {
-    return subscriptions.some((s) => s.status !== 'EXPIRED');
-  }, [subscriptions]);
-
   const handleRegisterPlan = () => {
-    if (subscriptionsLoading) {
-      showToast(t('common.loading'), 'info');
-      return;
-    }
-
-    if (hasActiveSubscription) {
-      console.log('hasActiveSubscription', hasActiveSubscription);
-      showToast(t('vehicle.alerts.onlyOneSubscription'), 'error');
-      return;
-    }
-
-
     navigate(`/plan`);
   };
 
@@ -133,48 +112,127 @@ export default function VehiclePage() {
   }
 
   return (
-    <SectionCard>
-      <Stack spacing={1}>
-        <Stack direction="row" justifyContent="space-between" flexWrap="wrap" spacing={1} mb={2}>
-          <Typography variant="h5">{t('vehicle.subtitle')}</Typography>
-          <Stack direction="row" spacing={1}>
-            <Button variant="contained" onClick={handleRegisterPlan}>
-              {t('vehicle.registerPlanButton')}
-            </Button>
-            <Button variant="contained" onClick={handleOpenCreate} disabled={isError}>
-              {t('vehicle.registerVehicleButton')}
-            </Button>
-          </Stack>
-        </Stack>
-      </Stack>
+    <Box className="profile-page-shell">
+      <Box sx={{ mb: 3 }}>
+        <Typography variant="h5" sx={{ fontWeight: 700, color: 'text.primary', mb: 0.5 }}>
+          {t('vehicle.title')}
+        </Typography>
+        <Typography variant="body2" fontSize="medium" color="text.secondary">
+          {t('vehicle.subtitle', {
+            defaultValue: 'Quản lý phương tiện cá nhân và đăng ký gửi xe nhanh chóng.',
+          })}
+        </Typography>
+      </Box>
 
-      <Stack direction={{ xs: 'column', sm: 'row' }} spacing={2} flexWrap="wrap" alignItems="center" mb={2}>
-        <input
-          placeholder={t('vehicle.search.userCode')}
-          className="plain-input"
-          value={userCodeFilter}
-          onChange={(event) => setUserCodeFilter(event.target.value)}
-          disabled={isLoading || isError}
-        />
-        <input
-          placeholder={t('vehicle.search.license')}
-          className="plain-input"
-          value={licenseFilter}
-          onChange={(event) => setLicenseFilter(event.target.value)}
-          disabled={isLoading || isError}
-        />
+      <Box
+        sx={{
+          mb: 3,
+          p: 2,
+          borderRadius: 3,
+          bgcolor: '#F8FAFC',
+          border: '1px solid #E5E7EB',
+        }}
+      >
+        <Stack
+          direction={{ xs: 'column', md: 'row' }}
+          spacing={1.5}
+          alignItems={{ xs: 'flex-start', md: 'center' }}
+          justifyContent="space-between"
+        >
+
+        <Stack direction={{ xs: 'column', sm: 'row' }} spacing={2} flexWrap="wrap" alignItems="center" mb={2}>
+          <Box
+            sx={{
+              display: "flex",
+              gap: 1,
+              alignItems: "center",
+              minWidth: 130,
+            }}
+          >
+            <FilterListIcon color="primary" fontSize="small" />
+            <Typography variant="body2" fontWeight={600}>
+              {t("common.filters.search")}
+            </Typography>
+          </Box>
+          <TextField
+            label={t('vehicle.search.userCode', {
+              defaultValue: 'Mã người dùng',
+            })}
+            placeholder={t('vehicle.search.userCodePlaceholder', {
+              defaultValue: 'Nhập mã người dùng',
+            })}
+            value={userCodeFilter}
+            onChange={(event) => setUserCodeFilter(event.target.value)}
+            disabled={isLoading || isError}
+            size="small"
+            sx={{
+              minWidth: { xs: '100%', sm: 220 },
+              bgcolor: '#FFFFFF',
+              '& .MuiOutlinedInput-root': {
+                borderRadius: 2,
+              },
+            }}
+          />
+
+          <TextField
+            label={t('vehicle.search.license', {
+              defaultValue: 'Biển số',
+            })}
+            placeholder={t('vehicle.search.licensePlaceholder', {
+              defaultValue: 'Nhập biển số xe',
+            })}
+            value={licenseFilter}
+            onChange={(event) => setLicenseFilter(event.target.value)}
+            disabled={isLoading || isError}
+            size="small"
+            sx={{
+              minWidth: { xs: '100%', sm: 220 },
+              bgcolor: '#FFFFFF',
+              '& .MuiOutlinedInput-root': {
+                borderRadius: 2,
+              },
+            }}
+          />
         <Button
-          variant="text"
+          variant="outlined"
           onClick={() => {
             setUserCodeFilter('');
             setLicenseFilter('');
             setPage(0);
           }}
-          disabled={isLoading || isError}
+          disabled={isLoading || isError || (!userCodeFilter && !licenseFilter)}
+          sx={{
+            borderRadius: 2,
+            textTransform: 'none',
+            px: 2.5,
+            bgcolor: '#FFFFFF',
+          }}
         >
-          {t('vehicle.clearFilter')}
+          {t('common.filters.reset', {
+            defaultValue: 'Xóa bộ lọc',
+          })}
         </Button>
-      </Stack>
+        </Stack>
+
+          <Stack direction="row" spacing={1} flexWrap="wrap">
+            <Button
+              variant="outlined"
+              onClick={handleRegisterPlan}
+              sx={{ textTransform: 'none', fontWeight: 700, borderRadius: 2 }}
+            >
+              {t('vehicle.registerPlanButton')}
+            </Button>
+            <Button
+              variant="contained"
+              onClick={handleOpenCreate}
+              disabled={isError}
+              sx={{ textTransform: 'none', fontWeight: 700, borderRadius: 2 }}
+            >
+              {t('vehicle.registerVehicleButton')}
+            </Button>
+          </Stack>
+        </Stack>
+      </Box>
 
       {isError && (
         <Typography color="error" mb={2}>
@@ -187,14 +245,34 @@ export default function VehiclePage() {
           <CircularProgress />
         </Box>
       ) : (
-        <Paper elevation={0} sx={{ boxShadow: 'none' }}>
-          <TableContainer component={Box}>
-            <Table size="small">
+        <TableContainer
+          component={Paper}
+          elevation={0}
+          sx={{
+            borderRadius: 3,
+            border: '1px solid #E5E7EB',
+            overflow: 'hidden',
+            bgcolor: '#FFFFFF',
+          }}
+        >
+          <Table size="small">
               <TableHead>
-                <TableRow>
+                <TableRow
+                  sx={{
+                    bgcolor: '#F8FAFC',
+                    '& th': {
+                      fontWeight: 700,
+                      color: '#334155',
+                      fontSize: 14,
+                      py: 1.75,
+                      borderBottom: '1px solid #E5E7EB',
+                      whiteSpace: 'nowrap',
+                    },
+                  }}
+                >
                   {vehicleColumns.map((column) => (
-                    <TableCell key={String(column.field)} sx={{ fontWeight: 600 }}>
-                      {t(column.headerName?? column.field)}
+                    <TableCell key={String(column.field)}>
+                      {t(`vehicle.table.${column.field}`)}
                     </TableCell>
                   ))}
                 </TableRow>
@@ -208,11 +286,20 @@ export default function VehiclePage() {
                   </TableRow>
                 ) : (
                   vehicles.map((vehicle: VehicleInfo) => (
-                    <TableRow key={vehicle.id} hover>
+                    <TableRow
+                      key={vehicle.id}
+                      hover
+                      sx={{
+                        '& td': {
+                          py: 1.8,
+                          fontSize: 14,
+                          borderBottom: '1px solid #EEF2F7',
+                        },
+                      }}
+                    >
                       <TableCell>{vehicle.vehicle_type}</TableCell>
                         <TableCell>{vehicle.license_plate}</TableCell>
                         <TableCell>
-                          {/* <BarcodeCell value={vehicle.barcode_token || '-'} /> */}
                           {vehicle.barcode_token || '-'}
                         </TableCell>
                       <TableCell>
@@ -224,17 +311,17 @@ export default function VehiclePage() {
                       </TableCell>
                       <TableCell>
                         <Stack direction="row" spacing={1}>
-                          <Tooltip title={t('vehicle.table.actionsMenu.edit')}>
+                          <Tooltip placement="top" title={t('vehicle.table.actionsMenu.edit')}>
                             <IconButton size="small" onClick={() => handleEdit(vehicle)}>
                               <EditIcon />
                             </IconButton>
                           </Tooltip>
-                          <Tooltip title={t('vehicle.table.actionsMenu.download')}>
+                          <Tooltip placement="top" title={t('vehicle.table.actionsMenu.download')}>
                             <IconButton size="small"  onClick={() => handleDownload(vehicle?.barcode_token || '', vehicle.vehicle_type)}>
                               <DownloadIcon />
                             </IconButton>
                           </Tooltip>
-                          <Tooltip title={t('vehicle.table.actionsMenu.delete')} disableInteractive placement="top">
+                          <Tooltip placement="top" title={t('vehicle.table.actionsMenu.delete')} disableInteractive>
                             <IconButton onClick={() => handleDelete(vehicle)}>
                               <DeleteIcon />
                             </IconButton>
@@ -246,7 +333,6 @@ export default function VehiclePage() {
                 )}
               </TableBody>
           </Table>
-          </TableContainer>
 
           <TablePagination
             component="div"
@@ -255,12 +341,12 @@ export default function VehiclePage() {
             onPageChange={(_event, newPage) => setPage(newPage)}
             rowsPerPage={rowsPerPage}
             onRowsPerPageChange={(event) => {
-              setRowsPerPage(parseInt(event.target.value, 5));
+              setRowsPerPage(parseInt(event.target.value, 10));
               setPage(0);
             }}
             rowsPerPageOptions={[5, 10, 20, 50, 100]}
           />
-        </Paper>
+        </TableContainer>
       )}
 
       <VehicleRegistrationModal
@@ -279,6 +365,6 @@ export default function VehiclePage() {
           {snackbar?.message ?? ''}
         </Alert>
       </Snackbar>
-    </SectionCard>
+    </Box>
   );
 }

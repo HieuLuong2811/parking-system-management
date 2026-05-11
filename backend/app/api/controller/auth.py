@@ -2,6 +2,7 @@ from datetime import datetime
 
 from fastapi import Response
 from fastapi import HTTPException, status
+from app.utils.email import generate_password_reset_code_email, send_email
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.models.auth import (
@@ -9,11 +10,19 @@ from app.models.auth import (
     AuthUser,
     ChangePasswordRequest,
     ExchangeCodeRequest,
+    ForgotPasswordRequest,
+    ForgotPasswordRequestResponse,
+    ForgotPasswordResetRequest,
+    ForgotPasswordVerifyRequest,
     LoginRequest,
     TokenResponse,
 )
 from app.service.auth import authService
 from app.service.auth_codes import AuthCodeStore
+from app.service.auth_verification_requests import authVerificationRequestService
+from app.service.users import userService
+import secrets
+from app.models.users import UsersUpdate
 
 
 class AuthController:
@@ -86,3 +95,87 @@ class AuthController:
     ) -> dict[str, str]:
         await authService.change_password(current_user.user_code, payload.current_password, payload.new_password, db)
         return {"detail": "password updated"}
+
+    @staticmethod
+    async def forgot_password_request_ctrl(
+        payload: ForgotPasswordRequest,
+        db: AsyncSession,
+    ) -> ForgotPasswordRequestResponse:
+        user_code = (payload.user_code or "").strip()
+        if not user_code:
+            raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail="User code is required")
+
+        user = await userService.crud.get(db, user_code)
+        # Don't leak account existence; return 200 to allow UI to proceed uniformly.
+        if not user or user.deleted_at is not None:
+            # Return policy info so UI can still show countdown.
+            return ForgotPasswordRequestResponse(
+                expires_at=datetime.utcnow(),
+                ttl_seconds=authVerificationRequestService.policy.ttl_seconds,
+                throttle_seconds=authVerificationRequestService.policy.throttle_seconds,
+            )
+
+        if not user.email or user.email.strip().lower() != payload.email.strip().lower():
+            raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail="Email does not match this user code")
+
+        raw_code = f"{secrets.randbelow(1_000_000):06d}"
+        created = await authVerificationRequestService.request_code(
+            db,
+            user_code=user.user_code,
+            verification_type="RESET_PASSWORD",
+            raw_code=raw_code,
+        )
+
+        email_data = generate_password_reset_code_email(
+            email_to=user.email,
+            user_name=user.full_name or user.user_code,
+            user_code=user.user_code,
+            code=raw_code,
+            ttl_seconds=authVerificationRequestService.policy.ttl_seconds,
+            lang=getattr(user, "language_use", None),
+        )
+        await send_email(user.email, email_data)
+
+        return ForgotPasswordRequestResponse(
+            expires_at=created.expires_at,
+            ttl_seconds=authVerificationRequestService.policy.ttl_seconds,
+            throttle_seconds=authVerificationRequestService.policy.throttle_seconds,
+        )
+
+    @staticmethod
+    async def forgot_password_verify_ctrl(
+        payload: ForgotPasswordVerifyRequest,
+        db: AsyncSession,
+    ) -> dict[str, bool]:
+        ok = await authVerificationRequestService.check_code(
+            db,
+            user_code=payload.user_code.strip(),
+            verification_type="RESET_PASSWORD",
+            raw_code=payload.code.strip(),
+        )
+        return {"valid": ok}
+
+    @staticmethod
+    async def forgot_password_reset_ctrl(
+        payload: ForgotPasswordResetRequest,
+        db: AsyncSession,
+    ) -> dict[str, str]:
+        user_code = (payload.user_code or "").strip()
+        if not user_code:
+            raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail="User code is required")
+
+        ok = await authVerificationRequestService.verify_code(
+            db,
+            user_code=user_code,
+            verification_type="RESET_PASSWORD",
+            raw_code=payload.code.strip(),
+        )
+        if not ok:
+            raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail="Invalid or expired verification code")
+
+        user = await userService.crud.get(db, user_code)
+        if not user or user.deleted_at is not None:
+            raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail="Invalid user")
+
+        await userService.update_user(user_code, UsersUpdate(password=payload.new_password), db)
+        return {"detail": "password reset"}

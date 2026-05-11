@@ -35,8 +35,39 @@ class userService:
         if existing_user:
             raise HTTPException(
                 status_code=status.HTTP_409_CONFLICT,
-                detail=f"User with code {user_in.user_code} already exists"
+                detail={"field": "user_code", "message": f"User code {user_in.user_code} already exists"},
             )
+
+        # Check duplicates for email / phone_number (ignore soft-deleted users)
+        email_value = (user_in.email or "").strip() if user_in.email is not None else ""
+        if email_value:
+            email_stmt = (
+                select(Users.user_code)
+                .where(Users.deleted_at.is_(None))
+                .where(func.lower(Users.email) == func.lower(email_value))
+                .limit(1)
+            )
+            email_existing = (await db.execute(email_stmt)).scalar_one_or_none()
+            if email_existing:
+                raise HTTPException(
+                    status_code=status.HTTP_409_CONFLICT,
+                    detail={"field": "email", "message": "Email already exists"},
+                )
+
+        phone_value = (user_in.phone_number or "").strip() if user_in.phone_number is not None else ""
+        if phone_value:
+            phone_stmt = (
+                select(Users.user_code)
+                .where(Users.deleted_at.is_(None))
+                .where(Users.phone_number == phone_value)
+                .limit(1)
+            )
+            phone_existing = (await db.execute(phone_stmt)).scalar_one_or_none()
+            if phone_existing:
+                raise HTTPException(
+                    status_code=status.HTTP_409_CONFLICT,
+                    detail={"field": "phone_number", "message": "Phone number already exists"},
+                )
 
         hashed_password = hash_password(user_in.password)
 
@@ -57,7 +88,7 @@ class userService:
             await db.rollback()
             raise HTTPException(
                 status_code=status.HTTP_409_CONFLICT,
-                detail="User already exists"
+                detail={"field": "user_code", "message": "User already exists"},
             )
 
         await db.refresh(user)

@@ -1,0 +1,452 @@
+﻿import {
+  Box,
+  Chip,
+  CircularProgress,
+  IconButton,
+  Paper,
+  Stack,
+  Table,
+  TableBody,
+  TableCell,
+  TableContainer,
+  TableHead,
+  TablePagination,
+  TableRow,
+  Tooltip,
+  Typography,
+} from "@mui/material";
+import { Fragment, useMemo, useState } from "react";
+import { useTranslation } from "react-i18next";
+import VehicleRegistrationModal from "../components/vehicle/VehicleRegistrationModal";
+import useModal from "../hooks/useModal";
+import SubscriptionVehicleDrawer from "../components/subscription/SubscriptionVehicleDrawer";
+import SubscriptionsIcon from "@mui/icons-material/Subscriptions";
+import DirectionsBikeIcon from "@mui/icons-material/DirectionsBike";
+import CalendarMonthIcon from "@mui/icons-material/CalendarMonth";
+import InfoOutlinedIcon from "@mui/icons-material/InfoOutlined";
+import VisibilityIcon from "@mui/icons-material/Visibility";
+
+import {
+  useUpdateSubscription,
+  useUserSubscriptionsPaginated,
+} from "../api/user_subscriptions";
+import { useVehicles } from "../api/vehicles";
+import { formatCurrency } from "../ultis/formatters";
+
+export default function UserSubscriptionsPage() {
+  const { t } = useTranslation();
+
+  const [subscriptionPage, setSubscriptionPage] = useState(0);
+  const [subscriptionRowsPerPage, setSubscriptionRowsPerPage] = useState(5);
+  const [vehicleDrawerOpen, setVehicleDrawerOpen] = useState(false);
+  const [drawerSubscription, setDrawerSubscription] = useState<any | null>(
+    null,
+  );
+  const registerVehicleModal = useModal();
+
+  const {
+    data: subscriptionsPaginated,
+    isLoading: subscriptionsLoading,
+    isError,
+  } = useUserSubscriptionsPaginated({
+    page: subscriptionPage + 1,
+    limit: subscriptionRowsPerPage,
+  });
+
+  const { data: myVehicles = [] } = useVehicles();
+  const { mutateAsync: updateSubscription, isPending: isUpdatingSubscription } =
+    useUpdateSubscription();
+
+  const subscriptions = useMemo(
+    () => subscriptionsPaginated?.data ?? [],
+    [subscriptionsPaginated],
+  );
+
+  const subscriptionsTotal = subscriptionsPaginated?.total ?? 0;
+
+  const getPaymentTypeLabel = (paymentType?: string | null) => {
+    switch (paymentType) {
+      case "MONTHLY":
+        return t("profile.subscriptions.paymentTypes.monthly", {
+          defaultValue: "Theo tháng",
+        });
+      case "TERM":
+        return t("profile.subscriptions.paymentTypes.term", {
+          defaultValue: "Theo kỳ",
+        });
+      case "SEMESTER":
+        return t("profile.subscriptions.paymentTypes.semester", {
+          defaultValue: "Theo học kỳ",
+        });
+      case "YEARLY":
+        return t("profile.subscriptions.paymentTypes.yearly", {
+          defaultValue: "Theo năm",
+        });
+      default:
+        return paymentType || "—";
+    }
+  };
+
+  const getStatusLabel = (status?: string | null) => {
+    if (!status) {
+      return t("profile.subscriptions.status.unknown", {
+        defaultValue: "Không xác định",
+      });
+    }
+
+    return t(`profile.subscriptions.status.${status.toLowerCase()}`, {
+      defaultValue: status,
+    });
+  };
+
+  const getStatusColor = (
+    status?: string | null,
+  ): "success" | "warning" | "error" | "default" | "info" => {
+    switch (status) {
+      case "ACTIVE":
+      case "PAID":
+        return "success";
+      case "PENDING":
+        return "warning";
+      case "EXPIRED":
+      case "CANCELLED":
+        return "error";
+      default:
+        return "default";
+    }
+  };
+
+  return (
+    <Box className="profile-page-shell">
+      <Box sx={{ mb: 3 }}>
+        <Typography
+          variant="h5"
+          sx={{
+            fontWeight: 700,
+            color: "text.primary",
+            mb: 0.5,
+          }}
+        >
+          {t("profile.subscriptions.heading", {
+            defaultValue: "Gói gửi xe đã đăng ký",
+          })}
+        </Typography>
+
+        <Typography variant="body2" fontSize="medium" color="text.secondary">
+          {t("profile.subscriptions.description", {
+            defaultValue:
+              "Theo dõi gói gửi xe, học kỳ áp dụng, phương tiện liên kết và trạng thái sử dụng của bạn.",
+          })}
+        </Typography>
+      </Box>
+
+      <TableContainer
+        component={Paper}
+        elevation={0}
+        sx={{
+          borderRadius: 3,
+          border: "1px solid #E5E7EB",
+          overflow: "hidden",
+          bgcolor: "#FFFFFF",
+        }}
+      >
+        <Table>
+          <TableHead>
+            <TableRow
+              sx={{
+                bgcolor: "#F8FAFC",
+                "& th": {
+                  fontWeight: 700,
+                  color: "#334155",
+                  fontSize: 16,
+                  py: 1.75,
+                  borderBottom: "1px solid #E5E7EB",
+                  whiteSpace: "nowrap",
+                },
+              }}
+            >
+              <TableCell>
+                {t("profile.subscriptions.plan", {
+                  defaultValue: "Gói gửi xe",
+                })}
+              </TableCell>
+              <TableCell>
+                {t("profile.subscriptions.vehicle", {
+                  defaultValue: "Phương tiện",
+                })}
+              </TableCell>
+              <TableCell>
+                {t("profile.subscriptions.term", { defaultValue: "Học kỳ" })}
+              </TableCell>
+              <TableCell>
+                {t("profile.subscriptions.paymentPlan", {
+                  defaultValue: "Thanh toán",
+                })}
+              </TableCell>
+              <TableCell align="right">
+                {t("profile.subscriptions.amount", {
+                  defaultValue: "Tổng tiền",
+                })}
+              </TableCell>
+              <TableCell align="center">
+                {t("profile.subscriptions.status.label", {
+                  defaultValue: "Trạng thái",
+                })}
+              </TableCell>
+              <TableCell align="center" sx={{ width: 72 }}>
+                {t("common.actions", { defaultValue: "Thao tác" })}
+              </TableCell>
+            </TableRow>
+          </TableHead>
+
+          <TableBody>
+            {subscriptionsLoading ? (
+              <TableRow>
+                <TableCell colSpan={8} align="center" sx={{ py: 6 }}>
+                  <CircularProgress size={26} />
+
+                  <Typography color="text.secondary" mt={1}>
+                    {t("profile.subscriptions.loading", {
+                      defaultValue: "Đang tải danh sách gói gửi xe...",
+                    })}
+                  </Typography>
+                </TableCell>
+              </TableRow>
+            ) : isError ? (
+              <TableRow>
+                <TableCell colSpan={8} align="center" sx={{ py: 6 }}>
+                  <InfoOutlinedIcon
+                    sx={{ fontSize: 44, color: "#EF4444", mb: 1 }}
+                  />
+
+                  <Typography color="error" fontWeight={700}>
+                    {t("profile.subscriptions.error", {
+                      defaultValue: "Không thể tải danh sách gói gửi xe",
+                    })}
+                  </Typography>
+
+                  <Typography variant="body2" color="text.secondary" mt={0.5}>
+                    {t("common.tryAgainLater", {
+                      defaultValue: "Vui lòng thử lại sau.",
+                    })}
+                  </Typography>
+                </TableCell>
+              </TableRow>
+            ) : subscriptions.length === 0 ? (
+              <TableRow>
+                <TableCell colSpan={8} align="center" sx={{ py: 6 }}>
+                  <SubscriptionsIcon
+                    sx={{ fontSize: 48, color: "#CBD5E1", mb: 1 }}
+                  />
+
+                  <Typography fontWeight={700} color="text.primary">
+                    {t("profile.subscriptions.emptyTitle", {
+                      defaultValue: "Chưa có gói gửi xe",
+                    })}
+                  </Typography>
+
+                  <Typography variant="body2" color="text.secondary" mt={0.5}>
+                    {t("profile.subscriptions.empty", {
+                      defaultValue: "Bạn chưa đăng ký gói gửi xe nào.",
+                    })}
+                  </Typography>
+                </TableCell>
+              </TableRow>
+            ) : (
+              subscriptions.map((subscription) => {
+                const coveredVehicles = subscription.covered_vehicles ?? [];
+                const vehicleCount = coveredVehicles.length;
+
+                const vehicleCountLabel =
+                  vehicleCount > 0
+                    ? t("profile.subscriptions.vehicleCount", {
+                        count: vehicleCount,
+                        defaultValue: `${vehicleCount} phương tiện`,
+                      })
+                    : t("profile.subscriptions.noVehicle", {
+                        defaultValue: "Chưa gắn xe",
+                      });
+                const paymentLabel = getPaymentTypeLabel(
+                  subscription.payment?.payment_type,
+                );
+                const statusLabel = getStatusLabel(subscription.status);
+                const statusColor = getStatusColor(subscription.status);
+                const openVehicleDrawer = () => {
+                  setDrawerSubscription(subscription);
+                  setVehicleDrawerOpen(true);
+                };
+
+                return (
+                  <Fragment key={subscription.id}>
+                    <TableRow
+                      hover
+                      sx={{
+                        transition: "0.2s",
+                        "&:hover": {
+                          bgcolor: "#F9FAFB",
+                        },
+                        "& td": {
+                          py: 1.8,
+                          fontSize: 14,
+                          borderBottom: "1px solid #EEF2F7",
+                        },
+                      }}
+                    >
+                      <TableCell>
+                        <Stack
+                          direction="row"
+                          spacing={1.2}
+                          alignItems="center"
+                        >
+                          <Box
+                            sx={{
+                              width: 36,
+                              height: 36,
+                              borderRadius: 2,
+                              bgcolor: "#E0F2FE",
+                              color: "#0369A1",
+                              display: "flex",
+                              alignItems: "center",
+                              justifyContent: "center",
+                              flexShrink: 0,
+                            }}
+                          >
+                            <SubscriptionsIcon fontSize="small" />
+                          </Box>
+
+                          <Typography fontWeight={700}>
+                            {t(`plan.cards.${subscription.plan.toLowerCase()}`)}
+                          </Typography>
+                        </Stack>
+                      </TableCell>
+
+                      <TableCell>
+                        <Stack direction="row" spacing={1} alignItems="center">
+                          <DirectionsBikeIcon fontSize="small" color="action" />
+
+                          <Box>
+                            <Typography fontWeight={600}>
+                              {vehicleCountLabel}
+                            </Typography>
+
+                            <Typography
+                              variant="caption"
+                              color="text.secondary"
+                            >
+                              {t("profile.subscriptions.vehicleHint", {
+                                defaultValue:
+                                  "Bấm để xem danh sách phương tiện",
+                              })}
+                            </Typography>
+                          </Box>
+                        </Stack>
+                      </TableCell>
+                      <TableCell>
+                        <Stack direction="row" spacing={1} alignItems="center">
+                          <CalendarMonthIcon fontSize="small" color="action" />
+
+                          <Typography fontWeight={500}>
+                            {subscription.term?.term_name ?? "—"}
+                          </Typography>
+                        </Stack>
+                      </TableCell>
+
+                      <TableCell>
+                        <Typography fontWeight={500}>{paymentLabel}</Typography>
+                      </TableCell>
+
+                      <TableCell align="right">
+                        <Typography fontWeight={700}>
+                          {formatCurrency(subscription.total_amount)}
+                        </Typography>
+                      </TableCell>
+
+                      <TableCell align="center">
+                        <Chip
+                          size="small"
+                          color={statusColor}
+                          label={statusLabel}
+                          sx={{
+                            fontWeight: 700,
+                            borderRadius: 999,
+                            minWidth: 120,
+                            textTransform: "none",
+                          }}
+                        />
+                      </TableCell>
+                      <TableCell align="center">
+                        <Tooltip
+                          placement="top"
+                          title={t("common.viewDetails", {
+                            defaultValue: "Xem chi tiết",
+                          })}
+                        >
+                          <IconButton
+                            size="small"
+                            aria-label="view subscription"
+                            onClick={(e) => {
+                              e.stopPropagation();
+                              openVehicleDrawer();
+                            }}
+                          >
+                            <VisibilityIcon fontSize="small" />
+                          </IconButton>
+                        </Tooltip>
+                      </TableCell>
+                    </TableRow>
+                  </Fragment>
+                );
+              })
+            )}
+          </TableBody>
+        </Table>
+      </TableContainer>
+
+      <TablePagination
+        component="div"
+        count={subscriptionsTotal}
+        page={subscriptionPage}
+        onPageChange={(_event, newPage) => {
+          setSubscriptionPage(newPage);
+        }}
+        rowsPerPage={subscriptionRowsPerPage}
+        onRowsPerPageChange={(event) => {
+          setSubscriptionRowsPerPage(parseInt(event.target.value, 10));
+          setSubscriptionPage(0);
+        }}
+        rowsPerPageOptions={[5, 10, 20, 50, 100]}
+        sx={{
+          "& .MuiTablePagination-toolbar": {
+            justifyContent: "flex-end",
+          },
+          "& .MuiTablePagination-selectLabel, & .MuiTablePagination-displayedRows":
+            {
+              color: "text.secondary",
+            },
+        }}
+      />
+
+      <SubscriptionVehicleDrawer
+        open={vehicleDrawerOpen}
+        subscription={drawerSubscription}
+        vehicles={myVehicles}
+        isUpdating={isUpdatingSubscription}
+        onClose={() => setVehicleDrawerOpen(false)}
+        onAddVehicle={() => registerVehicleModal.openModal()}
+        onUpdateVehicles={async (subscriptionId, vehicleIds) => {
+          await updateSubscription({
+            subscriptionId,
+            payload: { vehicle_ids: vehicleIds },
+          });
+
+          setVehicleDrawerOpen(false);
+        }}
+      />
+
+      <VehicleRegistrationModal
+        open={registerVehicleModal.open}
+        onClose={registerVehicleModal.closeModal}
+      />
+    </Box>
+  );
+}

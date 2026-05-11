@@ -35,7 +35,6 @@ export const Layout: React.FC = () => {
         component="main"
         sx={{
           flexGrow: 1,
-          p: 4,
           width: { xs: '100%', md: `calc(100% - ${drawerWidth}px)` },
           ml: { md: `${drawerWidth}px` },
           transition: 'margin 0.3s ease, width 0.3s ease',
@@ -43,7 +42,7 @@ export const Layout: React.FC = () => {
         }}
       >
         <Toolbar />
-        <Box p={4} bgcolor='#fff'>
+        <Box p={4} height='100vh' bgcolor='#fff'>
           <Outlet />
         </Box>
       </Box>

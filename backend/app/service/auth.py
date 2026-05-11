@@ -24,8 +24,9 @@ class authService:
                 
         if user.deleted_at is not None:
             raise HTTPException(
-                status_code=status.HTTP_403_FORBIDDEN,
-                detail="User account is deleted"
+                # Hide existence of disabled/deleted accounts.
+                status_code=status.HTTP_401_UNAUTHORIZED,
+                detail="Tài khoản không tồn tại"
             )
 
         if not verify_password(password, user.password):

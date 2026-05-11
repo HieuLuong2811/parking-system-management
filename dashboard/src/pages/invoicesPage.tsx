@@ -6,6 +6,7 @@ import { useTranslation } from 'react-i18next';
 import { SoftDataGrid } from '../components/common/SoftDataGrid';
 import { useInvoices } from '../api/invoices';
 import { formatCurrency, formatMeta, formatDateTime } from '../ultis/format';
+import { PageHeader } from '../components/common/PageHeader';
 
 type ToastState = { severity: 'error'; message: string } | null;
 
@@ -71,7 +72,8 @@ export const InvoicesPage: React.FC = () => {
   return (
     <Box>
       <Stack spacing={1} sx={{ mb: 2 }}>
-        <Typography variant="h5">{t('resources.tables.invoices')}</Typography>
+        <PageHeader title={t('resources.tables.invoices')} subtitle={t('invoicesPage.description')} />
+        <Typography variant="h5" style={{ display: 'none' }}>{t('resources.tables.invoices')}</Typography>
         <Typography color="text.secondary" variant="body2">
           Danh sách tất cả invoices đang tồn tại trong hệ thống theo modal backend
         </Typography>

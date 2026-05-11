@@ -22,6 +22,7 @@ from app.models.responses import DeleteResponse
 from app.service.parking_sessions import parkingSessionService, parkingSessionUserService
 from app.service.subscriptions import subscriptionService
 from app.service.vehicles import vehicleService
+from app.models.responses import FeeBreakdown
 
 
 class ParkingSessionController:
@@ -93,20 +94,52 @@ class ParkingSessionController:
                 user_type = resolved_user_type
 
         if not active_session:
+            sub, plan, _payment_plan = await subscriptionService.get_active_subscription_covering_vehicle(str(vehicle.id), db)
+            if subscriptionService.subscription_grants_parking_benefit(sub) and sub is not None:
+                conflict = await subscriptionService.get_active_session_using_subscription(
+                    str(sub.id), db, exclude_vehicle_id=str(vehicle.id)
+                )
+                if conflict is not None:
+                    return ParkingSessionRead(
+                        id=conflict.id,
+                        vehicle_id=vehicle.id,
+                        license_plate=vehicle.license_plate,
+                        check_in_time=now,
+                        check_out_time=None,
+                        status=ParkingSessionStatus.ACTIVE,
+                        user_type=user_type,
+                        total_amount=None,
+                        created_at=now,
+                        updated_at=now,
+                        allow_gate=False,
+                        message="Subscription is currently being used by another vehicle.",
+                        fee_breakdown=FeeBreakdown(
+                            has_active_subscription=True,
+                            subscription_benefit_applied=False,
+                            subscription_plan_code=None,
+                            fee_policy_message="Subscription is currently being used by another vehicle.",
+                        ),
+                    )
             session_payload = ParkingSessionCreate(
                 vehicle_id=vehicle.id,
                 license_plate=vehicle.license_plate,
                 check_in_time=now,
                 user_type=user_type,
             )
-            return await parkingSessionService.create_session(session_payload, db)
-        amount_due = await ParkingSessionController._calculate_parking_fee(user.user_code, vehicle.id, active_session.check_in_time, now, db)
+            created = await parkingSessionService.create_session(session_payload, db)
+            return ParkingSessionRead.model_validate(created, update={"allow_gate": True, "message": "OK"}) if hasattr(ParkingSessionRead, "model_validate") else created
+        breakdown = await ParkingSessionController._calculate_fee_breakdown(user.user_code, str(vehicle.id), active_session.check_in_time, now, db)
         update_payload = ParkingSessionUpdate(
             check_out_time=now,
             status=ParkingSessionStatus.DONE,
-            total_amount=amount_due,
+            total_amount=breakdown.total_amount if breakdown else None,
         )
-        return await parkingSessionService.update_session(str(active_session.id), update_payload, db)
+        updated = await parkingSessionService.update_session(str(active_session.id), update_payload, db)
+        response = ParkingSessionRead.model_validate(updated) if hasattr(ParkingSessionRead, "model_validate") else updated
+        response.allow_gate = True
+        response.message = "OK"
+        response.fee_breakdown = breakdown
+        return response
 
     @staticmethod
     async def create_session_via_plate_ctrl(payload: ParkingSessionPlateCheckIn, db: AsyncSession) -> ParkingSessionRead:
@@ -128,47 +161,100 @@ class ParkingSessionController:
                 user_type = resolved_user_type
 
         if not active_session:
+            sub, plan, _payment_plan = await subscriptionService.get_active_subscription_covering_vehicle(str(vehicle.id), db)
+            if subscriptionService.subscription_grants_parking_benefit(sub) and sub is not None:
+                conflict = await subscriptionService.get_active_session_using_subscription(
+                    str(sub.id), db, exclude_vehicle_id=str(vehicle.id)
+                )
+                if conflict is not None:
+                    return ParkingSessionRead(
+                        id=conflict.id,
+                        vehicle_id=vehicle.id,
+                        license_plate=vehicle.license_plate,
+                        check_in_time=now,
+                        check_out_time=None,
+                        status=ParkingSessionStatus.ACTIVE,
+                        user_type=user_type,
+                        total_amount=None,
+                        created_at=now,
+                        updated_at=now,
+                        allow_gate=False,
+                        message="Subscription is currently being used by another vehicle.",
+                        fee_breakdown=FeeBreakdown(
+                            has_active_subscription=True,
+                            subscription_benefit_applied=False,
+                            subscription_plan_code=None,
+                            fee_policy_message="Subscription is currently being used by another vehicle.",
+                        ),
+                    )
             session_payload = ParkingSessionCreate(
                 vehicle_id=vehicle.id,
                 license_plate=vehicle.license_plate,
                 check_in_time=now,
                 user_type=user_type,
             )
-            return await parkingSessionService.create_session(session_payload, db)
+            created = await parkingSessionService.create_session(session_payload, db)
+            return ParkingSessionRead.model_validate(created, update={"allow_gate": True, "message": "OK"}) if hasattr(ParkingSessionRead, "model_validate") else created
 
-        amount_due = await ParkingSessionController._calculate_parking_fee(
-            user.user_code,
-            vehicle.id,
-            active_session.check_in_time,
-            now,
-            db,
+        breakdown = await ParkingSessionController._calculate_fee_breakdown(
+            user.user_code, str(vehicle.id), active_session.check_in_time, now, db
         )
         update_payload = ParkingSessionUpdate(
             check_out_time=now,
             status=ParkingSessionStatus.DONE,
-            total_amount=amount_due,
+            total_amount=breakdown.total_amount if breakdown else None,
         )
-        return await parkingSessionService.update_session(str(active_session.id), update_payload, db)
+        updated = await parkingSessionService.update_session(str(active_session.id), update_payload, db)
+        response = ParkingSessionRead.model_validate(updated) if hasattr(ParkingSessionRead, "model_validate") else updated
+        response.allow_gate = True
+        response.message = "OK"
+        response.fee_breakdown = breakdown
+        return response
 
     @staticmethod
-    async def _calculate_parking_fee(
+    async def _calculate_fee_breakdown(
         user_code: str,
         vehicle_id: str,
         check_in: datetime,
         check_out: datetime,
         db: AsyncSession,
-    ) -> int | None:
+    ) -> FeeBreakdown:
         duration_seconds = max(0, (check_out - check_in).total_seconds())
         days = ceil(duration_seconds / 86_400) if duration_seconds else 1
-        base_amount = days * 1000
-        subscriptions = await subscriptionService.get_user_subscriptions_with_details(user_code, db)
-        has_active_plan = any(
-            subscription.status in (SubscriptionStatus.ACTIVE, SubscriptionStatus.PENDING)
-            for subscription in subscriptions
+        normal_base_amount = days * 1000
+
+        subscription, plan, _payment_plan = await subscriptionService.get_active_subscription_covering_vehicle(vehicle_id, db)
+        has_active_subscription = subscriptionService.subscription_grants_parking_benefit(subscription)
+        if not has_active_subscription or plan is None:
+            return FeeBreakdown(
+                base_amount=normal_base_amount,
+                after_18_amount=0,
+                total_amount=normal_base_amount,
+                has_active_subscription=False,
+                subscription_benefit_applied=False,
+                subscription_plan_code=None,
+                fee_policy_message="Normal parking fee applied.",
+            )
+
+        price_per_day = int(getattr(plan, "price_per_day", 0) or 0)
+        after_18_fee = int(getattr(plan, "after_18_fee", 0) or 0)
+        waive_after_18_fee = bool(getattr(plan, "waive_after_18_fee", False))
+
+        base_amount = days * price_per_day
+        after_18_amount = 0
+        if not waive_after_18_fee and check_out.hour >= 18:
+            after_18_amount = days * after_18_fee
+
+        total_amount = base_amount + after_18_amount
+        return FeeBreakdown(
+            base_amount=base_amount,
+            after_18_amount=after_18_amount,
+            total_amount=total_amount,
+            has_active_subscription=True,
+            subscription_benefit_applied=True,
+            subscription_plan_code=None,
+            fee_policy_message="Subscription fee policy applied.",
         )
-        if has_active_plan:
-            return 0
-        return base_amount
 
     @staticmethod
     async def export_my_sessions_xlsx_ctrl(

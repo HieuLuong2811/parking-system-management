@@ -33,7 +33,7 @@ async def list_my_plans(
     db: AsyncSession = Depends(get_db),
     current_user: AuthUser = Depends(required_roles("USER", "ADMIN")),
 ):
-    plans = await PlanController.get_all_plans_ctrl(db)
+    plans = await PlanController.get_plans_me_ctrl(current_user, db)
     return plans
 
 

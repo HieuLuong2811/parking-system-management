@@ -6,7 +6,6 @@ import { ApiRequestError, clientHttp, PaginatedResponse, requestWithContext, Par
 export type ParkingSessionsMeQuery = {
   page: number;
   limit: number;
-  query?: string;
   status?: 'ACTIVE' | 'DONE';
   from_time?: string;
   to_time?: string;

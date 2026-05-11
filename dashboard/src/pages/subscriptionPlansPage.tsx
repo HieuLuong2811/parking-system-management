@@ -16,6 +16,8 @@ import {
 import type { GridColDef } from '@mui/x-data-grid';
 import DeleteIcon from '@mui/icons-material/Delete';
 import EditIcon from '@mui/icons-material/Edit';
+import CheckIcon from '@mui/icons-material/Check';
+import CloseIcon from '@mui/icons-material/Close';
 import React, { useCallback, useMemo, useState } from 'react';
 import { useTranslation } from 'react-i18next';
 
@@ -30,7 +32,7 @@ import {
 import type { SubscriptionPlanRecord } from '../api/types';
 import { formatCurrency, formatDateTime } from '../ultis/format';
 import FilterListIcon from '@mui/icons-material/FilterList';
-import { planTypeOptions } from '../constant/config';
+import { PageHeader } from '../components/common/PageHeader';
 
 type ToastSeverity = 'success' | 'error';
 
@@ -38,10 +40,7 @@ const getErrorMessage = (error: unknown, fallback: string) =>
   error instanceof Error ? error.message : fallback;
 
 export const SubscriptionPlansPage: React.FC = () => {
-  const planTypeFilterOptions = useMemo(
-    () => ['ALL', ...Object.values(planTypeOptions)] as const,
-    []
-  );
+  const planTypeFilterOptions = useMemo(() => ['ALL', 'BASIC', 'STARTUP', 'ENTERPRISE'] as const, []);
   const [planTypeFilter, setPlanTypeFilter] = useState<(typeof planTypeFilterOptions)[number]>('ALL');
   const [modalOpen, setModalOpen] = useState(false);
   const [editingPlan, setEditingPlan] = useState<SubscriptionPlanRecord | null>(null);
@@ -114,8 +113,11 @@ export const SubscriptionPlansPage: React.FC = () => {
   );
 
   const columns = useMemo<GridColDef<SubscriptionPlanRecord>[]>(() => {
+    const renderBool = (value: unknown) =>
+      value === true ? <CheckIcon fontSize="small" color="success" /> : <CloseIcon fontSize="small" color="error" />;
+
     const baseColumns: GridColDef<SubscriptionPlanRecord>[] = [
-      { field: 'plans_type', headerName: t('subscriptionPlansPage.columns.planType', { defaultValue: 'Plan type' }), width: 240, sortable: true,
+      { field: 'plans_type', headerName: t('subscriptionPlansPage.columns.planType', { defaultValue: 'Plan type' }), width: 180, sortable: true,
         renderCell: (params) => {
           const value = params.value;
           return t(`common.subscriptionPlans.${value}`, { defaultValue: value });
@@ -123,10 +125,65 @@ export const SubscriptionPlansPage: React.FC = () => {
       },
       {
         field: 'price_per_day',
-        headerName: t('subscriptionPlansPage.columns.pricePerDay'),
+        headerName: t('subscriptionPlansPage.columns.pricePerDay', { defaultValue: 'Price/day' }),
         width: 160,
         sortable: true,
-        renderCell: (params) => <span>{formatCurrency(params.value as number)}</span>,
+        renderCell: (params) => <span>{formatCurrency((params.value as number) ?? 0)}</span>,
+      },
+      {
+        field: 'allow_monthly_payment',
+        headerName: t('subscriptionPlansPage.columns.allowMonthly', { defaultValue: 'Monthly' }),
+        width: 110,
+        sortable: true,
+        align: 'center',
+        headerAlign: 'center',
+        renderCell: (params) => renderBool(params.value),
+      },
+      {
+        field: 'allow_full_payment',
+        headerName: t('subscriptionPlansPage.columns.allowFull', { defaultValue: 'Full' }),
+        width: 90,
+        sortable: true,
+        align: 'center',
+        headerAlign: 'center',
+        renderCell: (params) => renderBool(params.value),
+      },
+      {
+        field: 'max_licensed_vehicle',
+        headerName: t('subscriptionPlansPage.columns.maxLicensed', { defaultValue: 'Max plate' }),
+        width: 120,
+        sortable: true,
+        renderCell: (params) => <span>{params.value ?? '-'}</span>,
+      },
+      {
+        field: 'max_unlicensed_vehicle',
+        headerName: t('subscriptionPlansPage.columns.maxUnlicensed', { defaultValue: 'Max no-plate' }),
+        width: 140,
+        sortable: true,
+        renderCell: (params) => <span>{params.value ?? '-'}</span>,
+      },
+      {
+        field: 'after_18_fee',
+        headerName: t('subscriptionPlansPage.columns.after18Fee', { defaultValue: 'After 18 fee' }),
+        width: 150,
+        sortable: true,
+        renderCell: (params) => <span>{params.value != null ? formatCurrency(Number(params.value)) : '-'}</span>,
+      },
+      {
+        field: 'waive_after_18_fee',
+        headerName: t('subscriptionPlansPage.columns.waiveAfter18', { defaultValue: 'Waive 18+' }),
+        width: 120,
+        sortable: true,
+        align: 'center',
+        headerAlign: 'center',
+        renderCell: (params) => renderBool(params.value),
+      },
+      {
+        field: 'status',
+        headerName: t('subscriptionPlansPage.columns.status', { defaultValue: 'Status' }),
+        width: 120,
+        sortable: true,
+        renderCell: (params) => <span>{params.value ?? '-'}</span>,
       },
       {
         field: 'updated_at',
@@ -194,9 +251,10 @@ export const SubscriptionPlansPage: React.FC = () => {
   return (
     <>
       <Box sx={{ display: 'flex', flexDirection: 'column', gap: 2 }}>
-        <Stack spacing={0.5}>
-          <Typography variant="h5">{t('subscriptionPlansPage.title', 'Subscription Plans')}</Typography>
-        </Stack>
+        <PageHeader
+          title={t('subscriptionPlansPage.title', 'Subscription Plans')}
+          subtitle={t('subscriptionPlansPage.description')}
+        />
 
         <Stack direction="row" justifyContent="space-between" alignItems="center" flexWrap="wrap" gap={2}>
           <Stack direction="row" alignItems="center" flexWrap="wrap" gap={2}>
@@ -217,7 +275,9 @@ export const SubscriptionPlansPage: React.FC = () => {
               >
                 {planTypeFilterOptions.map((value) => (
                   <MenuItem key={value} value={value}>
-                    {t(`common.subscriptionPlans.${value}`, { defaultValue: value })}
+                    {value === 'ALL'
+                      ? t('common.subscriptionPlans.ALL', { defaultValue: 'All' })
+                      : t(`common.subscriptionPlans.${value}`, { defaultValue: value })}
                   </MenuItem>
                 ))}
               </Select>

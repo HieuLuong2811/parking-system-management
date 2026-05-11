@@ -37,7 +37,7 @@ clientHttp.interceptors.request.use((config) => {
   }
   const hasQuery = config.url.includes('?');
   const [path, query = ''] = config.url.split('?');
-  const normalizedPath = path.endsWith('/') ? path : `${path}/`;
+  const normalizedPath = path !== '/' && path.endsWith('/') ? path.slice(0, -1) : path;
   config.url = hasQuery ? `${normalizedPath}?${query}` : normalizedPath;
   return config;
 });
@@ -60,6 +60,13 @@ export class ApiRequestError extends Error {
   }
 }
 
+export type PaginatedResponse<T> = {
+  data: T[];
+  total: number;
+  page: number;
+  limit: number;
+};
+
 export const requestWithContext = async <T>(
   request: Promise<AxiosResponse<T>>,
   label?: string
@@ -79,15 +86,22 @@ export const requestWithContext = async <T>(
   }
 };
 
-export type PaymentMethod = 'MOMO' | 'STRIPE' | 'CASH';
+export type PaymentMethod = 'MOMO' | 'CASH';
 export type PaymentStatus = 'PENDING' | 'PAID' | 'FAILED';
 export type InvoiceStatus = 'PENDING' | 'PAID' | 'FAILED';
 export type VehicleType = 'MOTORBIKE' | 'BICYCLE' | 'ELECTRIC_BICYCLE';
-export type SubscriptionStatus = 'ACTIVE' | 'EXPIRED' | 'SUSPENDED';
+export type SubscriptionStatus =
+  | 'ACTIVE'
+  | 'PAYMENT_DUE'
+  | 'OVERDUE'
+  | 'SUSPENDED'
+  | 'CANCELED'
+  | 'INACTIVE';
 export type UserType = 'GUEST' | 'STUDENT' | 'STAFF' | 'VISITOR';
 export type PaymentPlanType = 'FULL' | 'MONTHLY';
-export type SubscriptionPlanType = 'UNLICENSED_VEHICLE' | 'LICENSED_VEHICLE';
+export type SubscriptionPlanType = 'BASIC' | 'STARTUP' | 'ENTERPRISE';
 export type ParkingSessionStatus = 'ACTIVE' | 'DONE';
+export type SubscriptionPlanStatus = 'ACTIVE' | 'INACTIVE';
 
 export interface VehicleInfo {
   id: string;
@@ -147,12 +161,25 @@ export interface SubscriptionPlanRecord {
   id: string;
   plans_type: SubscriptionPlanType;
   price_per_day: number;
+
+  allow_monthly_payment?: boolean | null;
+  allow_full_payment?: boolean | null;
+
+  max_licensed_vehicle?: number | null;
+  max_unlicensed_vehicle?: number | null;
+
+  after_18_fee?: number | null;
+  waive_after_18_fee?: boolean | null;
+
+  status?: SubscriptionPlanStatus | string | null;
+
   deleted_at?: string | null;
   created_at: string;
   updated_at: string;
+
+  is_in_use?: boolean;
   perk?: string | null;
 }
-
 export interface PaymentPlan {
   id: string;
   payment_type: PaymentPlanType;
@@ -160,14 +187,6 @@ export interface PaymentPlan {
   is_active: boolean;
   created_at: string;
   updated_at: string;
-}
-
-export interface PlanPaymentModePricing {
-  payment_plan_id: string;
-  payment_type: PaymentPlanType;
-  discount_percent?: number | null;
-  original_amount: number;
-  amount: number;
 }
 
 export interface PlanPricing {
@@ -180,7 +199,6 @@ export interface PlanPricing {
   holiday_days: number;
   sundays_skipped: number;
   total_amount: number;
-  payment_modes: PlanPaymentModePricing[];
 }
 
 export interface PaymentPlanPricingDetail {
@@ -201,7 +219,6 @@ export interface UserInfo {
   full_name: string;
   email: string;
   phone_number?: string | null;
-  stripe_customer_id?: string | null;
   language_use?: string | null;
   created_at: string;
   updated_at: string;
@@ -214,7 +231,6 @@ export interface UserCreatePayload {
   full_name: string;
   email: string;
   phone_number?: string;
-  stripe_customer_id?: string | null;
   language_use?: string;
 }
 
@@ -222,7 +238,6 @@ export interface UserUpdatePayload {
   full_name?: string;
   email?: string;
   phone_number?: string;
-  stripe_customer_id?: string | null;
   language_use?: string;
   password?: string;
   deleted_at?: string | null;
@@ -233,7 +248,7 @@ export interface UserSubscriptionInfo {
   user_code: string;
   sub_plan_id: string;
   term_id: string;
-  vehicle_id: string;
+  vehicle_id?: string | null;
   payment_plan_id: string;
   total_amount: number;
   paid_amount: number;
@@ -258,24 +273,21 @@ export interface UserSubscriptionPayload {
 }
 
 export interface VehicleSummary {
-  id: string;
-  license_plate?: string | null;
+  id?: string;
   vehicle_type: VehicleType;
+  license_plate?: string | null;
+  qr_code?: string | null;
 }
 
 export interface SubscriptionPlanSummary {
-  id: string;
   plans_type: SubscriptionPlanType;
-  price_per_day: number;
 }
 
 export interface PaymentPlanSummary {
-  id: string;
   payment_type: PaymentPlanType;
 }
 
 export interface AcademicTermSummary {
-  id: string;
   term_name: string;
 }
 
@@ -293,6 +305,7 @@ export interface UserSubscriptionDetail {
   payment_plan?: PaymentPlanSummary | null;
   term?: AcademicTermSummary | null;
   vehicle?: VehicleSummary | null;
+  covered_vehicles?: VehicleSummary[] | null;
 }
 
 export interface InvoiceInfo {
@@ -300,7 +313,6 @@ export interface InvoiceInfo {
   user_code: string;
   subscription_id: string;
   amount: number;
-  stripe_invoice_id?: string | null;
   payment_method: PaymentMethod;
   status: InvoiceStatus;
   created_at: string;

@@ -1,25 +1,55 @@
 import { matchPath } from 'react-router-dom';
 
-export const routeBreadcrumbs: Record<string, string[]> = {
-  '/subscriptions/:subscriptionId/invoices': [
-    'subscriptionsPage.title',
-    'subscriptionInvoicesPage.title',
-  ],
-  '/subscriptions': ['subscriptionsPage.title'],
-  '/parking_sessions': ['parkingSessionsPage.title'],
-  '/vehicles': ['vehiclesPage.title'],
-  '/users': ['usersPage.title'],
-  '/users/:userCode/user-details': ['usersPage.title'],
-  '/roles': ['rolesPage.title'],
-  '/terms': ['termsPage.title'],
-  '/plans': ['plansPage.title'],
-  '/payment_transactions': ['resources.tables.paymentTransactions'],
-  '/billing_event_logs': ['billingEventLogsPage.title'],
-  '/notifications': ['notificationsPage.title'],
-  '/settings': ['breadcrumb.settings'],
+export type BreadcrumbCrumb = {
+  label: string;
+  path: string;
+  clickable?: boolean;
+  icon?: 'home';
 };
 
-export const resolveBreadcrumbKeys = (pathname: string): string[] => {
+type BreadcrumbRouteItem = {
+  key: string;
+  path?: string;
+  clickable?: boolean;
+};
+
+export const routeBreadcrumbs: Record<string, BreadcrumbRouteItem[]> = {
+  '/subscriptions/:subscriptionId/invoices': [
+    { key: 'sideBar.parents.billing', clickable: false },
+    { key: 'sideBar.children.subscriptions', path: '/subscriptions' },
+    { key: 'subscriptionInvoicesPage.title', clickable: false },
+  ],
+  '/subscriptions': [{ key: 'sideBar.children.subscriptions', clickable: false }],
+  '/parking_sessions': [{ key: 'sideBar.children.parkingSessions', clickable: false }],
+  '/vehicles': [{ key: 'sideBar.children.vehicles', clickable: false }],
+  '/users': [
+    { key: 'sideBar.parents.userManagement', clickable: false },
+    { key: 'sideBar.children.users', clickable: false },
+  ],
+  '/users/:userCode/user-details': [
+    { key: 'sideBar.parents.userManagement', clickable: false },
+    { key: 'sideBar.children.users', path: '/users' },
+    { key: 'breadcrumb.userDetail', clickable: false },
+  ],
+  '/roles': [
+    { key: 'sideBar.parents.userManagement', clickable: false },
+    { key: 'sideBar.children.roles', clickable: false },
+  ],
+  '/terms': [{ key: 'sideBar.children.terms', clickable: false }],
+  '/plans': [{ key: 'sideBar.children.plans', clickable: false }],
+  '/payment_transactions': [
+    { key: 'sideBar.parents.billing', clickable: false },
+    { key: 'sideBar.children.paymentTransactions', clickable: false },
+  ],
+  '/billing_event_logs': [
+    { key: 'sideBar.parents.billing', clickable: false },
+    { key: 'billingEventLogsPage.title', clickable: false },
+  ],
+  '/notifications': [{ key: 'sideBar.children.notifications', clickable: false }],
+  '/settings': [{ key: 'breadcrumb.settings', clickable: false }],
+};
+
+export const resolveBreadcrumbRoute = (pathname: string): BreadcrumbRouteItem[] => {
   for (const route in routeBreadcrumbs) {
     const match = matchPath({ path: route, end: true }, pathname);
     if (match) return routeBreadcrumbs[route];
@@ -31,13 +61,14 @@ export const buildBreadcrumbs = (
   pathname: string,
   t: (key: string) => string
 ) => {
-  const crumbs = [{ label: t('breadcrumb.home'), path: '/' }];
-  const keys = resolveBreadcrumbKeys(pathname);
+  const crumbs: BreadcrumbCrumb[] = [{ label: t('breadcrumb.home'), path: '/', icon: 'home' }];
+  const items = resolveBreadcrumbRoute(pathname);
 
-  keys.forEach((key) => {
+  items.forEach((item) => {
     crumbs.push({
-      label: t(key),
-      path: pathname,
+      label: t(item.key),
+      path: item.path ?? pathname,
+      clickable: item.clickable ?? Boolean(item.path),
     });
   });
 

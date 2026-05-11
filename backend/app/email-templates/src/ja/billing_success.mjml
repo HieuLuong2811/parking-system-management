@@ -1,0 +1,33 @@
+<mjml>
+  <mj-body background-color="#f5f7fb">
+    <mj-section padding="24px 0">
+      <mj-column>
+        <mj-text font-size="18px" font-weight="bold" color="#0f172a">
+          お支払いが完了しました
+        </mj-text>
+        <mj-text font-size="14px" color="#334155">
+          {{ user_name }} 様
+        </mj-text>
+        <mj-text font-size="14px" color="#334155">
+          請求書 <strong>{{ invoice_id }}</strong> のお支払いを確認しました。
+        </mj-text>
+        <mj-divider border-color="#e2e8f0" />
+        <mj-text font-size="14px" color="#0f172a">
+          <strong>金額:</strong> {{ amount_text }} VND
+        </mj-text>
+        <mj-text font-size="14px" color="#0f172a">
+          <strong>利用期間:</strong> {{ start_date }} – {{ end_date }}
+        </mj-text>
+        <mj-divider border-color="#e2e8f0" />
+        <mj-text font-size="13px" color="#64748b">
+          ご不明点がある場合は、このメールに返信してください。
+        </mj-text>
+        <mj-text font-size="13px" color="#64748b">
+          よろしくお願いいたします。<br />
+          {{ project_name }}
+        </mj-text>
+      </mj-column>
+    </mj-section>
+  </mj-body>
+</mjml>
+

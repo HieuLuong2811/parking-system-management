@@ -1,11 +1,13 @@
 import React, { useMemo, useState } from 'react';
 import { Alert, Box, Paper, Stack, TextField, Typography } from '@mui/material';
 import type { GridColDef } from '@mui/x-data-grid';
+import { useTranslation } from 'react-i18next';
 
 import { SoftDataGrid } from '../components/common/SoftDataGrid';
 import { useAdminRoles } from '../api/roles';
 import type { RoleRecord } from '../api/types';
 import { formatDateTime } from '../ultis/format';
+import { PageHeader } from '../components/common/PageHeader';
 
 const columns: GridColDef<RoleRecord>[] = [
   { field: 'id', headerName: 'Role ID', width: 220, sortable: true },
@@ -20,6 +22,7 @@ const columns: GridColDef<RoleRecord>[] = [
 ];
 
 export const RolesPage: React.FC = () => {
+  const { t } = useTranslation();
   const [searchTerm, setSearchTerm] = useState('');
   const { data = [], isLoading, isError, error } = useAdminRoles();
 
@@ -43,7 +46,8 @@ export const RolesPage: React.FC = () => {
 
   return (
     <Box sx={{ display: 'flex', flexDirection: 'column', gap: 2 }}>
-      <Stack spacing={0.5}>
+      <PageHeader title={t('rolesPage.title')} subtitle={t('rolesPage.description')} />
+      <Stack spacing={0.5} sx={{ display: 'none' }}>
         <Typography variant="h5">Roles</Typography>
         <Typography variant="body2" color="text.secondary">
           Danh sách vai trò và mã định danh.
@@ -56,8 +60,8 @@ export const RolesPage: React.FC = () => {
           size="small"
           variant="outlined"
           value={searchTerm}
-          label="Search"
-          placeholder="Search by code"
+          label={t('rolesPage.searchLabel')}
+          placeholder={t('rolesPage.searchPlaceholder')}
           onChange={(event) => setSearchTerm(event.target.value)}
           sx={{ maxWidth: 420 }}
         />
@@ -75,7 +79,7 @@ export const RolesPage: React.FC = () => {
           columns={columns}
           loading={isLoading}
           getRowId={(row) => (row as RoleRecord).id}
-          emptyMessage="No roles configured yet."
+          emptyMessage={t('rolesPage.empty')}
         />
       </Paper>
     </Box>

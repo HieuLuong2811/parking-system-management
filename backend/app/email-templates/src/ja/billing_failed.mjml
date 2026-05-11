@@ -1,0 +1,36 @@
+<mjml>
+  <mj-body background-color="#f5f7fb">
+    <mj-section padding="24px 0">
+      <mj-column>
+        <mj-text font-size="18px" font-weight="bold" color="#0f172a">
+          お支払いに失敗しました
+        </mj-text>
+        <mj-text font-size="14px" color="#334155">
+          {{ user_name }} 様
+        </mj-text>
+        <mj-text font-size="14px" color="#334155">
+          請求書 <strong>{{ invoice_id }}</strong> の自動支払いが失敗しました（試行 {{ attempt_number }} 回目）。
+        </mj-text>
+        <mj-divider border-color="#e2e8f0" />
+        <mj-text font-size="14px" color="#0f172a">
+          <strong>金額:</strong> {{ amount_text }} VND
+        </mj-text>
+        <mj-text font-size="14px" color="#0f172a">
+          <strong>理由:</strong> {{ error_message }}
+        </mj-text>
+        <mj-text font-size="14px" color="#0f172a">
+          <strong>状態:</strong> {{ status_text }}
+        </mj-text>
+        <mj-divider border-color="#e2e8f0" />
+        <mj-text font-size="13px" color="#64748b">
+          ご不明点がある場合は、このメールに返信してください。
+        </mj-text>
+        <mj-text font-size="13px" color="#64748b">
+          よろしくお願いいたします。<br />
+          {{ project_name }}
+        </mj-text>
+      </mj-column>
+    </mj-section>
+  </mj-body>
+</mjml>
+

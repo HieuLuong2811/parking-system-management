@@ -1,3 +1,5 @@
+import type { SidebarItemConfig } from "../components/layout/menu";
+
 export const formatCurrency = (value?: number | null) => {
   if (value === null || value === undefined) return '-';
   return value.toLocaleString('vi-VN', { maximumFractionDigits: 2 });
@@ -43,3 +45,11 @@ export const toLocalDateTimeInputValue = (date: Date) => {
   const seconds = pad2(date.getSeconds());
   return `${year}-${month}-${day}T${hours}:${minutes}:${seconds}`;
 };
+
+export const buildItems = (items: SidebarItemConfig[], t: (key: string) => string) =>
+  items.map((item) => ({
+    id: item.id,
+    text: t(item.translationKey),
+    icon: item.icon,
+    path: item.path,
+  }));

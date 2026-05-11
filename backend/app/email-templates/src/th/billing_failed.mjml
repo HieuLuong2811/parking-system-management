@@ -1,0 +1,36 @@
+<mjml>
+  <mj-body background-color="#f5f7fb">
+    <mj-section padding="24px 0">
+      <mj-column>
+        <mj-text font-size="18px" font-weight="bold" color="#0f172a">
+          ชำระเงินไม่สำเร็จ
+        </mj-text>
+        <mj-text font-size="14px" color="#334155">
+          สวัสดี {{ user_name }},
+        </mj-text>
+        <mj-text font-size="14px" color="#334155">
+          การชำระเงินอัตโนมัติสำหรับใบแจ้งหนี้ <strong>{{ invoice_id }}</strong> ไม่สำเร็จ (ครั้งที่ {{ attempt_number }})
+        </mj-text>
+        <mj-divider border-color="#e2e8f0" />
+        <mj-text font-size="14px" color="#0f172a">
+          <strong>จำนวนเงิน:</strong> {{ amount_text }} VND
+        </mj-text>
+        <mj-text font-size="14px" color="#0f172a">
+          <strong>สาเหตุ:</strong> {{ error_message }}
+        </mj-text>
+        <mj-text font-size="14px" color="#0f172a">
+          <strong>สถานะ:</strong> {{ status_text }}
+        </mj-text>
+        <mj-divider border-color="#e2e8f0" />
+        <mj-text font-size="13px" color="#64748b">
+          หากต้องการความช่วยเหลือ โปรดตอบกลับอีเมลนี้
+        </mj-text>
+        <mj-text font-size="13px" color="#64748b">
+          ขอแสดงความนับถือ,<br />
+          {{ project_name }}
+        </mj-text>
+      </mj-column>
+    </mj-section>
+  </mj-body>
+</mjml>
+

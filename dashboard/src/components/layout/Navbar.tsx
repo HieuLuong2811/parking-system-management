@@ -18,6 +18,7 @@ import {
 } from '@mui/material';
 import MenuIcon from '@mui/icons-material/Menu';
 import NotificationsIcon from '@mui/icons-material/Notifications';
+import HomeOutlinedIcon from '@mui/icons-material/HomeOutlined';
 import { Link as RouterLink, useLocation } from 'react-router-dom';
 import { useTranslation } from 'react-i18next';
 import { useNotifications } from '../../api/notifications';
@@ -109,12 +110,33 @@ export const Navbar: React.FC<{
               aria-label="breadcrumb"
               sx={{ mt: 0.5, fontSize: 13, color: 'text.secondary', overflow: 'hidden' }}
             >
-              {crumbs.map((crumb, index) =>
-                index === crumbs.length - 1 ? (
-                  <Typography key={crumb.label + index} fontSize={15} fontWeight={600}>
-                    {crumb.label}
-                  </Typography>
+              {crumbs.map((crumb, index) => {
+                const isLast = index === crumbs.length - 1;
+                const isClickable = Boolean(crumb.clickable) && !isLast;
+                const content = crumb.icon === 'home' ? (
+                  <Stack direction="row" alignItems="center" onClick={() => window.location.href = '/'} spacing={0.75}>
+                    <HomeOutlinedIcon fontSize="small" />
+                  </Stack>
                 ) : (
+                  crumb.label
+                );
+
+                if (!isClickable) {
+                  return (
+                    <Typography
+                      key={crumb.label + index}
+                      component="span"
+                      fontSize={15}
+                      fontWeight={isLast ? 600 : 500}
+                      color={isLast ? 'text.primary' : 'text.secondary'}
+                      sx={{ display: 'inline-flex', alignItems: 'center' }}
+                    >
+                      {content}
+                    </Typography>
+                  );
+                }
+
+                return (
                   <Link
                     key={crumb.label + index}
                     component={RouterLink}
@@ -122,11 +144,12 @@ export const Navbar: React.FC<{
                     color="inherit"
                     underline="hover"
                     fontSize={15}
+                    sx={{ display: 'inline-flex', alignItems: 'center' }}
                   >
-                    {crumb.label}
+                    {content}
                   </Link>
-                )
-              )}
+                );
+              })}
             </Breadcrumbs>
           </Box>
         </Stack>

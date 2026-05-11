@@ -4,6 +4,7 @@ import cv2
 import time
 import queue
 import requests
+import re
 from datetime import datetime
 from PyQt6 import QtCore, QtGui, QtWidgets
 
@@ -14,6 +15,7 @@ from app.core.config import settings
 MAX_LOOKUP_ATTEMPTS = 5
 LOOKUP_DEBOUNCE_SECONDS = 2.0
 DETECT_EVERY_N_FRAMES = 10
+PLATE_REGEX = re.compile(r"^[A-Z0-9]{4,12}$")
 
 class CameraWorker(QtCore.QThread):
     frame_ready = QtCore.pyqtSignal(QtGui.QImage)
@@ -87,10 +89,38 @@ class CameraWorker(QtCore.QThread):
                 if frame_count % DETECT_EVERY_N_FRAMES == 0:
                     try:
                         results = model(roi, conf=0.4, verbose=False)
-                        annotated = results[0].plot()
-                        output[y1:y2, x1:x2] = annotated
+                        boxes = results[0].boxes if results else None
 
-                        plate_text = DetectService.segment_image(roi).strip()
+                        best_crop = None
+                        best_conf = -1.0
+
+                        if boxes is not None and len(boxes) > 0:
+                            for box in boxes:
+                                bx1, by1, bx2, by2 = map(int, box.xyxy[0].tolist())
+                                bx1 = max(0, bx1)
+                                by1 = max(0, by1)
+                                bx2 = min(roi.shape[1], bx2)
+                                by2 = min(roi.shape[0], by2)
+                                if bx2 <= bx1 or by2 <= by1:
+                                    continue
+
+                                conf = float(getattr(box, "conf", [0.0])[0] if hasattr(box, "conf") else 0.0)
+                                if conf > best_conf:
+                                    best_conf = conf
+                                    best_crop = roi[by1:by2, bx1:bx2]
+
+                                cv2.rectangle(
+                                    output,
+                                    (x1 + bx1, y1 + by1),
+                                    (x1 + bx2, y1 + by2),
+                                    (0, 255, 0),
+                                    2,
+                                )
+
+                        if best_crop is not None and best_crop.size > 0:
+                            plate_candidate = DetectService.segment_image(best_crop).strip().upper()
+                            if PLATE_REGEX.match(plate_candidate):
+                                plate_text = plate_candidate
                     except Exception as e:
                         self.error_occurred.emit(str(e))
 
@@ -184,8 +214,6 @@ class LookupWorker(QtCore.QThread):
 
 
 class HomePageWidget(QtWidgets.QWidget):
-    toggle_camera_signal = QtCore.pyqtSignal(bool)
-
     def __init__(self, parent=None):
         super().__init__(parent)
         layout = QtWidgets.QVBoxLayout(self)
@@ -196,14 +224,6 @@ class HomePageWidget(QtWidgets.QWidget):
         header_frame.setStyleSheet("background-color:#0f172a; border-radius:14px; padding:14px;")
         header_layout = QtWidgets.QHBoxLayout(header_frame)
         header_layout.addWidget(self._styled_label("BẢNG ĐIỀU KHIỂN BẢO VỆ", color="#f8fafc", size=22, bold=True))
-        header_layout.addStretch()
-        self.toggle_btn = QtWidgets.QPushButton("Camera bật")
-        self.toggle_btn.setCheckable(True)
-        self.toggle_btn.setChecked(True)
-        self.toggle_btn.setMinimumHeight(40)
-        self.toggle_btn.setStyleSheet("font-weight:600; padding:8px 18px; border-radius:10px; background-color:#14b8a6; color:white;")
-        self.toggle_btn.toggled.connect(self._handle_toggle)
-        header_layout.addWidget(self.toggle_btn)
         layout.addWidget(header_frame)
 
         body_frame = QtWidgets.QFrame()
@@ -213,78 +233,73 @@ class HomePageWidget(QtWidgets.QWidget):
         left_column = QtWidgets.QVBoxLayout()
         left_column.setSpacing(12)
 
-        operator_frame = QtWidgets.QFrame()
-        operator_frame.setStyleSheet("background-color:#1f2937; border-radius:12px; padding:16px;")
-        operator_layout = QtWidgets.QFormLayout(operator_frame)
-        operator_layout.setHorizontalSpacing(20)
-        operator_layout.setVerticalSpacing(10)
-        operator_layout.addRow("Nhân viên:", QtWidgets.QLabel("Nguyễn Văn A"))
-        operator_layout.addRow("Mã bảo vệ:", QtWidgets.QLabel("SEC-204"))
-        camera_source_label = QtWidgets.QLabel(settings.CAMERA_RTSP_URL or "Chưa cấu hình RTSP")
-        operator_layout.addRow("Camera RTSP:", camera_source_label)
-        left_column.addWidget(operator_frame)
-
         detection_frame = QtWidgets.QFrame()
         detection_frame.setStyleSheet("background-color:#111b2b; border-radius:12px; padding:16px;")
         detection_layout = QtWidgets.QFormLayout(detection_frame)
         detection_layout.setHorizontalSpacing(20)
         detection_layout.setVerticalSpacing(10)
-        self.license_label = QtWidgets.QLabel("-")
+
+        self.check_in_time_label = QtWidgets.QLabel("-")
+        self.check_out_time_label = QtWidgets.QLabel("-")
+        self.user_code_label = QtWidgets.QLabel("-")
+        self.user_name_label = QtWidgets.QLabel("-")
         self.vehicle_type_label = QtWidgets.QLabel("-")
-        self.match_status_label = QtWidgets.QLabel("Chưa có dữ liệu")
-        self.match_status_label.setStyleSheet("color:#34d399; font-weight:600;")
-        detection_layout.addRow("Biển số:", self.license_label)
-        detection_layout.addRow("Loại xe:", self.vehicle_type_label)
-        detection_layout.addRow("Trạng thái:", self.match_status_label)
+        self.license_label = QtWidgets.QLabel("-")
+        self.amount_due_label = QtWidgets.QLabel("-")
+
+        base_style = "color:#f8fafc; font-weight:600;"
+        self.check_in_time_label.setStyleSheet(base_style)
+        self.check_out_time_label.setStyleSheet(base_style)
+        self.user_code_label.setStyleSheet(base_style)
+        self.user_name_label.setStyleSheet(base_style)
+        self.vehicle_type_label.setStyleSheet(base_style)
+        self.license_label.setStyleSheet("color:#f8fafc; font-weight:700;")
+        self.amount_due_label.setStyleSheet("color:#22c55e; font-weight:800; font-size:28px;")
+
+        detection_layout.addRow("Thời điểm vào:", self.check_in_time_label)
+        detection_layout.addRow("Thời điểm ra:", self.check_out_time_label)
+        detection_layout.addRow("Mã người dùng:", self.user_code_label)
+        detection_layout.addRow("Tên người dùng:", self.user_name_label)
+        detection_layout.addRow("Loại phương tiện:", self.vehicle_type_label)
+        detection_layout.addRow("Biển số xe:", self.license_label)
+        detection_layout.addRow("Số tiền cần thanh toán:", self.amount_due_label)
         left_column.addWidget(detection_frame)
 
-        stats_frame = QtWidgets.QFrame()
-        stats_frame.setStyleSheet("background-color:#1f2937; border-radius:12px; padding:16px;")
-        stats_layout = QtWidgets.QHBoxLayout(stats_frame)
-        active_plan_label = QtWidgets.QLabel("Kế hoạch đang hoạt động: Không")
-        active_plan_label.setStyleSheet("color:#f8fafc; font-weight:600;")
-        stats_layout.addWidget(active_plan_label)
-        stats_layout.addStretch()
-        self.register_btn = QtWidgets.QPushButton("Đăng ký ca trực mới")
-        self.register_btn.setMinimumHeight(36)
-        self.register_btn.setStyleSheet("font-weight:600; padding:6px 16px; background-color:#2563eb; color:white; border-radius:10px;")
-        stats_layout.addWidget(self.register_btn)
-        left_column.addWidget(stats_frame)
+        self.confirm_btn = QtWidgets.QPushButton("Xác nhận")
+        self.confirm_btn.setEnabled(False)
+        self.confirm_btn.setMinimumHeight(44)
+        self.confirm_btn.setStyleSheet(
+            "font-weight:700; padding:10px 18px; background-color:#2563eb; color:white; border-radius:12px;"
+        )
+        left_column.addWidget(self.confirm_btn)
+
+        self.result_status = QtWidgets.QLabel("-")
+        self.result_status.setStyleSheet("color:#94a3b8; font-weight:600; margin-top:4px;")
+        left_column.addWidget(self.result_status)
+        left_column.addStretch()
 
         body_layout.addLayout(left_column, 1)
 
-        side_layout = QtWidgets.QHBoxLayout()
         feed_frame = QtWidgets.QFrame()
         feed_frame.setStyleSheet("border-radius:18px; padding:12px; background-color:#0f172a;")
-        feed_layout = QtWidgets.QHBoxLayout(feed_frame)
+        feed_layout = QtWidgets.QVBoxLayout(feed_frame)
         self.video_label = QtWidgets.QLabel("Camera đang kết nối...")
         self.video_label.setAlignment(QtCore.Qt.AlignmentFlag.AlignCenter)
         self.video_label.setMinimumHeight(320)
         self.video_label.setStyleSheet("background:#0f172a; color:white; border-radius:12px;")
-        feed_layout.addWidget(self.video_label, 2)
+        feed_layout.addWidget(self.video_label)
 
-        detection_log_frame = QtWidgets.QFrame()
-        detection_log_frame.setStyleSheet("background-color:#1f2740; border-radius:12px; padding:16px;")
-        detection_log_layout = QtWidgets.QVBoxLayout(detection_log_frame)
-        self.detection_label = self._styled_label("Tiến trình phát hiện", color="#f8fafc", size=16, bold=True)
-        detection_log_layout.addWidget(self.detection_label)
-        self.last_plate = QtWidgets.QLabel("-")
-        self.last_plate.setStyleSheet("font-size:20px; font-weight:700; color:#f97316;")
-        detection_log_layout.addWidget(self.last_plate)
-        self.last_time = QtWidgets.QLabel("-")
-        detection_log_layout.addWidget(self.last_time)
-        self.detection_history = QtWidgets.QListWidget()
-        self.detection_history.setStyleSheet("border:none; padding:4px; background-color:transparent;")
-        detection_log_layout.addWidget(self.detection_history)
         self.status_label = QtWidgets.QLabel("Đang chờ camera...")
         self.status_label.setStyleSheet("font-weight:600; color:#f8fafc; margin-top:8px;")
-        detection_log_layout.addWidget(self.status_label)
+        feed_layout.addWidget(self.status_label)
 
-        side_layout.addWidget(feed_frame, 2)
-        side_layout.addWidget(detection_log_frame, 1)
-        body_layout.addLayout(side_layout, 2)
+        body_layout.addWidget(feed_frame, 2)
 
         layout.addWidget(body_frame)
+
+        self.current_plate: str | None = None
+        self.current_info: dict | None = None
+        self.confirm_btn.clicked.connect(self._confirm_action)
 
     def _styled_label(self, text: str, color: str = "#f8fafc", size: int = 14, bold: bool = False) -> QtWidgets.QLabel:
         label = QtWidgets.QLabel(text)
@@ -294,33 +309,98 @@ class HomePageWidget(QtWidgets.QWidget):
         label.setStyleSheet(style)
         return label
 
-    def _handle_toggle(self, enabled: bool) -> None:
-        self.toggle_btn.setText("Camera bật" if enabled else "Camera tắt")
-        self.toggle_camera_signal.emit(enabled)
+    def _format_time(self, value: object) -> str:
+        if not value:
+            return "-"
+        if isinstance(value, str):
+            try:
+                # accept ISO8601 from backend
+                dt = datetime.fromisoformat(value.replace("Z", "+00:00"))
+                if dt.tzinfo is not None:
+                    dt = dt.astimezone().replace(tzinfo=None)
+                return dt.strftime("%Y-%m-%d %H:%M:%S")
+            except ValueError:
+                return value
+        if isinstance(value, datetime):
+            return value.strftime("%Y-%m-%d %H:%M:%S")
+        return str(value)
+
+    def _format_money(self, amount: object) -> str:
+        if amount is None or amount == "":
+            return "-"
+        try:
+            value = int(float(amount))
+        except (TypeError, ValueError):
+            return str(amount)
+        return f"{value:,} VND".replace(",", ".")
 
     def update_detection_info(self, plate: str, info: dict | None = None) -> None:
         normalized = plate.strip()
         if not normalized:
             return
-        now = datetime.now().strftime("%H:%M:%S")
-        self.last_plate.setText(normalized)
-        self.last_time.setText(now)
-        item = QtWidgets.QListWidgetItem(f"{now} - {normalized}")
-        self.detection_history.insertItem(0, item)
-        self.detection_history.setCurrentRow(0)
 
-        if info:
-            self.license_label.setText(info.get("license_plate", normalized))
-            self.vehicle_type_label.setText(info.get("vehicle_type", "Không xác định"))
-            user_name = info.get("user_full_name", "Khách")
-            vehicle_type = info.get("vehicle_type", "Không xác định")
-            self.match_status_label.setText(f"Đã đối chiếu: {user_name} ({vehicle_type})")
-            self.match_status_label.setStyleSheet("color:#34d399; font-weight:600;")
-        else:
-            self.license_label.setText(normalized)
-            self.vehicle_type_label.setText("Chưa rõ loại")
-            self.match_status_label.setText("Khách hoặc không có dữ liệu")
-            self.match_status_label.setStyleSheet("color:#facc15; font-weight:600;")
+        now = datetime.now()
+        self.current_plate = normalized.upper()
+        self.current_info = info
+
+        self.license_label.setText(self.current_plate)
+
+        user_code = info.get("user_code") if info else None
+        user_name = info.get("user_full_name") if info else None
+        vehicle_type = info.get("vehicle_type") if info else None
+
+        self.user_code_label.setText(str(user_code) if user_code else "-")
+        self.user_name_label.setText(str(user_name) if user_name else "-")
+        self.vehicle_type_label.setText(str(vehicle_type) if vehicle_type else "-")
+
+        active_session = info.get("active_session") if info else None
+        check_in_time = None
+        check_out_time = None
+
+        if active_session:
+            check_in_time = active_session.get("check_in_time")
+            check_out_time = active_session.get("check_out_time")
+
+        if not check_in_time:
+            check_in_time = now
+
+        self.check_in_time_label.setText(self._format_time(check_in_time))
+        self.check_out_time_label.setText(self._format_time(check_out_time))
+
+        fee_breakdown = info.get("fee_breakdown") if info else None
+        amount_due = None
+        if fee_breakdown and isinstance(fee_breakdown, dict):
+            amount_due = fee_breakdown.get("total_amount")
+        if amount_due is None and active_session and isinstance(active_session, dict):
+            amount_due = active_session.get("total_amount")
+        self.amount_due_label.setText(self._format_money(amount_due))
+
+        self.result_status.setText("Đã nhận biển số, chờ xác nhận.")
+        self.confirm_btn.setEnabled(True)
+
+    def _confirm_action(self) -> None:
+        if not self.current_plate:
+            return
+
+        plate = self.current_plate
+        self.confirm_btn.setEnabled(False)
+        self.result_status.setText("Đang xử lý...")
+
+        try:
+            res = requests.post(
+                f"{settings.BACKEND_HOST}/api/v1/parking_sessions/plate_checkin",
+                json={"license_plate": plate},
+                timeout=6,
+            )
+            if res.ok:
+                data = res.json()
+                action = "CHECK-OUT" if data.get("check_out_time") else "CHECK-IN"
+                when = data.get("check_out_time") or data.get("check_in_time") or ""
+                self.result_status.setText(f"OK: {action} @ {when}")
+            else:
+                self.result_status.setText(f"Failed ({res.status_code})")
+        except Exception as e:
+            self.result_status.setText(str(e))
 
     def set_frame(self, frame: QtGui.QImage) -> None:
         if frame is None:
@@ -361,8 +441,6 @@ class SecurityConsole(QtWidgets.QMainWindow):
         self.start_worker()
 
     def build_ui(self) -> QtWidgets.QWidget:
-        self.home_page.toggle_camera_signal.connect(self.toggle_camera)
-
         container = QtWidgets.QWidget()
         layout = QtWidgets.QHBoxLayout(container)
         layout.setSpacing(0)
@@ -371,14 +449,6 @@ class SecurityConsole(QtWidgets.QMainWindow):
         content_layout = QtWidgets.QVBoxLayout(content_frame)
         content_layout.setSpacing(12)
 
-        header = QtWidgets.QFrame()
-        header.setStyleSheet("border-radius:14px; padding:12px;")
-        header_layout = QtWidgets.QHBoxLayout(header)
-        header_layout.addWidget(QtWidgets.QLabel("Operator console"))
-        header_layout.addStretch()
-        header_layout.addWidget(QtWidgets.QLabel("Nguyễn Văn A"))
-
-        content_layout.addWidget(header)
         content_layout.addWidget(self.home_page)
 
         layout.addWidget(content_frame)
@@ -413,13 +483,6 @@ class SecurityConsole(QtWidgets.QMainWindow):
         if self.worker:
             self.worker.stop()
             self.worker = None
-
-    def toggle_camera(self, enabled: bool) -> None:
-        if enabled:
-            self.start_worker()
-        else:
-            self.stop_worker()
-            self.home_page.set_status("Camera paused")
 
     def home_page_frame(self, image: QtGui.QImage) -> None:
         self.home_page.set_frame(image)

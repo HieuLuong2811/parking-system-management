@@ -6,6 +6,7 @@ import { useNotifications, type NotificationRecord } from '../api/notifications'
 import { SoftDataGrid } from '../components/common/SoftDataGrid';
 import { formatDateTime } from '../ultis/format';
 import type { GridColDef } from '@mui/x-data-grid';
+import { PageHeader } from '../components/common/PageHeader';
 
 export const NotificationsPage: React.FC = () => {
   const { t } = useTranslation();
@@ -75,12 +76,10 @@ export const NotificationsPage: React.FC = () => {
   return (
     <Box>
       <Stack direction="row" flexDirection="column" gap={2} sx={{ mb: 2 }}>
-        <Box>
-          <Typography variant="h5">{t('notificationsPage.title', { defaultValue: 'Notifications' })}</Typography>
-          <Typography variant="body2" color="text.secondary">
-            {t('notificationsPage.description', { defaultValue: 'Your latest notifications.' })}
-          </Typography>
-        </Box>
+        <PageHeader
+          title={t('notificationsPage.title', { defaultValue: 'Notifications' })}
+          subtitle={t('notificationsPage.description', { defaultValue: 'Your latest notifications.' })}
+        />
       </Stack>
 
       {notificationsQuery.isError && (
@@ -103,4 +102,3 @@ export const NotificationsPage: React.FC = () => {
     </Box>
   );
 };
-

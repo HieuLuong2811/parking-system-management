@@ -1,16 +1,23 @@
 import React from 'react';
 import { StyleSheet, Text, TouchableOpacity, View } from 'react-native';
-import ScreenShell from '../component/ScreenShell';
+import { useNavigation } from '@react-navigation/native';
+import type { NativeStackNavigationProp } from '@react-navigation/native-stack';
 
+import ScreenShell from '../component/ScreenShell';
 import { useAuth } from '../auth/AuthContext';
+import type { AppStackParamList } from '../navigation/AppStack';
+
+type Nav = NativeStackNavigationProp<AppStackParamList>;
 
 export default function ProfileScreen() {
   const { user, signOut } = useAuth();
+  const navigation = useNavigation<Nav>();
 
   return (
     <ScreenShell>
       <View style={styles.card}>
-        <Text style={styles.title}>Profile</Text>
+        <Text style={styles.title}>Thông tin cá nhân</Text>
+        <Text style={styles.subtitle}>Quản lý thông tin tài khoản, phương tiện và gói gửi xe.</Text>
 
         {user ? (
           <View style={styles.section}>
@@ -24,8 +31,25 @@ export default function ProfileScreen() {
             <Text style={styles.value}>{user.email}</Text>
           </View>
         ) : (
-          <Text style={styles.desc}>Chưa tải thông tin người dùng.</Text>
+          <Text style={styles.subtitle}>Chưa tải thông tin người dùng.</Text>
         )}
+
+        <View style={styles.quickActions}>
+          <TouchableOpacity
+            style={[styles.actionButton, styles.actionPrimary]}
+            onPress={() => navigation.navigate('Vehicles')}
+            activeOpacity={0.85}
+          >
+            <Text style={styles.actionButtonText}>Phương tiện</Text>
+          </TouchableOpacity>
+          <TouchableOpacity
+            style={[styles.actionButton, styles.actionPrimary]}
+            onPress={() => navigation.navigate('UserSubscriptions')}
+            activeOpacity={0.85}
+          >
+            <Text style={styles.actionButtonText}>Gói đã đăng ký</Text>
+          </TouchableOpacity>
+        </View>
 
         <TouchableOpacity style={styles.logoutButton} onPress={() => void signOut()} activeOpacity={0.85}>
           <Text style={styles.logoutButtonText}>Logout</Text>
@@ -42,14 +66,16 @@ const styles = StyleSheet.create({
     padding: 20,
   },
   title: {
-    fontSize: 24,
-    fontWeight: '800',
+    fontSize: 22,
+    fontWeight: '900',
     color: '#111827',
   },
-  desc: {
-    marginTop: 8,
-    fontSize: 15,
+  subtitle: {
+    marginTop: 6,
+    fontSize: 14,
+    fontWeight: '600',
     color: '#6b7280',
+    lineHeight: 20,
   },
   section: {
     marginTop: 16,
@@ -57,14 +83,32 @@ const styles = StyleSheet.create({
   label: {
     marginTop: 10,
     fontSize: 13,
-    fontWeight: '700',
+    fontWeight: '800',
     color: '#334155',
   },
   value: {
     marginTop: 4,
     fontSize: 15,
-    fontWeight: '600',
+    fontWeight: '700',
     color: '#111827',
+  },
+  quickActions: {
+    marginTop: 16,
+    gap: 10,
+  },
+  actionButton: {
+    height: 44,
+    borderRadius: 12,
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  actionPrimary: {
+    backgroundColor: '#111827',
+  },
+  actionButtonText: {
+    fontSize: 14,
+    fontWeight: '900',
+    color: '#ffffff',
   },
   logoutButton: {
     marginTop: 18,
@@ -76,7 +120,8 @@ const styles = StyleSheet.create({
   },
   logoutButtonText: {
     fontSize: 15,
-    fontWeight: '800',
+    fontWeight: '900',
     color: '#ffffff',
   },
 });
+

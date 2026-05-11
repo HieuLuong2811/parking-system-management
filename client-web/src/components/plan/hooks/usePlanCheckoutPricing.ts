@@ -1,13 +1,16 @@
 import { useMemo } from 'react';
-import type { PlanPaymentModePricing, PlanPricing } from '../../../api/clientApi';
+import type {
+  PaymentPlanPricingDetail,
+  PaymentPlanPricingResponse,
+} from '../../../api/clientApi';
 import { usePaymentPlanPricing } from '../../../api/payment_plan_pricing';
 
 export type PlanCheckoutPricingResult = {
-  planPricing: PlanPricing | null;
+  planPricing: PaymentPlanPricingResponse | null;
   planPricingBusy: boolean;
   planPricingReady: boolean;
-  recurringModePricing: PlanPaymentModePricing | null;
-  fullModePricing: PlanPaymentModePricing | null;
+  recurringModePricing: PaymentPlanPricingDetail | null;
+  fullModePricing: PaymentPlanPricingDetail | null;
 };
 
 export const usePlanCheckoutPricing = (
@@ -15,22 +18,28 @@ export const usePlanCheckoutPricing = (
   termId?: string,
   enabled = true
 ): PlanCheckoutPricingResult => {
-  const { data: planPricing, isLoading, isFetching } = usePaymentPlanPricing(planId, termId, enabled);
+  const {
+    data: planPricing,
+    isLoading,
+    isFetching,
+  } = usePaymentPlanPricing(planId, termId, enabled);
+
+  const paymentPlanDetails = useMemo(() => planPricing?.payment_plan_details ?? [], [planPricing]);
 
   const recurringModePricing = useMemo(
     () =>
-      planPricing?.payment_modes.find(
-        (mode: PlanPaymentModePricing) => mode.payment_type === 'MONTHLY'
+      paymentPlanDetails.find(
+        (mode) => mode.payment_type === 'MONTHLY' && mode.is_active
       ) ?? null,
-    [planPricing]
+    [paymentPlanDetails]
   );
 
   const fullModePricing = useMemo(
     () =>
-      planPricing?.payment_modes.find(
-        (mode: PlanPaymentModePricing) => mode.payment_type === 'FULL'
+      paymentPlanDetails.find(
+        (mode) => mode.payment_type === 'FULL' && mode.is_active
       ) ?? null,
-    [planPricing]
+    [paymentPlanDetails]
   );
 
   const planPricingBusy = isLoading || isFetching;

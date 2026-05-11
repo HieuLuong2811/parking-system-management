@@ -29,9 +29,11 @@ const th = {
       subscriptionStatus: {
         ALL: "ทั้งหมด",
         ACTIVE: "ใช้งานอยู่",
-        EXPIRED: "หมดอายุ",
-        SUSPENDED: "ระงับ",
-        PENDING: "รอดำเนินการ",
+        PAYMENT_DUE: "รอการชำระเงิน",
+        OVERDUE: "ค้างชำระ",
+        SUSPENDED: "ถูกระงับ",
+        CANCELED: "ยกเลิกแล้ว",
+        INACTIVE: "ไม่ใช้งาน",
       },
       paymentPlan: {
         ALL: "ทั้งหมด",
@@ -42,6 +44,17 @@ const th = {
         ALL: "ทั้งหมด",
         LICENSED_VEHICLE: "มีป้ายทะเบียน",
         UNLICENSED_VEHICLE: "ไม่มีป้ายทะเบียน",
+        BASIC: "Basic",
+        STARTUP: "Startup",
+        ENTERPRISE: "Enterprise",
+      },
+      subscriptionPackages: {
+        BASIC: "Basic",
+        STARTUP: "Startup",
+        ENTERPRISE: "Enterprise",
+      },
+      subscriptionBenefit: {
+        after18Waived: "Waived after 18:00",
       },
       vehicleTypeOptions: {
           ALL: 'ทั้งหมด',
@@ -49,6 +62,11 @@ const th = {
           BICYCLE: 'จักรยานยนต์',
           ELECTRIC_BICYCLE: 'จักรยานยนต์',
       },
+      roleTypes: {
+        admin: "ผู้ดูแลระบบ",
+        user: "ผู้ใช้",
+        security: "เจ้าหน้าที่รักษาความปลอดภัย",
+      }
     },
     pageTitle: {
       home: "ระบบจัดการที่จอดรถ - มหาวิทยาลัยเทคโนโลยีและการศึกษาเหิงเยิน",
@@ -194,6 +212,8 @@ const th = {
         deleted: "ลบผู้ใช้ {{user}} แล้ว",
         error: "ไม่สามารถบันทึกการเปลี่ยนแปลงได้",
         deleteConfirm: "ลบผู้ใช้ {{user}} ใช่หรือไม่ การกระทำนี้ไม่สามารถย้อนกลับได้",
+        deleteConfirmActiveWarning:
+          "หากคุณลบผู้ใช้นี้ในขณะที่ยัง ACTIVE บัญชีและการสมัครสมาชิก/ยานพาหนะที่เกี่ยวข้องจะถูกปิดใช้งาน\nคุณแน่ใจหรือไม่ว่าต้องการลบ {{user}}?",
       },
       roleSelector: {
         label: "กำหนดบทบาท",
@@ -207,8 +227,6 @@ const th = {
         removeTooltip: "ลบ {{role}}",
         removeSuccess: "ลบ {{role}} เรียบร้อยแล้ว",
         removeError: "ไม่สามารถลบ {{role}} ได้",
-        optionLabel: "{{role}}",
-        optionLabel: "{{role}}",
       },
       subscriptionDrawer: {
         title: "แพ็กเกจจอดรถล่าสุด",
@@ -261,6 +279,7 @@ const th = {
         password: "รหัสผ่าน",
         passwordHelper: "ปล่อยว่างไว้หากต้องการใช้รหัสผ่านเดิมเมื่อแก้ไข",
         status: "บัญชีใช้งาน",
+        role: "บทบาท",
       },
     },
     vehiclesPage: {
@@ -314,6 +333,11 @@ const th = {
          delete: "ลบภาคการศึกษา",
          inUse: "ภาคการศึกษาอยู่ในใช้งานและไม่สามารถลบได้",
       },
+      dialog: {
+        addTitle: "เพิ่มภาคการศึกษาใหม่",
+        editTitle: "แก้ไขภาคการศึกษา",
+        saving: "กำลังบันทึก...",
+      },
     },
     plansPage: {
       title: "แผนสมัครสมาชิก",
@@ -358,10 +382,28 @@ const th = {
       columns: {
         planName: "ชื่อแพ็กเกจ",
         pricePerDay: "ค่าจอดรถต่อวัน",
+        allowMonthly: "รายเดือน",
+        allowFull: "จ่ายครบ",
+        maxLicensed: "สูงสุด(ป้าย)",
+        maxUnlicensed: "สูงสุด(ไม่มีป้าย)",
+        after18Fee: "ค่าหลัง 18:00",
+        waiveAfter18: "ยกเว้น 18+",
+        status: "สถานะ",
         description: "รายละเอียด",
         createdAt: "สร้างเมื่อ",
         updatedAt: "อัปเดตเมื่อ",
         actions: "การดำเนินการ",
+      },
+      dialog: {
+        fields: {
+          allowMonthly: "อนุญาตชำระรายเดือน",
+          allowFull: "อนุญาตชำระเต็มจำนวน",
+          waiveAfter18: "ยกเว้นค่าหลัง 18:00",
+          maxLicensed: "จำนวนรถมีป้ายสูงสุด",
+          maxUnlicensed: "จำนวนรถไม่มีป้ายสูงสุด",
+          after18Fee: "ค่าหลัง 18:00 (VND)",
+          status: "สถานะ",
+        },
       },
       tooltips: {
         locked: 'แผนนี้กำลังถูกใช้งาน',
@@ -371,6 +413,50 @@ const th = {
       button: {
         add: "เพิ่มแผนใหม่",
       }
+    },
+    paymentPlansPage: {
+      title: "แผนการชำระเงิน",
+      description: "จัดการตัวเลือกการชำระเงิน (รายเดือน/จ่ายครบ) และส่วนลด",
+      empty: "ไม่พบแผนการชำระเงิน",
+      columns: {
+        paymentType: "ประเภทการชำระเงิน",
+        discountPercent: "ส่วนลด (%)",
+        active: "เปิดใช้งาน",
+        createdAt: "สร้างเมื่อ",
+        updatedAt: "อัปเดตเมื่อ",
+        actions: "การดำเนินการ",
+      },
+      status: {
+        active: "ใช้งาน",
+        inactive: "ปิด",
+      },
+      button: {
+        add: "เพิ่มแผนการชำระเงิน",
+      },
+      tooltips: {
+        edit: "แก้ไข",
+        delete: "ลบ",
+      },
+      toast: {
+        created: "สร้างแผนการชำระเงินแล้ว",
+        updated: "อัปเดตแผนการชำระเงินแล้ว",
+        deleted: "ลบแผนการชำระเงินแล้ว",
+        saveError: "ไม่สามารถบันทึกแผนการชำระเงินได้",
+        deleteError: "ไม่สามารถลบแผนการชำระเงินได้",
+        deleteConfirm: "ลบแผนการชำระเงินนี้หรือไม่?",
+      },
+      dialog: {
+        addTitle: "เพิ่มแผนการชำระเงิน",
+        editTitle: "แก้ไขแผนการชำระเงิน",
+        cancel: "ยกเลิก",
+        save: "บันทึก",
+        saving: "กำลังบันทึก...",
+        fields: {
+          paymentType: "ประเภทการชำระเงิน",
+          discountPercent: "ส่วนลด",
+          isActive: "เปิดใช้งาน",
+        },
+      },
     },
     subscriptionInvoicesPage: {
       title: "ใบแจ้งหนี้การสมัครสมาชิก",
@@ -382,9 +468,6 @@ const th = {
       payerTitle: "ผู้ชำระเงิน",
       recipientTitle: "ผู้รับเงิน",
       amountDueLabel: "จำนวนเงินที่ต้องชำระ",
-      common: {
-        back: "กลับ"
-      }
     },
     billingEventLogsPage: {
       title: "เหตุการณ์เรียกเก็บเงิน",
@@ -442,6 +525,7 @@ const th = {
         parkingSessions: "ช่วงเวลาจอดรถ",
         invoices: "ใบแจ้งหนี้",
         paymentTransactions: "ประวัติธุรกรรม",
+        paymentPlans: "แผนการชำระเงิน",
         billingEventLogs: "เหตุการณ์เรียกเก็บเงิน",
       },
     },

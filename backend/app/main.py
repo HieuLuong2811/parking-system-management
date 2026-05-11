@@ -4,7 +4,6 @@ from fastapi.routing import APIRoute
 from sqlalchemy import text
 from starlette.middleware.cors import CORSMiddleware
 
-from app.core import stripe_client
 from app.core.config import settings
 from app.api.main import router  
 from app.api.controller.auth import AuthController
