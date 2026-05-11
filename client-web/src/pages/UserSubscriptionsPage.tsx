@@ -32,6 +32,7 @@ import {
 } from "../api/user_subscriptions";
 import { useVehicles } from "../api/vehicles";
 import { formatCurrency } from "../ultis/formatters";
+import { getStatusColor, getStatusLabel } from "../ultis/status";
 
 export default function UserSubscriptionsPage() {
   const { t } = useTranslation();
@@ -84,35 +85,6 @@ export default function UserSubscriptionsPage() {
         });
       default:
         return paymentType || "—";
-    }
-  };
-
-  const getStatusLabel = (status?: string | null) => {
-    if (!status) {
-      return t("profile.subscriptions.status.unknown", {
-        defaultValue: "Không xác định",
-      });
-    }
-
-    return t(`profile.subscriptions.status.${status.toLowerCase()}`, {
-      defaultValue: status,
-    });
-  };
-
-  const getStatusColor = (
-    status?: string | null,
-  ): "success" | "warning" | "error" | "default" | "info" => {
-    switch (status) {
-      case "ACTIVE":
-      case "PAID":
-        return "success";
-      case "PENDING":
-        return "warning";
-      case "EXPIRED":
-      case "CANCELLED":
-        return "error";
-      default:
-        return "default";
     }
   };
 
@@ -269,7 +241,7 @@ export default function UserSubscriptionsPage() {
                 const paymentLabel = getPaymentTypeLabel(
                   subscription.payment?.payment_type,
                 );
-                const statusLabel = getStatusLabel(subscription.status);
+                const statusLabel = getStatusLabel(subscription.status ? `${t(`profile.subscriptions.status.${subscription.status.toLowerCase()}`)}` : `${t(`profile.subscriptions.status.unknown`)}`);
                 const statusColor = getStatusColor(subscription.status);
                 const openVehicleDrawer = () => {
                   setDrawerSubscription(subscription);

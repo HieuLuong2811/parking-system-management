@@ -297,6 +297,7 @@ const en = {
         pending: "Pending",
         expired: "Expired",
         suspended: "Suspended",
+        unknown: "Unknown",
       },
     },
   },

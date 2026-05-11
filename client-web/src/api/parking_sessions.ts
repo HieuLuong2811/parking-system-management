@@ -39,7 +39,7 @@ export const exportMyParkingSessionsXlsx = async (
     });
 
     const disposition = response.headers?.['content-disposition'] as string | undefined;
-    const match = disposition?.match(/filename=\"?([^\";]+)\"?/i);
+    const match = disposition?.match(/filename="?([^";]+)"?/i);
     const filename = match?.[1] ?? 'parking_sessions.xlsx';
     return { blob: response.data, filename };
   } catch (error) {

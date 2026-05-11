@@ -265,6 +265,7 @@ const ja = {
         pending: "保留中",
         expired: "期限切れ",
         suspended: "停止中",
+        unknown: "保留中",
       },
     },
   },

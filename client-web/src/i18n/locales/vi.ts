@@ -1,4 +1,4 @@
-﻿const vi = {
+const vi = {
   brand: {
     name: "Trường Đại học Sư phạm Kỹ thuật Hưng Yên",
   },
@@ -296,6 +296,7 @@
         pending: "Đang chờ",
         expired: "Hết hạn",
         suspended: "Tạm dừng",
+        unknown: "Không xác định",
       },
     },
   },

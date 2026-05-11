@@ -1,7 +1,6 @@
 import {
   Box,
   Chip,
-  Divider,
   Stack,
   Table,
   TableBody,

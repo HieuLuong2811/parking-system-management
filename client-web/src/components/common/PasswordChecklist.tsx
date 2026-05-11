@@ -11,7 +11,11 @@ interface Props {
 }
 
 const ALLOWED_SPECIAL_CHARS = "!@#$%^&*()_-+=[]{}?/|";
-const ALLOWED_PASSWORD_REGEX = /^[A-Za-z0-9!@#$%^&*()_\-+=\[\]{}?/|]*$/;
+const escapeForCharClass = (value: string) => value.replace(/[-\\^[\]]/g, "\\$&");
+const ALLOWED_PASSWORD_REGEX = new RegExp(
+  `^[A-Za-z0-9${escapeForCharClass(ALLOWED_SPECIAL_CHARS)}]*$`
+);
+const HAS_SPECIAL_CHAR_REGEX = new RegExp(`[${escapeForCharClass(ALLOWED_SPECIAL_CHARS)}]`);
 
 export default function PasswordChecklist({ password, t, type_width }: Props) {
   const checklistRules = [
@@ -49,7 +53,7 @@ export default function PasswordChecklist({ password, t, type_width }: Props) {
           defaultValue: "Ít nhất 1 ký tự đặc biệt",
         }),
       ),
-      valid: /[!@#$%^&*()_\-+=\[\]{}?/|]/.test(password),
+      valid: HAS_SPECIAL_CHAR_REGEX.test(password),
     },
     {
       key: "allowed-special",

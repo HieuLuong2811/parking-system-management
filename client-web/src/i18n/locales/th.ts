@@ -266,6 +266,7 @@ const th = {
         pending: "รอดำเนินการ",
         expired: "หมดอายุ",
         suspended: "ระงับชั่วคราว",
+        unknown: "รอดำเนินการ",
       },
     },
   },
