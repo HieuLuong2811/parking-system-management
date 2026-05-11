@@ -86,10 +86,6 @@ export default function VehiclePage() {
     registerModal.closeModal();
   };
 
-  const showToast = (message: string, severity: 'success' | 'info' | 'error' = 'info') => {
-    setSnackbar({ message, severity });
-  };
-
   const handleRegisterPlan = () => {
     navigate(`/plan`);
   };
