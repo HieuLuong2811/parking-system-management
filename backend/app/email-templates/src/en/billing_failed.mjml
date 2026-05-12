@@ -1,0 +1,36 @@
+<mjml>
+  <mj-body background-color="#f5f7fb">
+    <mj-section padding="24px 0">
+      <mj-column>
+        <mj-text font-size="18px" font-weight="bold" color="#0f172a">
+          Payment failed
+        </mj-text>
+        <mj-text font-size="14px" color="#334155">
+          Hi {{ user_name }},
+        </mj-text>
+        <mj-text font-size="14px" color="#334155">
+          Your automatic payment for invoice <strong>{{ invoice_id }}</strong> failed (attempt {{ attempt_number }}).
+        </mj-text>
+        <mj-divider border-color="#e2e8f0" />
+        <mj-text font-size="14px" color="#0f172a">
+          <strong>Amount:</strong> {{ amount_text }} VND
+        </mj-text>
+        <mj-text font-size="14px" color="#0f172a">
+          <strong>Reason:</strong> {{ error_message }}
+        </mj-text>
+        <mj-text font-size="14px" color="#0f172a">
+          <strong>Status:</strong> {{ status_text }}
+        </mj-text>
+        <mj-divider border-color="#e2e8f0" />
+        <mj-text font-size="13px" color="#64748b">
+          If you need help, please reply to this email.
+        </mj-text>
+        <mj-text font-size="13px" color="#64748b">
+          Regards,<br />
+          {{ project_name }}
+        </mj-text>
+      </mj-column>
+    </mj-section>
+  </mj-body>
+</mjml>
+

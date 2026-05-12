@@ -1,168 +1,175 @@
-import React from 'react';
+import React, { useEffect } from 'react';
 import {
   Box,
   Divider,
   Drawer,
   List,
-  ListItem,
-  ListItemButton,
-  ListItemIcon,
-  ListItemText,
   Toolbar,
   Typography,
   useMediaQuery,
   useTheme,
-  Tooltip,
 } from '@mui/material';
-import HomeIcon from '@mui/icons-material/Home';
-import { Link as RouterLink, useLocation } from 'react-router-dom';
+import { useLocation } from 'react-router-dom';
 import { useTranslation } from 'react-i18next';
+import { useAuth } from '../../contexts/useAuth';
 
 import { COLLAPSED_SIDEBAR_WIDTH, EXPANDED_SIDEBAR_WIDTH } from '../../constant/config';
-import { managementItems, primaryItems, type SidebarItemConfig } from './menu';
+import {
+  logoutItem,
+  overviewItems,
+  billingGroup,
+  userManagementGroup,
+  systemItems,
+  footerItems,
+  type SidebarItemConfig,
+  type SidebarGroupConfig,
+} from './menu';
+import FirstPageIcon from '@mui/icons-material/FirstPage';
+import LastPageIcon from '@mui/icons-material/LastPage';
+import { buildItems } from '../../ultis/format';
+import { SidebarGroup, SidebarItem } from './sidebarItem';
 
 interface SidebarProps {
   mobileOpen: boolean;
   onClose: () => void;
   collapsed: boolean;
+  onCollapseToggle: () => void; 
 }
 
-const SidebarItem = ({
-  text,
-  icon,
-  path,
-  onClick,
-  collapsed,
-  active,
-}: {
-  text: string;
-  icon: React.ReactNode;
-  path: string;
-  onClick: () => void;
-  collapsed: boolean;
-  active: boolean;
-}) => (
-  <ListItem disablePadding sx={{ justifyContent: 'center', mb: 0.5 }}>
-    <Tooltip title={collapsed ? text : ''} placement="right">
-      <ListItemButton
-        component={RouterLink}
-        to={path}
-        onClick={onClick}
-        sx={{
-          px: collapsed ? 1.5 : 2.5,
-          justifyContent: collapsed ? 'center' : 'flex-start',
-          transition: 'all 0.3s ease',
-          backgroundColor: active ? '#6b4fd0' : 'transparent',
-          '&:hover': {
-            backgroundColor: active ? '#6b4fd0' : 'rgba(15, 23, 42, 0.06)',
-          },
-          borderRadius: 2,
-          boxShadow: active ? '0px 1px 3px rgba(0, 0, 0, 0.2)' : 'none',
-          color: active ? '#ffffff' : '#000',
-        }}
-      >
-        <ListItemIcon sx={{ minWidth: 0, justifyContent: 'center', color: active ? '#ffffff' : '#525252cc' }}>{icon}</ListItemIcon>
-        {!collapsed && (
-          <ListItemText primary={text} sx={{ ml: 2 }} primaryTypographyProps={{ noWrap: true }} />
-        )}
-      </ListItemButton>
-    </Tooltip>
-  </ListItem>
-);
-
-const buildItems = (
-  items: SidebarItemConfig[],
-  t: ReturnType<typeof useTranslation>['t']
-) =>
-  items.map((item) => ({
-    id: item.id,
-    text: t(item.translationKey),
-    icon: item.icon,
-    path: item.path,
-  }));
-
-export const Sidebar: React.FC<SidebarProps> = ({ mobileOpen, onClose, collapsed }) => {
+export const Sidebar: React.FC<SidebarProps> = ({ mobileOpen, onClose, collapsed, onCollapseToggle }) => {
   const theme = useTheme();
   const isDesktop = useMediaQuery(theme.breakpoints.up('md'));
   const { t } = useTranslation();
   const location = useLocation();
-
-  const primaryResourceItems = buildItems(primaryItems, t);
-  const managementResourceItems = buildItems(managementItems, t);
-
+  const { user } = useAuth();
   const drawerWidth = collapsed ? COLLAPSED_SIDEBAR_WIDTH : EXPANDED_SIDEBAR_WIDTH;
 
   const isPathActive = (target: string) => {
-    if (target === '/') {
-      return location.pathname === '/';
-    }
+    if (target === '/') return location.pathname === '/';
     return location.pathname === target || location.pathname.startsWith(`${target}/`);
   };
 
-  const drawerContent = (
-    <Box
-      sx={{
-        width: drawerWidth,
-        minHeight: '100%',
-        display: 'flex',
-        flexDirection: 'column',
-      }}
-    >
-      <Toolbar sx={{ justifyContent: collapsed ? 'center' : 'space-between' }}>
-        <img src="/Logo.png" alt="Logo" width={50} height={50}/>
-        {!collapsed && (
-          <Box sx={{ textAlign: collapsed ? 'center' : 'left' }}>
-            <Typography variant="h6" sx={{ fontSize: 20 }}>
-              Quản lý bãi đỗ xe
-            </Typography>
-          </Box>
-        )}
-      </Toolbar>
-      <Divider />
-      <List sx={{ flexGrow: 0, px: collapsed ? 0 : 1 }}>
-        {!collapsed && (
-          <ListItem>
-            <ListItemText primary={t('sideBar.children.home')} />
-          </ListItem>
-        )}
+  const isGroupActive = (group: SidebarGroupConfig) =>
+    group.children.some((child) => isPathActive(child.path));
+
+  const [openGroups, setOpenGroups] = React.useState<Record<string, boolean>>(() => ({
+    [billingGroup.id]: isGroupActive(billingGroup),
+    [userManagementGroup.id]: isGroupActive(userManagementGroup),
+  }));
+
+  useEffect(() => {
+    setOpenGroups((prev) => {
+      const next = { ...prev };
+      if (isGroupActive(billingGroup)) next[billingGroup.id] = true;
+      if (isGroupActive(userManagementGroup)) next[userManagementGroup.id] = true;
+      return next;
+    });
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [location.pathname]);
+
+  const logout = () => {
+    window.location.href = '/logout';
+  };
+
+  const renderSection = (items: SidebarItemConfig[]) => (
+    <>
+      {buildItems(items, t).map((item) => (
         <SidebarItem
-          key="home"
-          text={t('sideBar.children.home')}
-          icon={<HomeIcon />}
-          path="/"
+          key={item.id}
+          text={item.text}
+          icon={item.icon}
+          path={item.path}
           onClick={onClose}
           collapsed={collapsed}
-          active={isPathActive('/')}
+          active={isPathActive(item.path)}
         />
-        {primaryResourceItems.map((resource) => (
-          <SidebarItem
-            key={resource.id}
-            text={resource.text}
-            icon={resource.icon}
-            path={resource.path}
-            onClick={onClose}
-            collapsed={collapsed}
-            active={isPathActive(resource.path)}
-          />
-        ))}
-      </List>
-      <List sx={{ flexGrow: 1, px: collapsed ? 0 : 1 }}>
+      ))}
+    </>
+  );
+
+
+  const renderGroup = (group: SidebarGroupConfig) => (
+    <SidebarGroup
+      key={group.id}
+      group={group}
+      collapsed={collapsed}
+      open={!!openGroups[group.id]}
+      onToggle={() =>
+        setOpenGroups((prev) => ({
+          ...prev,
+          [group.id]: !prev[group.id],
+        }))
+      }
+      onClose={onClose}
+      isPathActive={isPathActive}
+      isGroupActive={isGroupActive}
+      t={t}
+    />
+  );
+  
+  const roles = (user?.roles || []).map((r) => String(r || '').trim().toUpperCase());
+  const isSecurityOnly = roles.includes('SECURITY') && !roles.includes('ADMIN');
+
+  const visibleOverviewItems = isSecurityOnly
+    ? overviewItems.filter((item) => item.id === 'parking_sessions')
+    : overviewItems;
+
+  const visibleBillingGroup = isSecurityOnly
+    ? null
+    : billingGroup;
+
+  const visibleUserManagementGroup = isSecurityOnly
+    ? null
+    : userManagementGroup;
+
+  const visibleSystemItems = isSecurityOnly ? [] : systemItems;
+
+  const drawerContent = (
+    <Box sx={{ width: drawerWidth, minHeight: '100%', display: 'flex', flexDirection: 'column', borderRight: '1px solid', borderColor: '#e2e8f0' }}>
+      
+      <Toolbar sx={{ justifyContent: collapsed ? 'center' : 'flex-start', gap: 1 }}>
+        <img src="/Logo.png" alt="Logo" width={36} height={36} />
         {!collapsed && (
-          <ListItem>
-            <ListItemText primary={t('sideBar.children.resources')} />
-          </ListItem>
+          <Typography variant="subtitle1" sx={{ fontWeight: 600 }}>
+            Parking Admin
+          </Typography>
         )}
-        {managementResourceItems.map((resource) => (
-          <SidebarItem
-            key={resource.id}
-            text={resource.text}
-            icon={resource.icon}
-            path={resource.path}
-            onClick={onClose}
-            collapsed={collapsed}
-            active={isPathActive(resource.path)}
-          />
-        ))}
+      </Toolbar>
+
+      <Divider />
+
+      <List sx={{ px: collapsed ? 0 : 1 }}>
+        <SidebarItem
+          text={collapsed ? t('sideBar.expand') : t('sideBar.collapse')}
+          icon={collapsed ? <LastPageIcon /> : <FirstPageIcon />}
+          path="#"
+          onClick={onCollapseToggle}
+          collapsed={collapsed}
+          active={false}
+        />
+      </List>
+
+      <List disablePadding sx={{ px: collapsed ? 0 : 1, py: 0 }}>
+        {renderSection(visibleOverviewItems)}
+        {visibleBillingGroup ? renderGroup(visibleBillingGroup) : null}
+        {visibleUserManagementGroup ? renderGroup(visibleUserManagementGroup) : null}
+        {renderSection(visibleSystemItems)}
+      </List>
+
+
+      <List sx={{ mt: 'auto', px: collapsed ? 0 : 1 }}>
+        <Divider sx={{ mb: 1 }} />
+        {renderSection(footerItems)}
+        <Divider sx={{ my: 1 }} />
+        <SidebarItem
+          text={t(logoutItem.translationKey)}
+          icon={logoutItem.icon}
+          path="#"
+          onClick={logout}
+          collapsed={collapsed}
+          active={false}
+          isDanger
+        />
       </List>
     </Box>
   );
@@ -173,12 +180,9 @@ export const Sidebar: React.FC<SidebarProps> = ({ mobileOpen, onClose, collapsed
         variant="temporary"
         open={!isDesktop && mobileOpen}
         onClose={onClose}
-        ModalProps={{
-          keepMounted: true,
-        }}
+        ModalProps={{ keepMounted: true }}
         sx={{
           '& .MuiDrawer-paper': {
-            boxSizing: 'border-box',
             width: drawerWidth,
             boxShadow: 'none',
           },
@@ -186,20 +190,18 @@ export const Sidebar: React.FC<SidebarProps> = ({ mobileOpen, onClose, collapsed
       >
         {drawerContent}
       </Drawer>
+
       <Drawer
         variant="permanent"
+        open
         sx={{
           display: { xs: 'none', md: 'block' },
           '& .MuiDrawer-paper': {
             width: drawerWidth,
-            boxSizing: 'border-box',
-            overflowX: 'hidden',
-            transition: 'width 0.3s ease',
+            transition: 'width 0.3s',
             borderRight: 'none',
-            boxShadow: 'none',
           },
         }}
-        open
       >
         {drawerContent}
       </Drawer>

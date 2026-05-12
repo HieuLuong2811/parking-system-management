@@ -54,6 +54,13 @@ async def get_all_users(
     )
     return users
 
+@router.get("/{user_code}", response_model=UsersRead)
+async def get_user_by_userCode(user_code: str, db: AsyncSession = Depends(get_db)):
+    user = await UserController.get_user_by_userCode_ctrl(user_code, db)
+    if not user:
+        raise HTTPException(status_code=404, detail="User not found")
+    return user
+
 
 @router.patch("/{user_code}", response_model=UsersRead)
 async def update_user(user_code: str, user_in: UsersUpdate, db: AsyncSession = Depends(get_db)):

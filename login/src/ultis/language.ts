@@ -1,11 +1,10 @@
-export type Language = 'vi' | 'en' | 'ja' | 'th';
+export type Language = 'vi' | 'en' | 'th';
 
-export const supportedLanguages: Language[] = ['vi', 'en', 'ja', 'th'];
+export const supportedLanguages: Language[] = ['vi', 'en', 'th'];
 
 export const languageLabels: Record<Language, string> = {
   vi: 'Tiếng Việt',
   en: 'English',
-  ja: '日本語',
   th: 'ภาษาไทย',
 };
 

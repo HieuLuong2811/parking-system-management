@@ -119,7 +119,7 @@ export default function HomePage() {
               gửi xe, thanh toán, nhận diện phương tiện và kiểm soát ra vào hiệu quả.
             </Typography>
             <Stack direction={{ xs: 'column', sm: 'row' }} spacing={2} className="home-hero-actions">
-              <Button variant="contained" size="large" className="home-primary-btn" href='/vehicle'>
+              <Button variant="contained" size="large" className="home-primary-btn" href='/plan'>
                 Đăng ký gửi xe
               </Button>
               <Button variant="outlined" size="large" className="home-secondary-btn" href='#features'>

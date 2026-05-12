@@ -6,7 +6,6 @@ import { ApiRequestError, clientHttp, PaginatedResponse, requestWithContext, Par
 export type ParkingSessionsMeQuery = {
   page: number;
   limit: number;
-  query?: string;
   status?: 'ACTIVE' | 'DONE';
   from_time?: string;
   to_time?: string;
@@ -40,7 +39,7 @@ export const exportMyParkingSessionsXlsx = async (
     });
 
     const disposition = response.headers?.['content-disposition'] as string | undefined;
-    const match = disposition?.match(/filename=\"?([^\";]+)\"?/i);
+    const match = disposition?.match(/filename="?([^";]+)"?/i);
     const filename = match?.[1] ?? 'parking_sessions.xlsx';
     return { blob: response.data, filename };
   } catch (error) {

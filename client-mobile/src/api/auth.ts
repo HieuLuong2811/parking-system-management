@@ -27,6 +27,12 @@ export interface TokenResponse {
   roles: string[];
 }
 
+export interface UpdateProfilePayload {
+  full_name: string;
+  email: string;
+  phone: string;
+}
+
 function withAuthHeader(headers: Record<string, string> | undefined, token: string) {
   return { ...(headers ?? {}), Authorization: `Bearer ${token}` };
 }

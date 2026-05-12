@@ -1,0 +1,36 @@
+<mjml>
+  <mj-body background-color="#f5f7fb">
+    <mj-section padding="24px 0">
+      <mj-column>
+        <mj-text font-size="18px" font-weight="bold" color="#0f172a">
+          Thanh toán thất bại
+        </mj-text>
+        <mj-text font-size="14px" color="#334155">
+          Xin chào {{ user_name }},
+        </mj-text>
+        <mj-text font-size="14px" color="#334155">
+          Thanh toán tự động cho hóa đơn <strong>{{ invoice_id }}</strong> đã thất bại (lần thử {{ attempt_number }}).
+        </mj-text>
+        <mj-divider border-color="#e2e8f0" />
+        <mj-text font-size="14px" color="#0f172a">
+          <strong>Số tiền:</strong> {{ amount_text }} VND
+        </mj-text>
+        <mj-text font-size="14px" color="#0f172a">
+          <strong>Lý do:</strong> {{ error_message }}
+        </mj-text>
+        <mj-text font-size="14px" color="#0f172a">
+          <strong>Trạng thái:</strong> {{ status_text }}
+        </mj-text>
+        <mj-divider border-color="#e2e8f0" />
+        <mj-text font-size="13px" color="#64748b">
+          Nếu cần hỗ trợ, vui lòng trả lời email này.
+        </mj-text>
+        <mj-text font-size="13px" color="#64748b">
+          Trân trọng,<br />
+          {{ project_name }}
+        </mj-text>
+      </mj-column>
+    </mj-section>
+  </mj-body>
+</mjml>
+

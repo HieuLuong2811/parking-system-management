@@ -5,4 +5,6 @@ export const defaultUserFormValues: UserFormValues = {
   full_name: '',
   email: '',
   phone_number: '',
+  password: '',
+  role_id: '',
 };

@@ -9,14 +9,6 @@ from pydantic import BaseModel
 from app.enums.parking import PaymentType
 
 
-class PlanPaymentModePricing(BaseModel):
-    payment_plan_id: UUID
-    payment_type: PaymentType
-    discount_percent: Optional[int]
-    original_amount: int
-    amount: int
-
-
 class PlanPricingResponse(BaseModel):
     plan_id: UUID
     term_id: UUID
@@ -27,7 +19,6 @@ class PlanPricingResponse(BaseModel):
     holiday_days: int
     sundays_skipped: int
     total_amount: int
-    payment_modes: list[PlanPaymentModePricing]
 
 
 class PaymentPlanPricingDetail(BaseModel):

@@ -18,10 +18,9 @@ import type {
   PaymentTransactionDetailRecord,
 } from "../api/types";
 import { UserIdentityCell } from "../components/common/UserIdentityCell";
-import { formatCurrencyInvoice, formatDateTime } from "../ultis/format";
+import { formatCurrency, formatDateTime } from "../ultis/format";
 import { useTranslation } from "react-i18next";
-
-const formatCurrency = (value: number) => formatCurrencyInvoice(String(value));
+import { PageHeader } from "../components/common/PageHeader";
 
 export const PaymentTransactionsPage: React.FC = () => {
   const { t } = useTranslation();
@@ -136,7 +135,11 @@ export const PaymentTransactionsPage: React.FC = () => {
 
   return (
     <Box sx={{ display: "flex", flexDirection: "column", gap: 2 }}>
-      <Stack spacing={0.5}>
+      <PageHeader
+        title={t("resources.tables.paymentTransactions")}
+        subtitle={t("paymentTransactionsPage.description")}
+      />
+      <Stack spacing={0.5} style={{ display: "none" }}>
         <Typography variant="h5">
           {t("resources.tables.paymentTransactions")}
         </Typography>

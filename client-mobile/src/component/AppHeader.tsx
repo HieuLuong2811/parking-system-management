@@ -1,5 +1,5 @@
 import React from 'react';
-import { Image, Pressable, StyleSheet, View } from 'react-native';
+import { Image, Pressable, StyleSheet, View, Text } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 
 import { useUi } from '../ui/UiContext';
@@ -13,6 +13,7 @@ export default function AppHeader() {
     <View style={styles.container}>
       <View style={styles.left}>
         <Image source={require('../../assets/Logo.png')} style={styles.logo} resizeMode="contain" />
+        <Text style={styles.title}>Parking UTEHY</Text>
       </View>
 
       <Pressable onPress={toggleDrawer} style={styles.menuButton} hitSlop={10}>
@@ -38,10 +39,15 @@ const styles = StyleSheet.create({
   left: {
     flexDirection: 'row',
     alignItems: 'center',
+    gap: 12,
   },
   logo: {
     width: 32,
     height: 32,
+  },
+  title : {
+    fontSize: 18,
+    fontWeight: '600',
   },
   menuButton: {
     width: 42,

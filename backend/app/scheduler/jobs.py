@@ -1,350 +1,304 @@
 from __future__ import annotations
 
 import logging
+from datetime import datetime
 import re
-import uuid
-from datetime import date, datetime
-from typing import Optional
 
-import stripe
 from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
 
-from app.core.config import settings
-from app.core.stripe_client import ensure_stripe_configured, stripe_client
 from app.db.session import AsyncSessionLocal
-from app.enums.parking import InvoiceStatus, PaymentMethod, PaymentType, SubscriptionStatus
-from app.models.invoices import Invoice, InvoiceCreate, InvoiceUpdate
+from app.enums.parking import (
+    InvoiceStatus,
+    PaymentMethod,
+    PaymentType,
+    SubscriptionStatus,
+)
+from app.models.invoices import InvoiceCreate
 from app.models.notifications import NotificationCreate
 from app.models.payment_plans import PaymentPlan
-from app.models.payment_transactions import PaymentTransactionCreate
 from app.models.subscriptions import UserSubscription, UserSubscriptionUpdate
-from app.models.terms import AcademicTerm, AcademicTermUpdate
+from app.models.terms import AcademicTermUpdate
 from app.models.users import Users
+
 from app.service.invoices import invoiceService
 from app.service.notifications import notificationService
-from app.service.payment_notifications import (
-    send_billing_failed_email,
-    send_billing_success_email,
-)
-from app.service.payment_transactions import paymentTransactionService
+from app.service.payment_notifications import send_billing_failed_email
 from app.service.subscriptions import subscriptionService
 from app.service.terms import termService
-from app.scheduler.utils import DEFAULT_TZ, add_years_safe, is_last_day_of_month, local_day_bounds_utc
+from app.service.admin_billing_reports import (
+    get_admin_emails,
+    get_unpaid_subscription_rows,
+    build_unpaid_subscription_excel,
+)
+
+from app.service.payment_notifications import send_admin_billing_report_email
+from app.scheduler.utils import DEFAULT_TZ, add_years_safe, is_last_day_of_month
 
 logger = logging.getLogger(__name__)
 
 
-async def cron_monthly_billing_attempt_1() -> None:
-    await _run_monthly_billing(attempt_number=1, suspend_on_failure=False)
+MONTHLY_BILLING_STATUSES = [
+    SubscriptionStatus.ACTIVE,
+    SubscriptionStatus.PAYMENT_DUE,
+    SubscriptionStatus.OVERDUE,
+    SubscriptionStatus.CANCELED,
+]
 
 
-async def cron_monthly_billing_attempt_2() -> None:
-    await _run_monthly_billing(attempt_number=2, suspend_on_failure=False)
+async def cron_monthly_billing_attempt_1():
+    await _run_billing(attempt=1)
 
 
-async def cron_monthly_billing_attempt_3() -> None:
-    await _run_monthly_billing(attempt_number=3, suspend_on_failure=True)
+async def cron_monthly_billing_attempt_2():
+    await _run_billing(attempt=2)
+
+
+async def cron_monthly_billing_attempt_3():
+    await _run_billing(attempt=3)
 
 
 async def cron_academic_terms_rollover() -> None:
     async with AsyncSessionLocal() as db:
         await _roll_academic_terms_forward(db)
+        await db.commit()
 
 
-async def _run_monthly_billing(*, attempt_number: int, suspend_on_failure: bool) -> None:
-    now_local = datetime.now(DEFAULT_TZ)
-    today = now_local.date()
+async def _get_subscriptions(db: AsyncSession):
+    stmt = (
+        select(UserSubscription, Users)
+        .join(PaymentPlan, PaymentPlan.id == UserSubscription.payment_plan_id)
+        .join(Users, Users.user_code == UserSubscription.user_code)
+        .where(UserSubscription.status.in_(MONTHLY_BILLING_STATUSES))
+        .where(PaymentPlan.payment_type == PaymentType.MONTHLY)
+    )
+
+    res = await db.execute(stmt)
+    return res.all()
+
+
+async def _run_billing(*, attempt: int):
+    today = datetime.now(DEFAULT_TZ).date()
+
     if not is_last_day_of_month(today):
         return
 
     async with AsyncSessionLocal() as db:
-        subscriptions = await _get_active_monthly_subscriptions(db)
-        logger.info(
-            "Monthly billing run attempt=%s subscriptions=%s date=%s",
-            attempt_number,
-            len(subscriptions),
-            today.isoformat(),
-        )
-        for subscription, user in subscriptions:
+        subs = await _get_subscriptions(db)
+
+        for sub, user in subs:
             try:
-                await _process_subscription_monthly_billing(
-                    subscription=subscription,
+                await _process_subscription(
+                    sub=sub,
                     user=user,
                     db=db,
+                    attempt=attempt,
                     today=today,
-                    attempt_number=attempt_number,
-                    suspend_on_failure=suspend_on_failure,
                 )
+                await db.commit()
             except Exception:
-                logger.exception(
-                    "Monthly billing attempt=%s failed for subscription=%s user=%s",
-                    attempt_number,
-                    getattr(subscription, "id", None),
-                    getattr(user, "user_code", None),
-                )
+                await db.rollback()
+                logger.exception("Billing failed sub=%s", sub.id)
+
+        if attempt == 3:
+            try:
+                await _send_admin_billing_report(db)
+                await db.commit()
+            except Exception:
+                await db.rollback()
+                logger.exception("Failed to send admin billing report")
 
 
-async def _get_active_monthly_subscriptions(db: AsyncSession) -> list[tuple[UserSubscription, Users]]:
-    statement = (
-        select(UserSubscription, Users)
-        .join(PaymentPlan, PaymentPlan.id == UserSubscription.payment_plan_id)
-        .join(Users, Users.user_code == UserSubscription.user_code)
-        .where(UserSubscription.status == SubscriptionStatus.ACTIVE)
-        .where(PaymentPlan.payment_type == PaymentType.MONTHLY)
-        .where(Users.deleted_at.is_(None))
-        .order_by(UserSubscription.created_at.desc())
-    )
-    result = await db.execute(statement)
-    return [(sub, user) for sub, user in result.all()]
-
-
-async def _process_subscription_monthly_billing(
+async def _process_subscription(
     *,
-    subscription: UserSubscription,
+    sub: UserSubscription,
     user: Users,
     db: AsyncSession,
-    today: date,
-    attempt_number: int,
-    suspend_on_failure: bool,
-) -> None:
-    if subscription.status != SubscriptionStatus.ACTIVE:
-        return
-
-    day_start_utc, day_end_utc = local_day_bounds_utc(today)
-
-    today_invoice = await _get_latest_invoice_for_subscription(
+    attempt: int,
+    today,
+):
+    invoice = await invoiceService.find_current_month_invoice_by_subscription(
         db,
-        subscription_id=subscription.id,
-        created_from=day_start_utc,
-        created_to=day_end_utc,
+        sub.id,
+        today=today,
     )
 
-    # Attempt 1 creates the day's invoice; retries re-use it.
-    if attempt_number == 1:
-        if today_invoice is not None:
-            # Idempotency: do not create/re-charge again on the same day.
-            return
-        latest_invoice = await _get_latest_invoice_for_subscription(db, subscription_id=subscription.id)
-        if latest_invoice and latest_invoice.status == InvoiceStatus.PAID:
-            # Already paid recently; still allow billing next month only.
-            pass
-        amount_to_charge = subscription.total_amount
-        if latest_invoice and latest_invoice.status != InvoiceStatus.PAID:
-            amount_to_charge += int(latest_invoice.amount or 0)
+    if invoice and invoice.status == InvoiceStatus.PAID:
+        await _handle_paid_invoice(sub=sub, db=db)
+        return
 
-        invoice = await invoiceService.create_invoice(
-            InvoiceCreate(
-                user_code=subscription.user_code,
-                subscription_id=subscription.id,
-                amount=amount_to_charge,
-                payment_method=PaymentMethod.STRIPE,
-                status=InvoiceStatus.PENDING,
-            ),
-            db,
+    if attempt == 1:
+        invoice = await _ensure_pending_invoice(sub=sub, invoice=invoice, db=db)
+
+        if sub.status == SubscriptionStatus.ACTIVE:
+            await subscriptionService.update_subscription(
+                str(sub.id),
+                UserSubscriptionUpdate(status=SubscriptionStatus.PAYMENT_DUE),
+                db,
+            )
+
+        await _notify_user(
+            sub=sub,
+            user=user,
+            invoice=invoice,
+            db=db,
+            message="Tạo hóa đơn tháng",
+            attempt=attempt,
+            suspended=False,
         )
-    else:
-        if today_invoice is None:
-            return
-        if today_invoice.status == InvoiceStatus.PAID:
-            return
-        invoice = today_invoice
+        return
 
-    await _attempt_stripe_charge(
-        subscription=subscription,
-        user=user,
-        invoice=invoice,
-        db=db,
-        attempt_number=attempt_number,
-        suspend_on_failure=suspend_on_failure,
-    )
+    if attempt == 2:
+        if not invoice:
+            invoice = await _ensure_pending_invoice(sub=sub, invoice=None, db=db)
+
+        await _notify_user(
+            sub=sub,
+            user=user,
+            invoice=invoice,
+            db=db,
+            message="Nhắc thanh toán lần 2",
+            attempt=attempt,
+            suspended=False,
+        )
+        return
+
+    if attempt == 3:
+        if not invoice:
+            invoice = await _ensure_pending_invoice(sub=sub, invoice=None, db=db)
+
+        if sub.status in {
+            SubscriptionStatus.ACTIVE,
+            SubscriptionStatus.PAYMENT_DUE,
+        }:
+            await subscriptionService.update_subscription(
+                str(sub.id),
+                UserSubscriptionUpdate(status=SubscriptionStatus.OVERDUE),
+                db,
+            )
+
+        # CANCELED giữ nguyên CANCELED để admin còn xử lý công nợ.
+        # OVERDUE giữ nguyên OVERDUE.
+        await _notify_user(
+            sub=sub,
+            user=user,
+            invoice=invoice,
+            db=db,
+            message="Thanh toán quá hạn",
+            attempt=attempt,
+            suspended=False,
+        )
+
+        await _notify_admin_billing_overdue(
+            sub=sub,
+            user=user,
+            invoice=invoice,
+            db=db,
+        )
 
 
-async def _get_latest_invoice_for_subscription(
-    db: AsyncSession,
+async def _ensure_pending_invoice(
     *,
-    subscription_id: uuid.UUID,
-    created_from: datetime | None = None,
-    created_to: datetime | None = None,
-) -> Optional[Invoice]:
-    statement = select(Invoice).where(Invoice.subscription_id == subscription_id)
-    if created_from is not None:
-        statement = statement.where(Invoice.created_at >= created_from)
-    if created_to is not None:
-        statement = statement.where(Invoice.created_at < created_to)
-    statement = statement.order_by(Invoice.created_at.desc()).limit(1)
-    result = await db.execute(statement)
-    return result.scalars().first()
-
-
-def _stripe_default_payment_method_id(customer_id: str) -> str | None:
-    customer = stripe_client.Customer.retrieve(
-        customer_id,
-        expand=["invoice_settings.default_payment_method"],
-    )
-    invoice_settings = customer.get("invoice_settings") if hasattr(customer, "get") else getattr(customer, "invoice_settings", None)
-    if hasattr(invoice_settings, "get"):
-        default_pm = invoice_settings.get("default_payment_method")
-    elif isinstance(invoice_settings, dict):
-        default_pm = invoice_settings.get("default_payment_method")
-    else:
-        default_pm = getattr(invoice_settings, "default_payment_method", None)
-    if not default_pm:
-        return None
-    if isinstance(default_pm, str):
-        return default_pm
-    return getattr(default_pm, "id", None)
-
-
-async def _attempt_stripe_charge(
-    *,
-    subscription: UserSubscription,
-    user: Users,
-    invoice: Invoice,
+    sub: UserSubscription,
+    invoice,
     db: AsyncSession,
-    attempt_number: int,
-    suspend_on_failure: bool,
-) -> None:
-    ensure_stripe_configured()
+):
+    if invoice:
+        return invoice
 
-    customer_id = user.stripe_customer_id
-    if not customer_id:
-        await _record_failed_attempt(
-            subscription=subscription,
-            user=user,
-            invoice=invoice,
-            db=db,
-            attempt_number=attempt_number,
-            error_message="Missing Stripe customer_id",
-            suspend_on_failure=suspend_on_failure,
-        )
-        return
-
-    payment_method_id = _stripe_default_payment_method_id(customer_id)
-    if not payment_method_id:
-        await _record_failed_attempt(
-            subscription=subscription,
-            user=user,
-            invoice=invoice,
-            db=db,
-            attempt_number=attempt_number,
-            error_message="Missing default Stripe payment method",
-            suspend_on_failure=suspend_on_failure,
-        )
-        return
-
-    try:
-        payment_intent = stripe_client.PaymentIntent.create(
-            amount=int(invoice.amount),
-            currency="vnd",
-            customer=customer_id,
-            payment_method=payment_method_id,
-            off_session=True,
-            confirm=True,
-            metadata={"invoice_id": str(invoice.id), "subscription_id": str(subscription.id), "attempt": str(attempt_number)},
-        )
-    except stripe.error.StripeError as exc:
-        await _record_failed_attempt(
-            subscription=subscription,
-            user=user,
-            invoice=invoice,
-            db=db,
-            attempt_number=attempt_number,
-            error_message=str(getattr(exc, "user_message", None) or str(exc)),
-            suspend_on_failure=suspend_on_failure,
-        )
-        return
-
-    # Success path
-    await paymentTransactionService.create_transaction(
-        PaymentTransactionCreate(
-            invoice_id=invoice.id,
-            attempt_number=attempt_number,
-            transaction_code=payment_intent.id,
-            response_message=f"PaymentIntent {payment_intent.status}",
+    return await invoiceService.create_invoice(
+        InvoiceCreate(
+            user_code=sub.user_code,
+            subscription_id=sub.id,
+            amount=sub.total_amount,
+            payment_method=PaymentMethod.MOMO,
+            status=InvoiceStatus.PENDING,
         ),
         db,
     )
 
-    await invoiceService.update_invoice(
-        str(invoice.id),
-        InvoiceUpdate(status=InvoiceStatus.PAID, stripe_invoice_id=payment_intent.id),
-        db,
-    )
 
-    # Track paid amount on the subscription.
-    await subscriptionService.update_subscription(
-        str(subscription.id),
-        UserSubscriptionUpdate(paid_amount=int(subscription.paid_amount or 0) + int(invoice.amount)),
-        db,
-    )
+async def _handle_paid_invoice(
+    *,
+    sub: UserSubscription,
+    db: AsyncSession,
+):
+    if sub.status == SubscriptionStatus.CANCELED:
+        await subscriptionService.update_subscription(
+            str(sub.id),
+            UserSubscriptionUpdate(status=SubscriptionStatus.INACTIVE),
+            db,
+        )
+        return
 
+    if sub.status in {
+        SubscriptionStatus.PAYMENT_DUE,
+        SubscriptionStatus.OVERDUE,
+    }:
+        await subscriptionService.update_subscription(
+            str(sub.id),
+            UserSubscriptionUpdate(status=SubscriptionStatus.ACTIVE),
+            db,
+        )
+
+
+async def _notify_user(
+    *,
+    sub,
+    user,
+    invoice,
+    db,
+    message: str,
+    attempt: int,
+    suspended: bool,
+):
     await notificationService.create_notification(
         NotificationCreate(
-            actor_id=None,
-            receiver_id=subscription.user_code,
-            title="Thanh toán thành công",
-            content=f"Thanh toán tự động thành công cho hóa đơn {invoice.id} ({invoice.amount:,} VND).",
+            receiver_id=sub.user_code,
+            title="Thanh toán hóa đơn",
+            content=f"{message} - Invoice {invoice.id}",
             is_read=False,
         ),
         db,
     )
 
-    send_billing_success_email(user=user, invoice=invoice, subscription=subscription)
-
-
-async def _record_failed_attempt(
-    *,
-    subscription: UserSubscription,
-    user: Users,
-    invoice: Invoice,
-    db: AsyncSession,
-    attempt_number: int,
-    error_message: str,
-    suspend_on_failure: bool,
-) -> None:
-    await paymentTransactionService.create_transaction(
-        PaymentTransactionCreate(
-            invoice_id=invoice.id,
-            attempt_number=attempt_number,
-            transaction_code=f"FAILED-{uuid.uuid4()}",
-            response_message=error_message,
-        ),
-        db,
-    )
-    await invoiceService.update_invoice(
-        str(invoice.id),
-        InvoiceUpdate(status=InvoiceStatus.FAILED),
-        db,
-    )
-
-    if suspend_on_failure:
-        await subscriptionService.update_subscription(
-            str(subscription.id),
-            UserSubscriptionUpdate(status=SubscriptionStatus.SUSPENDED),
-            db,
-        )
-
     send_billing_failed_email(
         user=user,
         invoice=invoice,
-        subscription=subscription,
-        attempt_number=attempt_number,
-        error_message=error_message,
-        suspended=suspend_on_failure,
+        subscription=sub,
+        attempt_number=attempt,
+        error_message=message,
+        suspended=suspended,
+    )
+
+
+async def _notify_admin_billing_overdue(
+    *,
+    sub,
+    user,
+    invoice,
+    db,
+):
+    # TODO: thay bằng service gửi mail admin thật của bạn.
+    logger.warning(
+        "Billing overdue needs admin review: sub=%s user=%s invoice=%s status=%s",
+        sub.id,
+        sub.user_code,
+        invoice.id,
+        sub.status,
     )
 
 
 async def _roll_academic_terms_forward(db: AsyncSession) -> None:
     today = datetime.now(DEFAULT_TZ).date()
     current_year = today.year
-
     terms = await termService.crud.get_all(db)
+
     if not terms:
         return
 
-    # Idempotency: only roll forward when all terms are still for previous start years.
     max_start_year = max(term.start_date.year for term in terms)
+
     if max_start_year >= current_year:
         return
 
@@ -352,17 +306,24 @@ async def _roll_academic_terms_forward(db: AsyncSession) -> None:
         new_start = add_years_safe(term.start_date, 1)
         new_end = add_years_safe(term.end_date, 1)
         new_name = _bump_years_in_term_name(term.term_name, delta=1)
+
         await termService.update_term(
             str(term.id),
-            AcademicTermUpdate(term_name=new_name, start_date=new_start, end_date=new_end),
+            AcademicTermUpdate(
+                term_name=new_name,
+                start_date=new_start,
+                end_date=new_end,
+            ),
             db,
         )
 
     logger.info("Academic terms rolled forward by 1 year (count=%s)", len(terms))
 
 
-_TERM_YEAR_PAIR = re.compile(r"(?P<y1>\\b\\d{4}\\b)\\s*[-–]\\s*(?P<y2>\\b\\d{4}\\b)")
-_TERM_SINGLE_YEAR = re.compile(r"\\b\\d{4}\\b")
+_TERM_YEAR_PAIR = re.compile(
+    r"(?P<y1>\b\d{4}\b)\s*[-–]\s*(?P<y2>\b\d{4}\b)"
+)
+_TERM_SINGLE_YEAR = re.compile(r"\b\d{4}\b")
 
 
 def _bump_years_in_term_name(value: str, *, delta: int) -> str:
@@ -372,12 +333,43 @@ def _bump_years_in_term_name(value: str, *, delta: int) -> str:
         return f"{y1}-{y2}"
 
     updated = _TERM_YEAR_PAIR.sub(repl_pair, value)
+
     if updated != value:
         return updated
 
-    # Fallback: bump the first year occurrence if present.
     match = _TERM_SINGLE_YEAR.search(value)
+
     if not match:
         return value
+
     year = int(match.group(0)) + delta
+
     return value[: match.start()] + str(year) + value[match.end() :]
+
+async def _send_admin_billing_report(db: AsyncSession) -> None:
+    rows = await get_unpaid_subscription_rows(db)
+
+    if not rows:
+        logger.info("No unpaid subscriptions found for admin billing report")
+        return
+
+    admin_emails = await get_admin_emails(db)
+
+    if not admin_emails:
+        logger.warning("No admin emails found for admin billing report")
+        return
+
+    excel_bytes = build_unpaid_subscription_excel(rows)
+
+    filename = (
+        "bao-cao-sinh-vien-chua-thanh-toan-gui-xe"
+        f"{datetime.now(DEFAULT_TZ).strftime('%Y%m%d')}.xlsx"
+    )
+
+    send_admin_billing_report_email(
+        admin_emails=admin_emails,
+        report_rows_count=len(rows),
+        excel_bytes=excel_bytes,
+        filename=filename,
+        lang="vi",
+    )

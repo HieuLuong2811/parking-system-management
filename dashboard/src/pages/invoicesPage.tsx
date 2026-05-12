@@ -5,13 +5,10 @@ import { useTranslation } from 'react-i18next';
 
 import { SoftDataGrid } from '../components/common/SoftDataGrid';
 import { useInvoices } from '../api/invoices';
-import { formatCurrencyInvoice, formatMeta, formatDateTime } from '../ultis/format';
+import { formatCurrency, formatMeta, formatDateTime } from '../ultis/format';
+import { PageHeader } from '../components/common/PageHeader';
 
 type ToastState = { severity: 'error'; message: string } | null;
-
-
-const getInvoiceAmount = (row: Record<string, unknown>) =>
-  row.amount ?? row.total_amount ?? row.totalAmount ?? 0;
 
 const columns: GridColDef[] = [
   { field: 'id', headerName: 'Invoice ID', width: 220, sortable: false },
@@ -23,7 +20,7 @@ const columns: GridColDef[] = [
     width: 140,
     sortable: false,
     renderCell: (params) => (
-      <Typography variant="body2">{formatCurrencyInvoice(getInvoiceAmount(params.row))}</Typography>
+      <Typography variant="body2">{formatCurrency(params.row.amount)}</Typography>
     ),
   },
   { field: 'payment_method', headerName: 'Payment method', width: 160, sortable: false },
@@ -75,7 +72,8 @@ export const InvoicesPage: React.FC = () => {
   return (
     <Box>
       <Stack spacing={1} sx={{ mb: 2 }}>
-        <Typography variant="h5">{t('resources.tables.invoices')}</Typography>
+        <PageHeader title={t('resources.tables.invoices')} subtitle={t('invoicesPage.description')} />
+        <Typography variant="h5" style={{ display: 'none' }}>{t('resources.tables.invoices')}</Typography>
         <Typography color="text.secondary" variant="body2">
           Danh sách tất cả invoices đang tồn tại trong hệ thống theo modal backend
         </Typography>

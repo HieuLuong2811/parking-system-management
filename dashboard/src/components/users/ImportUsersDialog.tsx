@@ -28,13 +28,14 @@ import {
 import type { SelectChangeEvent } from '@mui/material/Select';
 import * as XLSX from 'xlsx';
 import { useTranslation } from 'react-i18next';
-
+import FilterListIcon from '@mui/icons-material/FilterList';
 import { importUsers } from '../../api/resources';
 
 type FilterStatus = 'all' | 'valid' | 'invalid';
 type ImportRowError = 'missingUserCode' | 'missingEmail' | 'invalidEmail';
 
 type ParsedUserEntry = {
+  source_index: number;
   user_code: string;
   full_name: string;
   email: string;
@@ -48,13 +49,36 @@ const normalizeValue = (value: unknown) =>
 
 const EMAIL_REGEX = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
 
+const validateEntry = (entry: Omit<ParsedUserEntry, 'errors' | 'isValid'>): ParsedUserEntry => {
+  const userCode = entry.user_code.trim();
+  const email = entry.email.trim();
+
+  const errors: ImportRowError[] = [];
+  if (!userCode) {
+    errors.push('missingUserCode');
+  }
+  if (!email) {
+    errors.push('missingEmail');
+  } else if (!EMAIL_REGEX.test(email)) {
+    errors.push('invalidEmail');
+  }
+
+  return {
+    ...entry,
+    user_code: userCode,
+    email,
+    errors,
+    isValid: errors.length === 0,
+  };
+};
+
 const parseExcelFile = async (file: File): Promise<ParsedUserEntry[]> => {
   const buffer = await file.arrayBuffer();
   const workbook = XLSX.read(buffer, { type: 'array' });
   const firstSheet = workbook.Sheets[workbook.SheetNames[0]];
   const rows = XLSX.utils.sheet_to_json<Record<string, unknown>>(firstSheet, { defval: '' });
 
-  return rows.map((row) => {
+  return rows.map((row, index) => {
     const userCode =
       normalizeValue(row.user_code) ||
       normalizeValue(row['Mã sinh viên']) ||
@@ -76,24 +100,13 @@ const parseExcelFile = async (file: File): Promise<ParsedUserEntry[]> => {
       normalizeValue(row['Số điện thoại']) ||
       '';
 
-    const errors: ImportRowError[] = [];
-    if (!userCode) {
-      errors.push('missingUserCode');
-    }
-    if (!email) {
-      errors.push('missingEmail');
-    } else if (!EMAIL_REGEX.test(email)) {
-      errors.push('invalidEmail');
-    }
-
-    return {
+    return validateEntry({
+      source_index: index,
       user_code: userCode,
       full_name: fullName || userCode,
       email,
       phone_number,
-      errors,
-      isValid: errors.length === 0,
-    };
+    });
   });
 };
 
@@ -117,7 +130,8 @@ export const ImportUsersDialog: React.FC<ImportUsersDialogProps> = ({
   const { t } = useTranslation();
   const [rows, setRows] = useState<ParsedUserEntry[]>([]);
   const [statusFilter, setStatusFilter] = useState<FilterStatus>('all');
-  const [searchTerm, setSearchTerm] = useState('');
+  const [searchUserCode, setSearchUserCode] = useState('');
+  const [searchNameEmail, setSearchNameEmail] = useState('');
   const [page, setPage] = useState(0);
   const [rowsPerPage, setRowsPerPage] = useState(5);
   const [isImporting, setIsImporting] = useState(false);
@@ -129,7 +143,8 @@ export const ImportUsersDialog: React.FC<ImportUsersDialogProps> = ({
     if (!open) {
       setRows([]);
       setStatusFilter('all');
-      setSearchTerm('');
+      setSearchUserCode('');
+      setSearchNameEmail('');
       setPage(0);
       setRowsPerPage(5);
       setLoadError('');
@@ -167,7 +182,8 @@ export const ImportUsersDialog: React.FC<ImportUsersDialogProps> = ({
   const validRows = useMemo(() => rows.filter((row) => row.isValid), [rows]);
 
   const filteredRows = useMemo(() => {
-    const normalizedSearch = searchTerm.trim().toLowerCase();
+    const codeSearch = searchUserCode.trim().toLowerCase();
+    const nameEmailSearch = searchNameEmail.trim().toLowerCase();
     return rows.filter((row) => {
       const matchesStatus =
         statusFilter === 'all' ||
@@ -176,16 +192,19 @@ export const ImportUsersDialog: React.FC<ImportUsersDialogProps> = ({
       if (!matchesStatus) {
         return false;
       }
-      if (!normalizedSearch) {
-        return true;
+      if (codeSearch && !row.user_code.toLowerCase().includes(codeSearch)) {
+        return false;
       }
-      return (
-        row.user_code.toLowerCase().includes(normalizedSearch) ||
-        row.full_name.toLowerCase().includes(normalizedSearch) ||
-        row.email.toLowerCase().includes(normalizedSearch)
-      );
+      if (nameEmailSearch) {
+        const matchesName = row.full_name.toLowerCase().includes(nameEmailSearch);
+        const matchesEmail = row.email.toLowerCase().includes(nameEmailSearch);
+        if (!matchesName && !matchesEmail) {
+          return false;
+        }
+      }
+      return true;
     });
-  }, [rows, searchTerm, statusFilter]);
+  }, [rows, searchNameEmail, searchUserCode, statusFilter]);
 
   useEffect(() => {
     if (page > 0 && page * rowsPerPage >= filteredRows.length) {
@@ -202,6 +221,25 @@ export const ImportUsersDialog: React.FC<ImportUsersDialogProps> = ({
 
   const renderErrors = (errors: ImportRowError[]) =>
     errors.map((error) => t(`usersPage.importModal.errors.${error}`)).join(', ');
+
+  const handleCellChange = (
+    source_index: number,
+    field: 'user_code' | 'full_name' | 'email' | 'phone_number',
+    value: string,
+  ) => {
+    setRows((prev) =>
+      prev.map((row) => {
+        if (row.source_index !== source_index) return row;
+        return validateEntry({
+          source_index: row.source_index,
+          user_code: field === 'user_code' ? value : row.user_code,
+          full_name: field === 'full_name' ? value : row.full_name,
+          email: field === 'email' ? value : row.email,
+          phone_number: field === 'phone_number' ? value : row.phone_number,
+        });
+      }),
+    );
+  };
 
   const handleStatusChange = (event: SelectChangeEvent<FilterStatus>) => {
     setStatusFilter(event.target.value as FilterStatus);
@@ -223,7 +261,7 @@ export const ImportUsersDialog: React.FC<ImportUsersDialogProps> = ({
       const payload = {
         entries: validRows.map((row) => ({
           user_code: row.user_code,
-          full_name: row.full_name,
+          full_name: row.full_name || row.user_code,
           email: row.email,
           phone_number: row.phone_number || undefined,
         })),
@@ -263,15 +301,33 @@ export const ImportUsersDialog: React.FC<ImportUsersDialogProps> = ({
           }}
         >
           <Box sx={{ display: 'flex', gap: 2, alignItems: 'center' }}>
+            <Box sx={{ display: 'flex', gap: 0.5, alignItems: 'center' }}>
+              <FilterListIcon color="action" />
+              <Typography variant="body2">{t('common.filters.search')}</Typography>
+            </Box>
             <TextField
-              label={t('usersPage.importModal.searchPlaceholder')}
-              placeholder={t('usersPage.importModal.searchPlaceholder')}
-              value={searchTerm}
-              onChange={(event) => setSearchTerm(event.target.value)}
+              label={t('usersPage.importModal.filters.userCode')}
+              value={searchUserCode}
+              onChange={(event) => {
+                setSearchUserCode(event.target.value);
+                setPage(0);
+              }}
               size="small"
               variant="outlined"
+              sx={{ minWidth: 180 }}
             />
-            <FormControl fullWidth size="small">
+            <TextField
+              label={t('usersPage.importModal.filters.nameOrEmail')}
+              value={searchNameEmail}
+              onChange={(event) => {
+                setSearchNameEmail(event.target.value);
+                setPage(0);
+              }}
+              size="small"
+              variant="outlined"
+              sx={{ minWidth: 220 }}
+            />
+            <FormControl size="small">
               <InputLabel id="import-status-label">{t('usersPage.importModal.statusLabel')}</InputLabel>
               <Select
                 labelId="import-status-label"
@@ -319,7 +375,7 @@ export const ImportUsersDialog: React.FC<ImportUsersDialogProps> = ({
 
         <Paper variant="outlined" sx={{ maxHeight: 360, overflow: 'hidden' }}>
           <TableContainer sx={{ maxHeight: 360 }}>
-            <Table stickyHeader size="small">
+            <Table stickyHeader size="small" sx={{ borderCollapse: 'collapse'}}>
               <TableHead>
                 <TableRow>
                   <TableCell>{t('usersPage.importModal.tableHeaders.userCode')}</TableCell>
@@ -333,19 +389,59 @@ export const ImportUsersDialog: React.FC<ImportUsersDialogProps> = ({
               <TableBody>
                 {paginatedRows.length === 0 ? (
                   <TableRow>
-                    <TableCell colSpan={5} align="center">
+                    <TableCell colSpan={6} align="center">
                       <Typography variant="body2" color="text.secondary">
                         {t('usersPage.importModal.noRows')}
                       </Typography>
                     </TableCell>
                   </TableRow>
                 ) : (
-                  paginatedRows.map((row, index) => (
-                    <TableRow key={`${row.user_code || 'row'}-${index}`} hover>
-                      <TableCell>{row.user_code || '-'}</TableCell>
-                      <TableCell>{row.full_name || '-'}</TableCell>
-                      <TableCell>{row.email || '-'}</TableCell>
-                      <TableCell>{row.phone_number || '-'}</TableCell>
+                  paginatedRows.map((row) => (
+                    <TableRow key={row.source_index} hover>
+                      <TableCell sx={{ py: 0.5 }}>
+                        <TextField
+                          value={row.user_code}
+                          onChange={(event) =>
+                            handleCellChange(row.source_index, 'user_code', event.target.value)
+                          }
+                          size="small"
+                          fullWidth
+                          disabled={isImporting}
+                          error={row.errors.includes('missingUserCode')}
+                        />
+                      </TableCell>
+                      <TableCell sx={{ py: 0.5 }}>
+                        <TextField
+                          value={row.full_name}
+                          onChange={(event) =>
+                            handleCellChange(row.source_index, 'full_name', event.target.value)
+                          }
+                          size="small"
+                          fullWidth
+                          disabled={isImporting}
+                        />
+                      </TableCell>
+                      <TableCell sx={{ py: 0.5 }}>
+                        <TextField
+                          value={row.email}
+                          onChange={(event) => handleCellChange(row.source_index, 'email', event.target.value)}
+                          size="small"
+                          fullWidth
+                          disabled={isImporting}
+                          error={row.errors.includes('missingEmail') || row.errors.includes('invalidEmail')}
+                        />
+                      </TableCell>
+                      <TableCell sx={{ py: 0.5 }}>
+                        <TextField
+                          value={row.phone_number}
+                          onChange={(event) =>
+                            handleCellChange(row.source_index, 'phone_number', event.target.value)
+                          }
+                          size="small"
+                          fullWidth
+                          disabled={isImporting}
+                        />
+                      </TableCell>
                       <TableCell>
                         <Chip
                           size="small"

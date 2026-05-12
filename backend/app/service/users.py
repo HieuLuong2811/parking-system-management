@@ -8,6 +8,8 @@ from typing import List
 from app.models.roles import Roles, RolesCreate
 from app.scripts.seeds import DEFAULT_USERS, DEFAULT_ROLES
 from app.utils.pagination import PaginatedResponse
+from app.utils.common import build_user_with_roles_stmt, map_users_with_roles
+from app.utils.validations import is_valid_domain, normalize_phone_text
 from fastapi import HTTPException, status
 from sqlalchemy.exc import IntegrityError
 from sqlalchemy import func, or_, select
@@ -16,23 +18,11 @@ from sqlalchemy.ext.asyncio import AsyncSession
 from app.core.security import hash_password
 from app.models.auth import UserImportEntry
 from app.models.user_roles import UserRoles, UserRolesCreate
-from app.models.users import UserWithRoles, Users, UsersCreate, UsersUpdate, RoleSummary
+from app.models.users import UserWithRoles, Users, UsersCreate, UsersRead, UsersUpdate, RoleSummary
 from app.service.base import CRUDService
 from app.service.roles import roleService
 from app.service.user_roles import userRolesService
 from app.utils.search import ilike_unaccent
-
-DOMAIN_REGEX = re.compile(r"^[a-z0-9-]+(?:\.[a-z0-9-]+)+$")
-
-
-def is_valid_domain(email: str) -> bool:
-    domain_part = email.split("@", 1)[-1].strip().lower()
-    return bool(domain_part and DOMAIN_REGEX.fullmatch(domain_part))
-
-
-def normalize_phone_text(value: str) -> str:
-    return "".join(ch for ch in value if ch.isdigit())
-
 
 class userService:
     crud = CRUDService(Users, pk_field="user_code")
@@ -45,8 +35,39 @@ class userService:
         if existing_user:
             raise HTTPException(
                 status_code=status.HTTP_409_CONFLICT,
-                detail=f"User with code {user_in.user_code} already exists"
+                detail={"field": "user_code", "message": f"User code {user_in.user_code} already exists"},
             )
+
+        # Check duplicates for email / phone_number (ignore soft-deleted users)
+        email_value = (user_in.email or "").strip() if user_in.email is not None else ""
+        if email_value:
+            email_stmt = (
+                select(Users.user_code)
+                .where(Users.deleted_at.is_(None))
+                .where(func.lower(Users.email) == func.lower(email_value))
+                .limit(1)
+            )
+            email_existing = (await db.execute(email_stmt)).scalar_one_or_none()
+            if email_existing:
+                raise HTTPException(
+                    status_code=status.HTTP_409_CONFLICT,
+                    detail={"field": "email", "message": "Email already exists"},
+                )
+
+        phone_value = (user_in.phone_number or "").strip() if user_in.phone_number is not None else ""
+        if phone_value:
+            phone_stmt = (
+                select(Users.user_code)
+                .where(Users.deleted_at.is_(None))
+                .where(Users.phone_number == phone_value)
+                .limit(1)
+            )
+            phone_existing = (await db.execute(phone_stmt)).scalar_one_or_none()
+            if phone_existing:
+                raise HTTPException(
+                    status_code=status.HTTP_409_CONFLICT,
+                    detail={"field": "phone_number", "message": "Phone number already exists"},
+                )
 
         hashed_password = hash_password(user_in.password)
 
@@ -67,7 +88,7 @@ class userService:
             await db.rollback()
             raise HTTPException(
                 status_code=status.HTTP_409_CONFLICT,
-                detail="User already exists"
+                detail={"field": "user_code", "message": "User already exists"},
             )
 
         await db.refresh(user)
@@ -137,11 +158,7 @@ class userService:
                 status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
                 detail=f"Unexpected error during seeding: {str(e)}"
             )
-
-    @staticmethod
-    async def get_all_users(db: AsyncSession) -> list[Users]:
-        return await userService.get_users(db)
-
+        
     @staticmethod
     async def get_users(
         db: AsyncSession,
@@ -153,23 +170,19 @@ class userService:
         page: int = 1,
         limit: int = 5,
     ) -> PaginatedResponse[UserWithRoles]:
-        statement = (
-            select(Users, Roles)
-            .join(UserRoles, UserRoles.user_code == Users.user_code)
-            .join(Roles, Roles.id == UserRoles.role_id)
-            .order_by(Users.user_code)
-        )
+
+        statement = build_user_with_roles_stmt().order_by(Users.user_code)
 
         filters = []
 
         if nameOrEmail:
-            trimmed_search = nameOrEmail.strip()
-            if trimmed_search:
-                like_pattern = f"%{trimmed_search.lower()}%"
+            trimmed = nameOrEmail.strip()
+            if trimmed:
+                like = f"%{trimmed.lower()}%"
                 filters.append(
                     or_(
-                        ilike_unaccent(Users.full_name, trimmed_search),
-                        ilike_unaccent(Users.email, like_pattern),
+                        ilike_unaccent(Users.full_name, trimmed),
+                        ilike_unaccent(Users.email, like),
                     )
                 )
 
@@ -177,47 +190,75 @@ class userService:
             filters.append(ilike_unaccent(Users.user_code, users_code))
 
         if phone:
-            normalized_phone = normalize_phone_text(phone)
-            if normalized_phone:
+            normalized = normalize_phone_text(phone)
+            if normalized:
                 phone_expr = func.coalesce(Users.phone_number, "")
                 for symbol in [" ", "-", ".", "(", ")"]:
                     phone_expr = func.replace(phone_expr, symbol, "")
-                filters.append(phone_expr.ilike(f"%{normalized_phone}%"))
+                filters.append(phone_expr.ilike(f"%{normalized}%"))
+
         if role:
             filters.append(func.lower(Roles.role_code) == role.lower())
+
         if is_deleted is not None:
-            if is_deleted:
-                filters.append(Users.deleted_at.is_not(None))
-            else:
-                filters.append(Users.deleted_at.is_(None))
+            filters.append(
+                Users.deleted_at.is_not(None) if is_deleted else Users.deleted_at.is_(None)
+            )
 
         if filters:
             statement = statement.where(*filters)
-        
+
+        # count
         count_stmt = select(func.count()).select_from(statement.subquery())
         total_count = await db.scalar(count_stmt)
+
+        # pagination
         offset = (page - 1) * limit
         statement = statement.offset(offset).limit(limit)
 
         result = await db.execute(statement)
         rows = result.all()
 
-        users_dict = {}
-        for user, role in rows:
-            if user.user_code not in users_dict:
-                users_dict[user.user_code] = {"user": user, "roles": []}
-            users_dict[user.user_code]["roles"].append(RoleSummary(id=role.id, role_code=role.role_code))
+        users_list = map_users_with_roles(rows)
 
-        users_list = list(users_dict.values())
-        total_pages = math.ceil(total_count / limit) or 0
-        
         return {
             "data": users_list,
             "total": total_count,
             "page": page,
             "limit": limit,
-            "total_pages": total_pages
+            "total_pages": math.ceil(total_count / limit) or 0,
         }
+
+    @staticmethod
+    async def get_users_by_user_codes(
+        user_code: str, db: AsyncSession
+    ) -> UsersRead | None:
+
+        statement = (
+            build_user_with_roles_stmt()
+            .where(Users.user_code == user_code)
+        )
+
+        result = await db.execute(statement)
+        rows = result.all()
+
+        if not rows:
+            return None
+
+        mapped = map_users_with_roles(rows)[0]
+
+        user = mapped["user"]
+        roles = mapped["roles"]
+
+        return UsersRead(
+            user_code=user.user_code,
+            full_name=user.full_name,
+            email=user.email,
+            phone_number=user.phone_number,
+            language_use=user.language_use,
+            roles=roles,
+            deleted_at=user.deleted_at,
+        )    
     
     @staticmethod
     async def update_user(user_code: str, user_in: UsersUpdate, db: AsyncSession) -> Users:
@@ -239,31 +280,6 @@ class userService:
             await db.commit()
             await db.refresh(user)
         return user
-
-    @staticmethod
-    async def get_users_by_emails(emails: List[str], db: AsyncSession) -> dict[str, str]:
-        normalized_emails = {email.strip().lower() for email in emails if email and email.strip()}
-        if not normalized_emails:
-            return {}
-        statement = select(Users.user_code, Users.email).where(func.lower(Users.email).in_(normalized_emails))
-        result = await db.execute(statement)
-        return {email.lower(): user_code for user_code, email in result.all()}
-
-    @staticmethod
-    async def get_users_by_user_codes(user_codes: List[str], db: AsyncSession) -> dict[str, Users]:
-        normalized_codes = {code.strip() for code in user_codes if code and code.strip()}
-        if not normalized_codes:
-            return {}
-        statement = select(Users).where(Users.user_code.in_(normalized_codes))
-        result = await db.execute(statement)
-        return {user.user_code: user for user in result.scalars().all()}
-
-    @staticmethod
-    async def _ensure_user_role(db: AsyncSession) -> Roles:
-        existing_role = await roleService.get_by_code("user", db)
-        if existing_role:
-            return existing_role
-        return await roleService.create_role(RolesCreate(role_code="user"), db)
 
     @staticmethod
     async def import_users(entries: List[UserImportEntry], role_code: str, db: AsyncSession) -> List[Users]:

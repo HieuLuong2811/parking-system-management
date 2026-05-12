@@ -70,7 +70,7 @@ $ alembic revision --autogenerate -m "Add column last_name to User model"
 $ docker compose exec web bash
 $ cd backend
 $ alembic -c alembic/env.py upgrade head
-$ alembic upgrade head
+$ alembic upgrade heads
 ```
 
 If you don't want to use migrations at all, uncomment the lines in the file at `./backend/app/core/db.py` that end in:
@@ -82,7 +82,14 @@ SQLModel.metadata.create_all(engine)
 and comment the line in the file `scripts/prestart.sh` that contains:
 
 ```console
-$ alembic upgrade head
+$ alembic upgrade heads
+```
+
+If you end up with multiple migration versions marked as head, Alembic will not know which branch to follow and will raise an error. To resolve this, you need to create a new migration that merges these heads into a single version:
+
+```console
+$ alembic merge -m "Merge multiple heads" <version-1> <version-2>
+$ alembic upgrade heads
 ```
 
 If you don't want to start with the default models and want to remove them / modify them, from the beginning, without having any previous revision, you can remove the revision files (`.py` Python files) under `./backend/app/alembic/versions/`. And then create a first migration as described above.

@@ -12,50 +12,32 @@ import {
   MenuItem,
   Stack,
   Toolbar,
-  Tooltip,
   Typography,
   useMediaQuery,
   useTheme,
 } from '@mui/material';
 import MenuIcon from '@mui/icons-material/Menu';
 import NotificationsIcon from '@mui/icons-material/Notifications';
+import HomeOutlinedIcon from '@mui/icons-material/HomeOutlined';
 import { Link as RouterLink, useLocation } from 'react-router-dom';
 import { useTranslation } from 'react-i18next';
-import FirstPageIcon from '@mui/icons-material/FirstPage';
-import LastPageIcon from '@mui/icons-material/LastPage';
-
 import { useNotifications } from '../../api/notifications';
-import { resourceConfigs } from '../../config/resources';
 import { languageOptions } from '../../ultis/flags';
 import { COLLAPSED_SIDEBAR_WIDTH, EXPANDED_SIDEBAR_WIDTH } from '../../constant/config';
 import { useAuth } from '../../contexts/useAuth';
-
-const getBreadcrumbs = (resourceLabel: string | null, path: string, t: ReturnType<typeof useTranslation>['t']) => {
-  const crumbs = [{ label: t('breadcrumb.home'), path: '/' }];
-  if (resourceLabel) {
-    crumbs.push({ label: resourceLabel, path });
-  } else if (path === '/settings') {
-    crumbs.push({ label: t('breadcrumb.settings'), path: '/settings' });
-  }
-  return crumbs;
-};
+import { buildBreadcrumbs } from '../../routes/RouterBreadcrumbs'
 
 export const Navbar: React.FC<{
   onMenuClick?: () => void;
   collapsed: boolean;
-  onCollapseToggle: () => void;
-}> = ({ onMenuClick, collapsed, onCollapseToggle }) => {
+}> = ({ onMenuClick, collapsed }) => {
   const location = useLocation();
   const { t, i18n } = useTranslation();
   const theme = useTheme();
   const isDesktop = useMediaQuery(theme.breakpoints.up('md'));
   const drawerWidth = collapsed ? COLLAPSED_SIDEBAR_WIDTH : EXPANDED_SIDEBAR_WIDTH;
   const { user, logout } = useAuth();
-  const pathSegments = location.pathname.split('/').filter(Boolean);
-  const resourceEndpoint = pathSegments[0];
-  const resource = resourceEndpoint ? resourceConfigs.find((entry) => entry.endpoint === resourceEndpoint) : undefined;
-  const resourceLabel = resource ? (resource.translationKey ? t(resource.translationKey) : resource.label) : null;
-  const crumbs = getBreadcrumbs(resourceLabel, location.pathname, t);
+  const crumbs = buildBreadcrumbs(location.pathname, t);
 
   const [notificationAnchor, setNotificationAnchor] = useState<null | HTMLElement>(null);
   const [languageAnchor, setLanguageAnchor] = useState<null | HTMLElement>(null);
@@ -123,24 +105,38 @@ export const Navbar: React.FC<{
               <MenuIcon />
             </IconButton>
           )}
-          {isDesktop && (
-            <Tooltip title={collapsed ? 'Mở rộng menu' : 'Thu gọn menu'}>
-              <IconButton size="small" onClick={onCollapseToggle}>
-                {collapsed ? <LastPageIcon /> : <FirstPageIcon />}
-              </IconButton>
-            </Tooltip>
-          )}
           <Box sx={{ flexGrow: 1, overflow: 'hidden' }}>
             <Breadcrumbs
               aria-label="breadcrumb"
               sx={{ mt: 0.5, fontSize: 13, color: 'text.secondary', overflow: 'hidden' }}
             >
-              {crumbs.map((crumb, index) =>
-                index === crumbs.length - 1 ? (
-                  <Typography key={crumb.label + index} fontSize={15} fontWeight={600}>
-                    {crumb.label}
-                  </Typography>
+              {crumbs.map((crumb, index) => {
+                const isLast = index === crumbs.length - 1;
+                const isClickable = Boolean(crumb.clickable) && !isLast;
+                const content = crumb.icon === 'home' ? (
+                  <Stack direction="row" alignItems="center" onClick={() => window.location.href = '/'} spacing={0.75}>
+                    <HomeOutlinedIcon fontSize="small" />
+                  </Stack>
                 ) : (
+                  crumb.label
+                );
+
+                if (!isClickable) {
+                  return (
+                    <Typography
+                      key={crumb.label + index}
+                      component="span"
+                      fontSize={15}
+                      fontWeight={isLast ? 600 : 500}
+                      color={isLast ? 'text.primary' : 'text.secondary'}
+                      sx={{ display: 'inline-flex', alignItems: 'center' }}
+                    >
+                      {content}
+                    </Typography>
+                  );
+                }
+
+                return (
                   <Link
                     key={crumb.label + index}
                     component={RouterLink}
@@ -148,11 +144,12 @@ export const Navbar: React.FC<{
                     color="inherit"
                     underline="hover"
                     fontSize={15}
+                    sx={{ display: 'inline-flex', alignItems: 'center' }}
                   >
-                    {crumb.label}
+                    {content}
                   </Link>
-                )
-              )}
+                );
+              })}
             </Breadcrumbs>
           </Box>
         </Stack>

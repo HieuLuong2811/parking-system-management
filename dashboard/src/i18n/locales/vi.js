@@ -1,20 +1,84 @@
 const vi = {
   translation: {
     sideBar: {
+      expand: "Mở rộng sidebar",
+      collapse: "Thu gọn sidebar",
+      parents: {
+        userManagement: "Quản lý người dùng",
+        billing: "Thanh toán & giao dịch",
+      },
       title: "Hệ thống bãi đỗ xe",
+      subMenu: {
+        General: "Tổng quan",
+        subscriptions: "Gói đăng ký và hoá đơn",
+        system: "Hệ thống",
+      },
       children: {
-        home: "Trang chủ",
-        users: "Người dùng",
+        dashboard: "Dashboard",
         parkingSessions: "Phiên gửi xe",
-        resources: "Danh mục quản lý",
-        settings: "Cài đặt",
+        subscriptions: "Gói đăng ký",
+        plans: "Danh sách gói",
+        paymentTransactions: "Lịch sử thanh toán",
+        paymentPlans: "Hình thức thanh toán",
+        users: "Người dùng",
+        roles: "Vai trò",
+        vehicles: "Phương tiện",
+        terms: "Học kỳ",
+        notifications: "Thông báo",
+        profile: "Trang cá nhân",
+        logout: "Đăng xuất",     
       },
     },
     common: {
+      filters: {
+        search: "Tìm kiếm bằng :",
+        reset: "Đặt lại",
+      },
       tooltips: {
         user_code: "Mã người dùng",
         full_name: "Tên người dùng",
       },
+      subscriptionStatus: {
+        ALL: "Tất cả",
+        ACTIVE: "Đang hoạt động",
+        PAYMENT_DUE: "Chờ thanh toán",
+        OVERDUE: "Quá hạn thanh toán",
+        SUSPENDED: "Bị tạm dừng",
+        CANCELED: "Đã huỷ",
+        INACTIVE: "Không hoạt động",
+      },
+      paymentPlan: {
+        ALL: "Tất cả",
+        MONTHLY: "Thanh toán hàng tháng",
+        FULL: "Thanh toán toàn bộ",
+      },
+      subscriptionPlans: {
+        ALL: "Tất cả",
+        LICENSED_VEHICLE: "Có biển số xe",
+        UNLICENSED_VEHICLE: "Không biển số xe",
+        BASIC: "Cơ bản",
+        STARTUP: "Linh hoạt",
+        ENTERPRISE: "Gói toàn diện",
+      },  
+      subscriptionPackages: {
+        BASIC: "Cơ bản",
+        STARTUP: "Linh hoạt",
+        ENTERPRISE: "Gói toàn diện",
+      },
+      subscriptionBenefit: {
+        after18Waived: "Miễn phí sau 18:00",
+      },
+      vehicleTypeOptions: {
+        ALL: "Tất cả",
+        MOTORBIKE: "Xe máy",
+        ELECTRIC_BICYCLE: "Xe đạp điện",
+        BICYCLE: "Xe đạp",
+      },
+      roleTypes: {
+        admin: "Quản trị viên",
+        user: "Người dùng",
+        security: "Nhân viên bảo vệ",
+      }
     },
     pageTitle: {
       home: "Hệ thống quản lý bãi đỗ xe - Trường Đại học SPKT Hưng Yên",
@@ -28,6 +92,7 @@ const vi = {
       parkingSessions: "Phiên gửi xe",
       resources: "Bảng dữ liệu",
       settings: "Cài đặt",
+      userDetail: "Chi tiết người dùng",
     },
     button: {
       login: "Đăng nhập",
@@ -51,6 +116,7 @@ const vi = {
     },
     home: {
       title: "Trang chính",
+      subtitle: "Tổng quan nhanh các chỉ số và lối tắt quản trị quan trọng.",
       description:
         "Chào mừng {{name}}, đây là khu vực tổng quan giúp bạn tiếp cận nhanh các bảng dữ liệu quan trọng.",
       fallbackName: "bạn",
@@ -64,6 +130,7 @@ const vi = {
     },
     parkingSessionsPage: {
       title: "Phiên gửi xe",
+      description: "Xem và lọc các phiên gửi xe đã ghi nhận trong hệ thống.",
       tableHeaders: {
         sessionId: "Mã phiên",
         vehicleId: "Phương tiện",
@@ -87,13 +154,14 @@ const vi = {
         },
       },
       search: {
-        label: "Tìm kiếm phiên gửi xe theo mã phiên hoặc mã phương tiện",
-        userCode: "Tìm kiếm theo mã người dùng",
-        vehicleType: "Tìm kiếm theo loại phương tiện",
+        label: "Mã phiên hoặc mã phương tiện",
+        userCode: "Mã người dùng",
+        vehicleType: "Loại phương tiện",
       }
     },
     usersPage: {
       title: "Quản lý người dùng",
+      description: "Quản lý tài khoản, vai trò và trạng thái hoạt động của người dùng.",
       importButton: "Nhập danh sách {{role}}",
       importProcessing: "Đang xử lý...",
       importSuccess: "Đã Nhập {{count}} người dùng cho {{role}}.",
@@ -103,8 +171,7 @@ const vi = {
       importModal: {
         title: "Nhập danh sách sinh viên / giảng viên",
         description: "Chọn tệp Excel để xem trước dữ liệu trước khi tạo tài khoản.",
-        searchPlaceholder: "Tìm theo mã, tên hoặc email",
-        statusLabel: "Trạng thái bản ghi",
+        statusLabel: "Trạng thái",
         statusOptions: {
           all: "Tất cả",
           valid: "Hợp lệ",
@@ -143,6 +210,10 @@ const vi = {
           success: "Tạo {{count}} người dùng, bỏ qua {{skipped}} dòng lỗi.",
           error: "Import thất bại. {{message}}",
         },
+        filters: {
+          userCode: "Mã người dùng",
+          nameOrEmail: "Tên hoặc email",
+        },
       },
       actions: {
         subtitle: "Xem, tạo và cập nhật tài khoản với toàn quyền kiểm soát.",
@@ -157,6 +228,8 @@ const vi = {
         deleted: "Đã xóa người dùng {{user}}.",
         error: "Không thể lưu thay đổi.",
         deleteConfirm: "Xóa người dùng {{user}}? Hành động này không thể hoàn tác.",
+        deleteConfirmActiveWarning:
+          "Nếu bạn xoá user này trong lúc vẫn ACTIVE, tài khoản và các gói gửi xe, phương tiện liên quan sẽ bị vô hiệu hoá.\nBạn có chắc chắn muốn xoá {{user}}?",
       },
       roleSelector: {
         label: "Gán vai trò",
@@ -170,8 +243,6 @@ const vi = {
         removeTooltip: "Xóa {{role}}",
         removeSuccess: "Đã xóa {{role}}.",
         removeError: "Không thể xóa {{role}}.",
-        optionLabel: "{{role}}",
-        optionLabel: "{{role}}",
       },
       subscriptionDrawer: {
         title: "Gói gửi xe đăng ký gần nhất",
@@ -212,9 +283,9 @@ const vi = {
       filters: {
         role: "Vai trò",
         allRoles: "Tất cả vai trò",
-        userCode: "Tìm theo mã người dùng",
-        nameOrEmail: "Tìm theo tên hoặc email",
-        phoneNumber: "Tìm theo số điện thoại",
+        userCode: "Mã người dùng",
+        nameOrEmail: "Tên hoặc email",
+        phoneNumber: "Số điện thoại",
       },
       form: {
         userCode: "Mã người dùng",
@@ -225,6 +296,7 @@ const vi = {
         phoneNumber: "Số điện thoại",
         passwordHelper: "Để trống để giữ nguyên mật khẩu khi chỉnh sửa.",
         status: "Tài khoản hoạt động",
+        role: "Vai trò",
       },
     },
     vehiclesPage: {
@@ -237,7 +309,7 @@ const vi = {
         userCode: "Mã người dùng",
         type: "Loại phương tiện",
         licensePlate: "Biển số",
-        qrCode: "Mã QR",
+        qrCode: "Mã barcode",
         status: "Trạng thái",
         createdAt: "Thời điểm tạo",
         updatedAt: "Thời điểm cập nhật",
@@ -246,14 +318,13 @@ const vi = {
         active: "Đang hoạt động",
         deleted: "Đã xoá",
       },
-      vehicleTypes: {
-        motorbike: "Xe máy",
-        electricBicycle: "Xe đạp điện",
-        bicycle: "Xe đạp",
-      },
     },
     rolesPage: {
       title: "Vai trò",
+      description: "Danh sách vai trò và mã định danh để phân quyền trong hệ thống.",
+      searchLabel: "Tìm kiếm",
+      searchPlaceholder: "Tìm theo mã vai trò",
+      empty: "Chưa có vai trò nào được cấu hình.",
     },
     userRolesPage: {
       title: "Vai trò người dùng",
@@ -262,7 +333,7 @@ const vi = {
       title: "Học kỳ",
       description: "Định nghĩa học kỳ và thời gian áp dụng.",
       searchTerm: {
-        name: "Tìm theo tên học kỳ"
+        name: "Tên học kỳ"
       },
       empty: "Chưa có học kỳ nào được đăng ký.",
       fields: {
@@ -283,21 +354,21 @@ const vi = {
          delete: "Xóa học kỳ",
          inUse: "Học kỳ đang được sử dụng và không thể xóa",
       },
-    },
-    plansPage: {
-      title: "Gói đăng ký",
-      fields: {
-        planName: "Tên gói",
-        pricePerDay: "Giá mỗi ngày",
-        description: "Mô tả",
+      dialog: {
+        addTitle: "Tạo học kỳ mới",
+        editTitle: "Chỉnh sửa học kỳ",
+        saving: "Đang lưu...",
       },
     },
     subscriptionsPage: {
       title: "Đăng ký gửi xe",
       description: "Tổng quan các gói đăng ký đã triển khai trong hệ thống.",
-      searchPlaceholder: "Tìm theo người dùng, gói, hoặc học kỳ",
       filters: {
+        userCode: "Mã người dùng",
+        fullName: "Tên người dùng",
+        planType: "Loại gói",
         status: "Trạng thái",
+        paymentPlan: "Phương thức thanh toán",
       },
       periodLabels: {
         from: "Từ",
@@ -320,12 +391,18 @@ const vi = {
     },
     subscriptionPlansPage: {
       title: "Gói đăng ký gửi xe",
-      description: "Danh sách các gói đăng ký gửi xe có sẵn.",
-      searchPlaceholder: "Tìm theo tên gói hoặc id",
+      description: "Thiết lập các gói đăng ký và quy tắc giá áp dụng.",
       empty: "Chưa có gói nào được định nghĩa.",
       columns: {
-        planName: "Tên gói",
+        planType: "Loại gói",
         pricePerDay: "Giá gửi xe / ngày",
+        allowMonthly: "Tháng",
+        allowFull: "Toàn bộ",
+        maxLicensed: "Tối đa (biển)",
+        maxUnlicensed: "Tối đa (không biển)",
+        after18Fee: "Phí sau 18:00",
+        waiveAfter18: "Miễn sau 18:00",
+        status: "Trạng thái",
         description: "Mô tả",
         createdAt: "Thời gian tạo",
         updatedAt: "Thời gian cập nhật",
@@ -338,10 +415,77 @@ const vi = {
       },
       button: {
         add: "Thêm gói gửi xe mới",
-      }
+      },
+      dialog: {
+        addTitle: "Thêm gói gửi xe",
+        editTitle: "Chỉnh sửa gói gửi xe",
+        fields: {
+          pricePerDay: "Giá gửi xe / ngày",
+          description: "Mô tả",
+          planType: "Loại gói",
+          allowMonthly: "Cho phép thanh toán theo tháng",
+          allowFull: "Cho phép thanh toán toàn bộ",
+          waiveAfter18: "Miễn phí sau 18:00",
+          maxLicensed: "Số xe có biển tối đa",
+          maxUnlicensed: "Số xe không biển tối đa",
+          after18Fee: "Phí sau 18:00 (VND)",
+          status: "Trạng thái",
+        },
+        cancel: "Hủy",
+        save: "Lưu",
+        warnings: {
+          typeChange: "Nếu bạn thay đổi loại gói, hệ thống có thể sẽ gửi thông báo đến những người dùng đang sử dụng gói này.",
+          priceLocked: "Giá bị khóa khi gói đang được sử dụng.",
+        },
+      },
+    },
+    paymentPlansPage: {
+      title: "Hình thức thanh toán",
+      description: "Quản lý các hình thức thanh toán (theo tháng/toàn bộ) và chiết khấu.",
+      empty: "Chưa có hình thức thanh toán nào.",
+      columns: {
+        paymentType: "Hình thức",
+        discountPercent: "Chiết khấu (%)",
+        active: "Kích hoạt",
+        createdAt: "Thời gian tạo",
+        updatedAt: "Thời gian cập nhật",
+        actions: "Hành động",
+      },
+      status: {
+        active: "Đang hoạt động",
+        inactive: "Tạm tắt",
+      },
+      button: {
+        add: "Thêm hình thức",
+      },
+      tooltips: {
+        edit: "Sửa",
+        delete: "Xóa",
+      },
+      toast: {
+        created: "Đã tạo hình thức thanh toán.",
+        updated: "Đã cập nhật hình thức thanh toán.",
+        deleted: "Đã xóa hình thức thanh toán.",
+        saveError: "Không thể lưu hình thức thanh toán.",
+        deleteError: "Không thể xóa hình thức thanh toán.",
+        deleteConfirm: "Xóa hình thức thanh toán này?",
+      },
+      dialog: {
+        addTitle: "Thêm hình thức thanh toán",
+        editTitle: "Chỉnh sửa hình thức thanh toán",
+        cancel: "Hủy",
+        save: "Lưu",
+        saving: "Đang lưu...",
+        fields: {
+          paymentType: "Hình thức",
+          discountPercent: "Chiết khấu",
+          isActive: "Kích hoạt",
+        },
+      },
     },
     subscriptionInvoicesPage: {
       title: "Hóa đơn đăng ký",
+      description: "Theo dõi các hóa đơn được tạo cho gói đăng ký đã chọn.",
       noSubscription: "Thiếu ID đăng ký.",
       error: "Không thể tải hóa đơn.",
       empty: "Chưa có hóa đơn nào cho đăng ký này.",
@@ -350,9 +494,6 @@ const vi = {
       payerTitle: "Người thanh toán",
       recipientTitle: "Người nhận",
       amountDueLabel: "Số tiền phải thanh toán",
-      common: {
-        back: "Quay lại"
-      }
     },
     billingEventLogsPage: {
       title: "Sự kiện thanh toán",
@@ -376,6 +517,22 @@ const vi = {
     settingsPage: {
       title: "⚙ Trang Cài Đặt",
       description: "Đây là nơi bạn có thể thiết lập các tùy chọn cho ứng dụng.",
+    },
+    notificationsPage: {
+      title: "Thông báo",
+      description: "Danh sách thông báo gần đây của bạn.",
+      empty: "Không có thông báo.",
+      error: "Không thể tải thông báo.",
+      columns: {
+        title: "Tiêu đề",
+        content: "Nội dung",
+        status: "Trạng thái",
+        createdAt: "Thời gian",
+      },
+      status: {
+        read: "Đã đọc",
+        unread: "Chưa đọc",
+      },
     },
     notifications: {
       sendBy: "Gửi bởi {{sender}}",
@@ -433,6 +590,13 @@ const vi = {
         invoice_id: "Mã hoá đơn",
         invoice_createdAt: "Thời gian tạo hoá đơn",
       },
+    },
+    invoicesPage: {
+      description: "Danh sách hóa đơn trong hệ thống, hỗ trợ tìm nhanh theo mã và thông tin liên quan.",
+    },
+    userProfilePage: {
+      title: "Chi tiết người dùng",
+      description: "Xem hồ sơ người dùng và các dữ liệu liên quan (phương tiện, gói đăng ký, ...).",
     },
   },
 };

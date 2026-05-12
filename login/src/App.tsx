@@ -4,7 +4,6 @@ import { AppRouter } from './routers/AppRouter';
 import './App.css';
 import { applyPalette } from './ultis/palette';
 
-// Component App chính để bọc Router và CssBaseline
 const App: React.FC = () => {
   useEffect(() => {
     applyPalette();

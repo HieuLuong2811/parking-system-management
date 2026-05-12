@@ -1,3 +1,5 @@
+from datetime import datetime
+
 from fastapi import APIRouter, Depends, Query
 from sqlalchemy.ext.asyncio import AsyncSession
 
@@ -37,12 +39,39 @@ async def list_transactions_details(
     search: str | None = None,
     page: int = Query(1, ge=1, description="Page number"),
     limit: int = Query(5, ge=1, le=100, description="Number of items per page"),
+    from_time: datetime | None = Query(None, description="Filter by created_at (from)"),
+    to_time: datetime | None = Query(None, description="Filter by created_at (to)"),
     db: AsyncSession = Depends(get_db),
     current_user: AuthUser = Depends(required_roles("ADMIN")),
 ):
     return await PaymentTransactionController.get_transactions_details_ctrl(
         db,
         search=search,
+        from_time=from_time,
+        to_time=to_time,
+        page=page,
+        limit=limit,
+    )
+
+
+@router.get("/me/details", response_model=PaginatedResponse[PaymentTransactionDetailRead])
+async def list_my_transactions_details(
+    invoice_id: str | None = None,
+    transaction_code: str | None = None,
+    page: int = Query(1, ge=1, description="Page number"),
+    limit: int = Query(5, ge=1, le=100, description="Number of items per page"),
+    from_time: datetime | None = Query(None, description="Filter by created_at (from)"),
+    to_time: datetime | None = Query(None, description="Filter by created_at (to)"),
+    db: AsyncSession = Depends(get_db),
+    current_user: AuthUser = Depends(required_roles("USER", "ADMIN")),
+):
+    return await PaymentTransactionController.get_my_transactions_details_ctrl(
+        current_user.user_code,
+        db,
+        invoice_id=invoice_id,
+        transaction_code=transaction_code,
+        from_time=from_time,
+        to_time=to_time,
         page=page,
         limit=limit,
     )

@@ -29,7 +29,7 @@ export const FormInput: React.FC<FormInputProps> = ({
   return (
     <Box>
       <Typography component="label" className="required-label">
-        {label} {required && <span className="required-icon">*</span>}
+        {label} {required && <Typography component="span" sx={{ color: "#d32f2f"}}>*</Typography>}
       </Typography>
 
       <Box className="input-wrapper">

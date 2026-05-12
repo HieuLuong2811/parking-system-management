@@ -38,23 +38,6 @@ export const loginTranslations: Record<Language, TranslationMap> = {
     'login.logo-alt': 'Hung Yen University of Technology and Education logo',
     'login.form-title': 'Welcome',
   },
-  ja: {
-    'login.title': '駐車場システムログインポータル',
-    'login.subtitle': 'Hung Yen University of Technology and Education',
-    'login.description':
-    '本システムはスマートな駐車場管理を提供し、ユーザーは駐車セッションの確認、履歴の閲覧、支払い処理、および関連情報の管理を効率的に行うことができます。',    
-    'login.usercode': 'ユーザーコード',
-    'login.password': 'パスワード',
-    'login.button': 'ログイン',
-    'login.loading': '認証中...',
-    'login.error.invalid': 'ユーザーコードまたはパスワードが正しくありません。',
-    'login.required-first.usercode': 'ユーザーコード',
-    'login.required-first.password': 'パスワード',
-    'login.forgot-password': 'パスワードをお忘れですか？',
-    'login.language-label': '表示言語',
-    'login.logo-alt': 'ハンイェン工科教育大学のロゴ',
-    'login.form-title': 'ようこそ',
-  },
   th: {
     'login.title': 'พอร์ทัลเข้าสู่ระบบระบบจอดรถ',
     'login.subtitle': 'Hung Yen University of Technology and Education',

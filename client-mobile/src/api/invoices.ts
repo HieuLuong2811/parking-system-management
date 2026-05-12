@@ -1,6 +1,13 @@
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 
-import { clientHttp, requestWithContext, InvoiceInfo, InvoiceStatus, PaymentMethod } from './clientApi';
+import {
+  clientHttp,
+  requestWithContext,
+  InvoiceInfo,
+  InvoiceStatus,
+  PaymentMethod,
+  PaginatedResponse,
+} from './clientApi';
 
 const fetchInvoices = async (): Promise<InvoiceInfo[]> => {
   return requestWithContext(clientHttp.get<InvoiceInfo[]>('/invoices/me'), 'Load invoices');
@@ -14,6 +21,29 @@ export const useInvoices = () => {
   });
 };
 
+export type InvoicesMeQuery = {
+  page: number;
+  limit: number;
+  from_time?: string;
+  to_time?: string;
+};
+
+const fetchInvoicesPaginated = async (params: InvoicesMeQuery): Promise<PaginatedResponse<InvoiceInfo>> => {
+  return requestWithContext(
+    clientHttp.get<PaginatedResponse<InvoiceInfo>>('/invoices/me/paginated', { params }),
+    'Load invoices'
+  );
+};
+
+export const useInvoicesPaginated = (params: InvoicesMeQuery) => {
+  return useQuery({
+    queryKey: ['invoices', 'me', 'paginated', params],
+    queryFn: () => fetchInvoicesPaginated(params),
+    staleTime: 1000 * 60,
+    placeholderData: (prev) => prev,
+  });
+};
+
 export interface InvoiceCreatePayload {
   user_code: string;
   subscription_id?: string | null;
@@ -21,7 +51,6 @@ export interface InvoiceCreatePayload {
   payment_method: PaymentMethod;
   status: InvoiceStatus;
   metadata?: Record<string, unknown>;
-  stripe_invoice_id?: string | null;
 }
 
 const createInvoice = async (payload: InvoiceCreatePayload): Promise<InvoiceInfo> => {
@@ -37,4 +66,3 @@ export const useCreateInvoice = () => {
     },
   });
 };
-

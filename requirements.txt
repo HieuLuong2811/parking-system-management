@@ -11,8 +11,6 @@ python-dotenv
 
 PyJWT
 
-stripe
-
 numpy==1.26.4
 opencv-python
 ultralytics==8.0.38
@@ -32,3 +30,4 @@ passlib
 setuptools
 apscheduler
 openpyxl
+reportlab

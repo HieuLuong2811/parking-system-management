@@ -14,7 +14,9 @@ from app.models.parking_sessions import (
     ParkingSessionAdminRead,
     ParkingSessionRead,
     ParkingSessionUpdate,
-    ParkingSessionQRCheckIn,
+    ParkingSessionBarcodeCheckIn,
+    ParkingSessionPlateCheckIn,
+    ParkingSessionPlateConfirm
 )
 from app.utils.pagination import PaginatedResponse
 
@@ -26,10 +28,21 @@ async def create_session(payload: ParkingSessionCreate, db: AsyncSession = Depen
     return await ParkingSessionController.create_session_ctrl(payload, db)
 
 
-@router.post("/qr_checkin", response_model=ParkingSessionRead)
-async def qr_checkin(payload: ParkingSessionQRCheckIn, db: AsyncSession = Depends(get_db)):
-    return await ParkingSessionController.create_session_via_qr_ctrl(payload, db)
+@router.post("/barcode_checkin", response_model=ParkingSessionRead)
+async def barcode_checkin(payload: ParkingSessionBarcodeCheckIn, db: AsyncSession = Depends(get_db)):
+    return await ParkingSessionController.create_session_via_barcode_ctrl(payload, db)
 
+
+@router.post("/plate_checkin", response_model=ParkingSessionRead)
+async def plate_checkin(payload: ParkingSessionPlateCheckIn, db: AsyncSession = Depends(get_db)):
+    return await ParkingSessionController.create_session_via_plate_ctrl(payload, db)
+
+@router.post("/plate/confirm", response_model=ParkingSessionRead)
+async def plate_confirm(
+    payload: ParkingSessionPlateConfirm,
+    db: AsyncSession = Depends(get_db),
+):
+    return await ParkingSessionController.confirm_session_via_plate_ctrl(payload, db)
 
 @router.get("/", response_model=PaginatedResponse[ParkingSessionAdminRead])
 async def list_sessions(
@@ -37,7 +50,6 @@ async def list_sessions(
     current_user: AuthUser = Depends(required_roles("ADMIN")),
     page: int = Query(1, ge=1, description="Page number (1-based)"),
     limit: int = Query(20, ge=1, le=100, description="Number of items per page"),
-    query: str | None = Query(None, description="Search by session, vehicle, plate, user"),
     user_code: str | None = Query(None, description="Filter by user code"),
     vehicle_type: VehicleType | None = Query(None, description="Filter by vehicle type"),
     status: ParkingSessionStatus | None = Query(None, description="Filter by session status"),
@@ -48,7 +60,6 @@ async def list_sessions(
         db,
         page=page,
         limit=limit,
-        query=query,
         user_code=user_code,
         vehicle_type=vehicle_type,
         status=status,
@@ -63,7 +74,6 @@ async def list_my_sessions(
     current_user: AuthUser = Depends(required_roles("USER", "ADMIN", "SECURITY")),
     page: int = Query(1, ge=1, description="Page number (1-based)"),
     limit: int = Query(20, ge=1, le=100, description="Number of items per page"),
-    query: str | None = Query(None, description="Search by session, vehicle, plate"),
     status: ParkingSessionStatus | None = Query(None, description="Filter by session status"),
     from_time: datetime | None = Query(None, description="Filter by check-in time (from)"),
     to_time: datetime | None = Query(None, description="Filter by check-in time (to)"),
@@ -73,7 +83,6 @@ async def list_my_sessions(
         scope_user_code=current_user.user_code,
         page=page,
         limit=limit,
-        query=query,
         status=status,
         from_time=from_time,
         to_time=to_time,

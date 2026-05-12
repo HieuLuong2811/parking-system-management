@@ -50,4 +50,5 @@ class PaymentTransactionDetailRead(SQLModel):
 
     invoice_amount: int
     invoice_payment_method: PaymentMethod
+    invoice_status: InvoiceStatus
     invoice_created_at: datetime

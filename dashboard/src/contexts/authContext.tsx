@@ -1,23 +1,17 @@
 import React, { useCallback, useEffect, useMemo, useState } from 'react';
 import { Box, CircularProgress, Typography } from '@mui/material';
-import axios from 'axios';
-
-import { AuthContext,type AuthContextValue,type AuthStatus } from './authContextCore';
-import AuthRequiredNotice from '../components/common/AuthRequiredNotice';
-import { fetchCurrentUser, exchangeAuthCode } from '../api/auth';
+import { AuthContext, AUTH_STATUS, type AuthContextValue, type AuthStatus } from './authContextCore';
+import { fetchCurrentUser, exchangeAuthCode, logoutAuth } from '../api/auth';
 import { VITE_LOGIN_URL } from '../constant/config';
 
 const bypassAuth = import.meta.env.VITE_BYPASS_AUTH === 'true';
 
 const getAuthCodeFromUrl = (): string | null => {
-  if (typeof window === 'undefined') return null;
   const params = new URLSearchParams(window.location.search);
-  const code = params.get('code');
-  return code?.trim() || null;
+  return params.get('code')?.trim() || null;
 };
 
-const removeAuthCodeFromUrl = (): void => {
-  if (typeof window === 'undefined') return;
+const removeAuthCodeFromUrl = () => {
   const url = new URL(window.location.href);
   url.searchParams.delete('code');
   window.history.replaceState(null, '', url.toString());
@@ -25,60 +19,51 @@ const removeAuthCodeFromUrl = (): void => {
 
 export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children }) => {
   const [user, setUser] = useState<AuthContextValue['user']>(null);
-  const [status, setStatus] = useState<AuthStatus>(bypassAuth ? 'authenticated' : 'loading');
+  const [status, setStatus] = useState<AuthStatus>(
+    bypassAuth ? AUTH_STATUS.AUTHENTICATED : AUTH_STATUS.LOADING
+  );
 
   const refresh = useCallback(async () => {
     if (bypassAuth) {
-      setStatus('authenticated');
+      setStatus(AUTH_STATUS.AUTHENTICATED);
       return;
     }
 
-    setStatus('loading');
     try {
       const me = await fetchCurrentUser();
       setUser(me);
-      const normalizedRoles = (me.roles || []).map((role) => role?.trim().toUpperCase());
-      if (!normalizedRoles.includes('ADMIN')) {
-        setStatus('forbidden');
+
+      const roles = (me.roles || []).map(r => r?.trim().toUpperCase());
+      if (!roles.includes('ADMIN') && !roles.includes('SECURITY')) {
+        setStatus(AUTH_STATUS.FORBIDDEN);
       } else {
-        setStatus('authenticated');
+        setStatus(AUTH_STATUS.AUTHENTICATED);
       }
-    } catch (error) {
-      setUser(null);
-      setStatus('unauthorized');
-      console.error('Failed to fetch current user:', error);
+    } catch {
+      window.location.href = VITE_LOGIN_URL;
     }
   }, []);
 
   const logout = useCallback(async () => {
     try {
-      await axios.post(`${VITE_LOGIN_URL.replace(/\/$/, '')}/auth/logout`, null, {
-        withCredentials: true,
-      });
-    } catch (error) {
-      console.error('Logout request failed', error);
+      await logoutAuth();
     } finally {
-      setUser(null);
-      setStatus('unauthorized');
-      window.location.href = VITE_LOGIN_URL;
+      window.location.href = VITE_LOGIN_URL + '?logout=true';
     }
   }, []);
 
   useEffect(() => {
-    if (bypassAuth) {
-      return;
-    }
+    if (bypassAuth) return;
 
-    const initialize = async () => {
+    const init = async () => {
       const code = getAuthCodeFromUrl();
+
       if (code) {
         removeAuthCodeFromUrl();
         try {
           await exchangeAuthCode(code);
-        } catch (error) {
-          console.error('Failed to exchange auth code:', error);
-          setUser(null);
-          setStatus('unauthorized');
+        } catch {
+          window.location.href = VITE_LOGIN_URL;
           return;
         }
       }
@@ -86,20 +71,15 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
       await refresh();
     };
 
-    void initialize();
+    void init();
   }, [refresh]);
 
   const value = useMemo(
-    () => ({
-      user,
-      status,
-      refresh,
-      logout,
-    }),
+    () => ({ user, status, refresh, logout }),
     [user, status, refresh, logout]
   );
 
-  if (status === 'loading') {
+  if (status === AUTH_STATUS.LOADING) {
     return (
       <Box sx={{ height: '100vh', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
         <Box sx={{ textAlign: 'center' }}>
@@ -110,22 +90,9 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
     );
   }
 
-  if (status === 'unauthorized') {
+  if (status === AUTH_STATUS.FORBIDDEN) {
     return (
-      <AuthRequiredNotice onRetry={refresh} loginUrl={VITE_LOGIN_URL} />
-    );
-  }
-
-  if (status === 'forbidden') {
-    return (
-      <Box
-        sx={{
-          height: '100vh',
-          display: 'flex',
-          alignItems: 'center',
-          justifyContent: 'center',
-        }}
-      >
+      <Box sx={{ height: '100vh', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
         <Typography>Quyền truy cập bị từ chối.</Typography>
       </Box>
     );

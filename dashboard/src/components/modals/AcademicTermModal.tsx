@@ -73,10 +73,15 @@ export const AcademicTermModal: React.FC<AcademicTermModalProps> = ({
 
   return (
     <Dialog open={open} maxWidth="sm" fullWidth>
-      <DialogTitle>{initialValue ? 'Edit academic term' : 'Create new academic term'}</DialogTitle>
+      <DialogTitle>
+        {initialValue
+          ? t('termsPage.dialog.editTitle', { defaultValue: 'Edit academic term' })
+          : t('termsPage.dialog.addTitle', { defaultValue: 'Create new academic term' })}
+      </DialogTitle>
       <DialogContent>
         <Stack spacing={2} sx={{ mt: 1 }}>
           <FormInput
+            name="term_name"
             label={t('termsPage.fields.termName', { defaultValue: 'Term name' })}
             required
             value={termName}
@@ -92,6 +97,7 @@ export const AcademicTermModal: React.FC<AcademicTermModalProps> = ({
             </Alert>
           )}
           <FormInput
+            name="start_date"
             label={t('termsPage.fields.startDate', { defaultValue: 'Start date' })}
             required={!disableDates}
             type="date"
@@ -106,6 +112,7 @@ export const AcademicTermModal: React.FC<AcademicTermModalProps> = ({
             error={fieldErrors.start_date}
           />
           <FormInput
+            name="end_date"
             label={t('termsPage.fields.endDate', { defaultValue: 'End date' })}
             required={!disableDates}
             type="date"
@@ -123,10 +130,12 @@ export const AcademicTermModal: React.FC<AcademicTermModalProps> = ({
       </DialogContent>
       <DialogActions sx={{ px: 3, pb: 2 }}>
         <Button onClick={onClose} disabled={submitting}>
-          Cancel
+          {t('button.cancel', { defaultValue: 'Cancel' })}
         </Button>
         <Button variant="contained" onClick={handleSave} disabled={submitting}>
-          {submitting ? 'Saving...' : 'Save'}
+          {submitting
+            ? t('termsPage.dialog.saving', { defaultValue: 'Saving...' })
+            : t('button.save', { defaultValue: 'Save' })}
         </Button>
       </DialogActions>
     </Dialog>

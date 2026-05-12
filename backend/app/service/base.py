@@ -45,6 +45,25 @@ class CRUDService(Generic[ModelType, CreateSchemaType, UpdateSchemaType]):
             raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail=f"{self.model.__name__} not found")
         return instance
 
+    async def get_for_update(
+        self,
+        db: AsyncSession,
+        identifier: Any,
+        *,
+        nowait: bool = False,
+        skip_locked: bool = False,
+    ) -> ModelType:
+        statement = (
+            select(self.model)
+            .where(getattr(self.model, self.pk_field) == identifier)
+            .with_for_update(nowait=nowait, skip_locked=skip_locked)
+        )
+        result = await db.execute(statement)
+        instance = result.scalar_one_or_none()
+        if not instance:
+            raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail=f"{self.model.__name__} not found")
+        return instance
+
     async def update(self, db: AsyncSession, identifier: Any, payload: UpdateSchemaType) -> ModelType:
         instance = await self.get(db, identifier)
         update_data = payload.dict(exclude_unset=True, exclude_none=True)

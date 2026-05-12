@@ -1,7 +1,23 @@
-import { Alert, Box, Button, IconButton, Paper, Snackbar, Stack, TextField, Tooltip, Typography } from '@mui/material';
+import {
+  Alert,
+  Box,
+  Button,
+  FormControl,
+  IconButton,
+  InputLabel,
+  MenuItem,
+  Paper,
+  Select,
+  Snackbar,
+  Stack,
+  Tooltip,
+  Typography,
+} from '@mui/material';
 import type { GridColDef } from '@mui/x-data-grid';
 import DeleteIcon from '@mui/icons-material/Delete';
 import EditIcon from '@mui/icons-material/Edit';
+import CheckIcon from '@mui/icons-material/Check';
+import CloseIcon from '@mui/icons-material/Close';
 import React, { useCallback, useMemo, useState } from 'react';
 import { useTranslation } from 'react-i18next';
 
@@ -15,6 +31,8 @@ import {
 } from '../api/subscriptionPlans';
 import type { SubscriptionPlanRecord } from '../api/types';
 import { formatCurrency, formatDateTime } from '../ultis/format';
+import FilterListIcon from '@mui/icons-material/FilterList';
+import { PageHeader } from '../components/common/PageHeader';
 
 type ToastSeverity = 'success' | 'error';
 
@@ -22,7 +40,8 @@ const getErrorMessage = (error: unknown, fallback: string) =>
   error instanceof Error ? error.message : fallback;
 
 export const SubscriptionPlansPage: React.FC = () => {
-  const [searchTerm, setSearchTerm] = useState('');
+  const planTypeFilterOptions = useMemo(() => ['ALL', 'BASIC', 'STARTUP', 'ENTERPRISE'] as const, []);
+  const [planTypeFilter, setPlanTypeFilter] = useState<(typeof planTypeFilterOptions)[number]>('ALL');
   const [modalOpen, setModalOpen] = useState(false);
   const [editingPlan, setEditingPlan] = useState<SubscriptionPlanRecord | null>(null);
   const [isSaving, setIsSaving] = useState(false);
@@ -94,14 +113,77 @@ export const SubscriptionPlansPage: React.FC = () => {
   );
 
   const columns = useMemo<GridColDef<SubscriptionPlanRecord>[]>(() => {
+    const renderBool = (value: unknown) =>
+      value === true ? <CheckIcon fontSize="small" color="success" /> : <CloseIcon fontSize="small" color="error" />;
+
     const baseColumns: GridColDef<SubscriptionPlanRecord>[] = [
-      { field: 'plans_type', headerName: t('subscriptionPlansPage.columns.planType', { defaultValue: 'Plan type' }), width: 240, sortable: true },
+      { field: 'plans_type', headerName: t('subscriptionPlansPage.columns.planType', { defaultValue: 'Plan type' }), width: 180, sortable: true,
+        renderCell: (params) => {
+          const value = params.value;
+          return t(`common.subscriptionPlans.${value}`, { defaultValue: value });
+        },
+      },
       {
         field: 'price_per_day',
-        headerName: t('subscriptionPlansPage.columns.pricePerDay'),
+        headerName: t('subscriptionPlansPage.columns.pricePerDay', { defaultValue: 'Price/day' }),
         width: 160,
         sortable: true,
-        renderCell: (params) => <span>{formatCurrency(params.value as number)}</span>,
+        renderCell: (params) => <span>{formatCurrency((params.value as number) ?? 0)}</span>,
+      },
+      {
+        field: 'allow_monthly_payment',
+        headerName: t('subscriptionPlansPage.columns.allowMonthly', { defaultValue: 'Monthly' }),
+        width: 110,
+        sortable: true,
+        align: 'center',
+        headerAlign: 'center',
+        renderCell: (params) => renderBool(params.value),
+      },
+      {
+        field: 'allow_full_payment',
+        headerName: t('subscriptionPlansPage.columns.allowFull', { defaultValue: 'Full' }),
+        width: 90,
+        sortable: true,
+        align: 'center',
+        headerAlign: 'center',
+        renderCell: (params) => renderBool(params.value),
+      },
+      {
+        field: 'max_licensed_vehicle',
+        headerName: t('subscriptionPlansPage.columns.maxLicensed', { defaultValue: 'Max plate' }),
+        width: 120,
+        sortable: true,
+        renderCell: (params) => <span>{params.value ?? '-'}</span>,
+      },
+      {
+        field: 'max_unlicensed_vehicle',
+        headerName: t('subscriptionPlansPage.columns.maxUnlicensed', { defaultValue: 'Max no-plate' }),
+        width: 140,
+        sortable: true,
+        renderCell: (params) => <span>{params.value ?? '-'}</span>,
+      },
+      {
+        field: 'after_18_fee',
+        headerName: t('subscriptionPlansPage.columns.after18Fee', { defaultValue: 'After 18 fee' }),
+        width: 150,
+        sortable: true,
+        renderCell: (params) => <span>{params.value != null ? formatCurrency(Number(params.value)) : '-'}</span>,
+      },
+      {
+        field: 'waive_after_18_fee',
+        headerName: t('subscriptionPlansPage.columns.waiveAfter18', { defaultValue: 'Waive 18+' }),
+        width: 120,
+        sortable: true,
+        align: 'center',
+        headerAlign: 'center',
+        renderCell: (params) => renderBool(params.value),
+      },
+      {
+        field: 'status',
+        headerName: t('subscriptionPlansPage.columns.status', { defaultValue: 'Status' }),
+        width: 120,
+        sortable: true,
+        renderCell: (params) => <span>{params.value ?? '-'}</span>,
       },
       {
         field: 'updated_at',
@@ -153,23 +235,13 @@ export const SubscriptionPlansPage: React.FC = () => {
     ];
   }, [handleDeletePlan, handleStartEdit, t]);
 
-  const searchKeys = useMemo(
-    () => (row: SubscriptionPlanRecord) => [row.id, row.plans_type],
-    []
-  );
   const handleClearFilters = useCallback(() => {
-    setSearchTerm('');
+    setPlanTypeFilter('ALL');
   }, []);
-  const normalizedSearch = searchTerm.trim().toLowerCase();
   const filteredPlans = useMemo(() => {
-    if (!normalizedSearch) return plans;
-    return plans.filter((plan) =>
-      searchKeys(plan).some((value) => {
-        if (value === null || value === undefined) return false;
-        return String(value).toLowerCase().includes(normalizedSearch);
-      })
-    );
-  }, [normalizedSearch, plans, searchKeys]);
+    if (planTypeFilter === 'ALL') return plans;
+    return plans.filter((plan) => plan.plans_type === planTypeFilter);
+  }, [planTypeFilter, plans]);
   const fetchErrorMessage = useMemo(() => {
     if (!isError) return '';
     if (error instanceof Error) return error.message;
@@ -179,33 +251,48 @@ export const SubscriptionPlansPage: React.FC = () => {
   return (
     <>
       <Box sx={{ display: 'flex', flexDirection: 'column', gap: 2 }}>
-        <Stack spacing={0.5}>
-          <Typography variant="h5">{t('subscriptionPlansPage.title', 'Subscription Plans')}</Typography>
-          <Typography variant="body2" color="text.secondary">
-            {t('subscriptionPlansPage.description', 'List of available subscription plans')}
-          </Typography>
-        </Stack>
+        <PageHeader
+          title={t('subscriptionPlansPage.title', 'Subscription Plans')}
+          subtitle={t('subscriptionPlansPage.description')}
+        />
 
         <Stack direction="row" justifyContent="space-between" alignItems="center" flexWrap="wrap" gap={2}>
-          <TextField
-            fullWidth
-            size="small"
-            variant="outlined"
-            value={searchTerm}
-            label={t('subscriptionPlansPage.searchLabel', { defaultValue: 'Search' })}
-            placeholder={t('subscriptionPlansPage.searchPlaceholder', 'Search by plan type or id')}
-            onChange={(event) => setSearchTerm(event.target.value)}
-            sx={{ maxWidth: 420 }}
-          />
-          <Stack direction="row" spacing={1}>
-            <Button variant="outlined" size="small" onClick={handleClearFilters}>
-              {t('button.clear', { defaultValue: 'Clear' })}
+          <Stack direction="row" alignItems="center" flexWrap="wrap" gap={2}>
+            <Box sx={{ display: 'flex', gap: 0.5, alignItems: 'center' }}>
+              <FilterListIcon color="action" />
+              <Typography variant="body2">{t('common.filters.search')}</Typography>
+            </Box>
+            <FormControl size="small" sx={{ minWidth: 280 }}>
+              <InputLabel>
+                {t('subscriptionPlansPage.columns.planType', { defaultValue: 'Plan type' })}
+              </InputLabel>
+              <Select
+                value={planTypeFilter}
+                label={t('subscriptionPlansPage.columns.planType', { defaultValue: 'Plan type' })}
+                onChange={(event) =>
+                  setPlanTypeFilter(event.target.value as (typeof planTypeFilterOptions)[number])
+                }
+              >
+                {planTypeFilterOptions.map((value) => (
+                  <MenuItem key={value} value={value}>
+                    {value === 'ALL'
+                      ? t('common.subscriptionPlans.ALL', { defaultValue: 'All' })
+                      : t(`common.subscriptionPlans.${value}`, { defaultValue: value })}
+                  </MenuItem>
+                ))}
+              </Select>
+            </FormControl>
+            <Button onClick={handleClearFilters}>
+              {t('common.filters.reset', { defaultValue: 'Reset filters' })}
             </Button>
+          </Stack>
+          <Stack direction="row" spacing={1}>
             <Button variant="contained" size="small" onClick={handleOpenNew}>
               {t('subscriptionPlansPage.button.add', { defaultValue: 'Add new plan' })}
             </Button>
           </Stack>
         </Stack>
+
 
         {fetchErrorMessage && (
           <Alert severity="error" variant="filled">

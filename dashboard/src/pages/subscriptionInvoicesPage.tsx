@@ -24,7 +24,8 @@ import { format } from 'date-fns';
 
 import { useInvoiceSearch } from '../api/invoices';
 import type { InvoiceAdminRecord } from '../api/types';
-import { formatCurrencyInvoice, formatDateTime } from '../ultis/format';
+import { formatCurrency, formatDateTime } from '../ultis/format';
+import { PageHeader } from '../components/common/PageHeader';
 
 type InvoiceMetadataItem = {
   description?: string;
@@ -80,8 +81,6 @@ type InvoiceTemplateProps = {
   recipientLabel: string;
   amountDueLabel: string;
 };
-
-const formatCurrency = (value: number) => formatCurrencyInvoice(value.toString());
 
 const InvoiceTemplateRenderer: React.FC<InvoiceTemplateProps> = ({
   localizationOptions,
@@ -316,7 +315,7 @@ const buildTemplateProps = (
     paymentMethod: metadata?.paymentMethod ?? invoice.payment_method,
     seller: stringifyParty(metadata?.seller) ?? 'UTEHY',
     buyer: stringifyParty(metadata?.buyer) ?? invoice.user_code,
-    total: formatCurrencyInvoice(grossTotal.toString()),
+    total: formatCurrency(grossTotal),
     invoiceTitle: titleValue,
   };
 
@@ -387,11 +386,9 @@ export const SubscriptionInvoicesPage: React.FC = () => {
   return (
     <Box>
       <Stack direction="row" alignItems="center" justifyContent="space-between" sx={{ mb: 2 }}>
-        <Typography variant="h5">
-          {t('subscriptionInvoicesPage.title')}
-        </Typography>
+        <PageHeader title={t('subscriptionInvoicesPage.title')} subtitle={t('subscriptionInvoicesPage.description')} />
         <Button variant="outlined" startIcon={<ArrowBackIcon />} onClick={() => navigate('/subscriptions')}>
-          {t('subscriptionInvoicesPage.common.back')}
+          {t('common.back')}
         </Button>
       </Stack>
 
@@ -425,7 +422,7 @@ export const SubscriptionInvoicesPage: React.FC = () => {
           {data.map((invoice) => {
             const metadata = parseMetadata(invoice.metadata);
             const title = metadata?.invoiceNumber ?? invoice.id;
-            const amount = formatCurrencyInvoice(invoice.amount);
+            const amount = formatCurrency(invoice.amount);
             const status = invoice.status;
             const description = metadata?.description;
             const isSelected = selectedInvoice?.id === invoice.id;

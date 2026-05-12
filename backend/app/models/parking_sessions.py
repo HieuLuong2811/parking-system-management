@@ -8,6 +8,7 @@ from sqlalchemy import Column as SAColumn, Enum, Integer, String
 from sqlmodel import Field, SQLModel
 
 from app.enums.parking import ParkingSessionStatus, UserType, VehicleType
+from app.models.responses import FeeBreakdown, PlateLookupAction
 from .mixins import TimestampMixin
 
 
@@ -42,6 +43,11 @@ class ParkingSessionRead(ParkingSessionBase):
     id: uuid.UUID
     created_at: datetime
     updated_at: datetime
+    allow_gate: bool | None = None
+    message: str | None = None
+    fee_breakdown: FeeBreakdown | None = None
+    vehicle_type: Optional[VehicleType] = None
+    licensePlate: Optional[str] = None
 
 
 class ParkingSessionAdminRead(ParkingSessionRead):
@@ -57,7 +63,13 @@ class ParkingSessionUpdate(SQLModel):
     total_amount: Optional[int] = None
 
 
-class ParkingSessionQRCheckIn(SQLModel):
-    vehicle_id: uuid.UUID
-    user_code: str
-    qr_secret: str
+class ParkingSessionBarcodeCheckIn(SQLModel):
+    barcode_token: str
+
+
+class ParkingSessionPlateCheckIn(SQLModel):
+    license_plate: str
+
+class ParkingSessionPlateConfirm(SQLModel):
+    license_plate: str
+    action: PlateLookupAction

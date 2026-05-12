@@ -4,8 +4,9 @@ import cv2
 import time
 import queue
 import requests
+import re
 from datetime import datetime
-from PyQt6 import QtCore, QtGui, QtWidgets
+from PyQt6 import QtCore, QtGui, QtWidgets, uic
 
 from app.service.detect import DetectService, get_model
 from app.core.config import settings
@@ -13,8 +14,15 @@ from app.core.config import settings
 
 MAX_LOOKUP_ATTEMPTS = 5
 LOOKUP_DEBOUNCE_SECONDS = 2.0
-DETECT_EVERY_N_FRAMES = 5
+DETECT_EVERY_N_FRAMES = 10
+PLATE_REGEX = re.compile(r"^[A-Z0-9]{5,12}$")
+SECURITY_GATE_ACTION = getattr(settings, "SECURITY_GATE_ACTION", "CHECK_IN").strip().upper()
 
+def normalize_plate_text(text: str) -> str:
+    if not text:
+        return ""
+    print(re.sub(r"[^A-Z0-9]", "", text.strip().upper()))
+    return re.sub(r"[^A-Z0-9]", "", text.strip().upper())
 
 class CameraWorker(QtCore.QThread):
     frame_ready = QtCore.pyqtSignal(QtGui.QImage)
@@ -27,185 +35,165 @@ class CameraWorker(QtCore.QThread):
         self.camera_source = camera_source
         self._running = False
         self._latest_frame = None
+        self._last_plate = None
+        self._last_emit_time = 0
 
     def _build_capture(self):
-        # RTSP ổn định hơn khi ép TCP + FFmpeg
-        os.environ["OPENCV_FFMPEG_CAPTURE_OPTIONS"] = "rtsp_transport;tcp"
-
         if isinstance(self.camera_source, str) and self.camera_source.startswith("rtsp://"):
+            os.environ["OPENCV_FFMPEG_CAPTURE_OPTIONS"] = "rtsp_transport;tcp|max_delay;0"
             cap = cv2.VideoCapture(self.camera_source, cv2.CAP_FFMPEG)
         else:
-            cap = cv2.VideoCapture(self.camera_source)
+            # Webcam local, nhất là Windows, dùng CAP_DSHOW thường mở nhanh và ổn hơn.
+            cap = cv2.VideoCapture(self.camera_source, cv2.CAP_DSHOW)
 
         cap.set(cv2.CAP_PROP_BUFFERSIZE, 1)
+        cap.set(cv2.CAP_PROP_FRAME_WIDTH, 1280)
+        cap.set(cv2.CAP_PROP_FRAME_HEIGHT, 720)
+
         return cap
 
     def run(self):
         self._running = True
-        frame_count = 0
 
         try:
-            self.status_changed.emit("Loading detection model...")
+            self.status_changed.emit("Loading model...")
             model = get_model()
         except Exception as e:
-            self.error_occurred.emit(f"Không tải được model: {e}")
+            self.error_occurred.emit(str(e))
             return
 
         cap = self._build_capture()
         if not cap.isOpened():
-            self.error_occurred.emit(f"Không mở được camera source: {self.camera_source}")
+            self.error_occurred.emit("Không mở được camera")
             return
 
         self.status_changed.emit("Camera connected")
 
+        frame_count = 0
+
         while self._running:
             try:
-                ret, frame = cap.read()
+                # drop frame cũ
+                for _ in range(2):
+                    cap.grab()
+
+                ret, frame = cap.retrieve()
                 if not ret or frame is None:
-                    self.status_changed.emit("Mất frame từ camera, đang chờ lại...")
-                    QtCore.QThread.msleep(50)
+                    QtCore.QThread.msleep(30)
                     continue
 
                 frame_count += 1
-                output_frame = frame.copy()
-                plate_text = ""
+                output = frame.copy()
 
                 h, w = frame.shape[:2]
+                x1, y1 = int(w*0.2), int(h*0.25)
+                x2, y2 = int(w*0.8), int(h*0.85)
 
-                # ROI ví dụ: chỉ lấy vùng giữa ảnh, bỏ mép trên chứa timestamp
-                x1 = int(w * 0.15)
-                y1 = int(h * 0.20)
-                x2 = int(w * 0.85)
-                y2 = int(h * 0.90)
+                roi = frame[y1:y2, x1:x2]
 
-                roi = frame[y1:y2, x1:x2].copy()
+                # vẽ ROI
+                cv2.rectangle(output, (x1, y1), (x2, y2), (0, 255, 255), 2)
 
-                # Vẽ khung ROI lên ảnh hiển thị
-                cv2.rectangle(output_frame, (x1, y1), (x2, y2), (0, 255, 255), 2)
-
-                if frame_count % DETECT_EVERY_N_FRAMES == 0:
-                    try:
-                        results = model(roi, verbose=False, conf=0.4)
-
-                        # Nếu muốn hiển thị box detect đúng vị trí trên frame gốc
-                        annotated_roi = results[0].plot()
-                        output_frame[y1:y2, x1:x2] = annotated_roi
-
-                        # OCR tạm trên ROI, không OCR toàn frame nữa
-                        plate_text = DetectService.segment_image(roi).strip()
-
-                    except Exception as e:
-                        self.error_occurred.emit(f"Lỗi detect/OCR: {e}")
-
-                rgb_frame = cv2.cvtColor(output_frame, cv2.COLOR_BGR2RGB)
-                hh, ww, ch = rgb_frame.shape
-                qimage = QtGui.QImage(
-                    rgb_frame.data,
-                    ww,
-                    hh,
-                    ch * ww,
-                    QtGui.QImage.Format.Format_RGB888
-                ).copy()
-
-                self._latest_frame = output_frame.copy()
-                self.frame_ready.emit(qimage)
-
-                if plate_text:
-                    self.detection_ready.emit(plate_text)
-
-                QtCore.QThread.msleep(10)
-
-            except Exception as e:
-                self.error_occurred.emit(f"Lỗi camera thread: {e}")
-                QtCore.QThread.msleep(100)
-
-        cap.release()
-        self.status_changed.emit("Camera stopped")        
-        self._running = True
-        frame_count = 0
-
-        try:
-            self.status_changed.emit("Loading detection model...")
-            model = get_model()
-        except Exception as e:
-            self.error_occurred.emit(f"Không tải được model: {e}")
-            return
-
-        cap = self._build_capture()
-
-        if not cap.isOpened():
-            self.error_occurred.emit(f"Không mở được camera source: {self.camera_source}")
-            return
-
-        self.status_changed.emit("Camera connected")
-
-        while self._running:
-            try:
-                ret, frame = cap.read()
-                if not ret or frame is None:
-                    self.status_changed.emit("Mất frame từ camera, đang chờ lại...")
-                    QtCore.QThread.msleep(50)
-                    continue
-
-                frame_count += 1
-                output_frame = frame.copy()
                 plate_text = ""
 
-                # Chỉ detect mỗi N frame để giảm tải
                 if frame_count % DETECT_EVERY_N_FRAMES == 0:
                     try:
-                        results = model(frame, verbose=False, conf=0.4)
-                        output_frame = results[0].plot()
+                        results = model(roi, conf=0.25, verbose=False)
+                        boxes = results[0].boxes if results else None
 
-                        # Giữ logic cũ của bạn.
-                        # Sau này nên OCR trên vùng crop biển số thay vì ảnh annotated.
-                        plate_text = DetectService.segment_image(output_frame).strip()
+                        best_crop = None
+                        best_conf = -1.0
+
+                        if boxes is not None and len(boxes) > 0:
+                            for box in boxes:
+                                bx1, by1, bx2, by2 = map(int, box.xyxy[0].tolist())
+                                bx1 = max(0, bx1)
+                                by1 = max(0, by1)
+                                bx2 = min(roi.shape[1], bx2)
+                                by2 = min(roi.shape[0], by2)
+                                if bx2 <= bx1 or by2 <= by1:
+                                    continue
+
+                                conf = float(getattr(box, "conf", [0.0])[0] if hasattr(box, "conf") else 0.0)
+                                if conf > best_conf:
+                                    best_conf = conf
+                                    best_crop = roi[by1:by2, bx1:bx2]
+
+                                cv2.rectangle(
+                                    output,
+                                    (x1 + bx1, y1 + by1),
+                                    (x1 + bx2, y1 + by2),
+                                    (0, 255, 0),
+                                    2,
+                                )
+
+                        if best_crop is not None and best_crop.size > 0:
+                            debug_dir = "debug_plates"
+                            os.makedirs(debug_dir, exist_ok=True)
+
+                            debug_path = os.path.join(
+                                debug_dir,
+                                f"plate_{int(time.time() * 1000)}.jpg"
+                            )
+                            cv2.imwrite(debug_path, best_crop)
+
+                            plate_candidate_raw = DetectService.segment_image(best_crop)
+                            print("best_conf:", best_conf)
+                            print("crop_shape:", best_crop.shape)
+                            print("debug_crop:", debug_path)
+                            print("plate_candidate_raw:", repr(plate_candidate_raw))
+
+                            plate_candidate = normalize_plate_text(plate_candidate_raw)
+                            print("plate_candidate:", repr(plate_candidate))
+
+                            if PLATE_REGEX.match(plate_candidate):
+                                plate_text = plate_candidate
                     except Exception as e:
-                        self.error_occurred.emit(f"Lỗi detect/OCR: {e}")
+                        self.error_occurred.emit(str(e))
 
-                rgb_frame = cv2.cvtColor(output_frame, cv2.COLOR_BGR2RGB)
-                h, w, ch = rgb_frame.shape
-                bytes_per_line = ch * w
+                # render
+                rgb = cv2.cvtColor(output, cv2.COLOR_BGR2RGB)
+                h, w, ch = rgb.shape
 
-                # copy() rất quan trọng để tránh crash do vùng nhớ numpy bị giải phóng/ghi đè
-                qimage = QtGui.QImage(
-                    rgb_frame.data,
-                    w,
-                    h,
-                    bytes_per_line,
+                qimg = QtGui.QImage(
+                    rgb.data, w, h, ch*w,
                     QtGui.QImage.Format.Format_RGB888
                 ).copy()
 
-                self._latest_frame = output_frame.copy()
-                self.frame_ready.emit(qimage)
+                self.frame_ready.emit(qimg)
 
+                # debounce detection
+                now = time.time()
                 if plate_text:
-                    self.detection_ready.emit(plate_text)
+                    if (
+                        plate_text != self._last_plate
+                        or now - self._last_emit_time > 1.5
+                    ):
+                        self._last_plate = plate_text
+                        self._last_emit_time = now
+                        self.detection_ready.emit(plate_text)
 
-                QtCore.QThread.msleep(10)
+                QtCore.QThread.msleep(5)
 
             except Exception as e:
-                self.error_occurred.emit(f"Lỗi camera thread: {e}")
-                QtCore.QThread.msleep(100)
+                self.error_occurred.emit(str(e))
+                QtCore.QThread.msleep(50)
 
         cap.release()
         self.status_changed.emit("Camera stopped")
 
     def stop(self):
         self._running = False
-        self.wait(3000)
-
-    def snapshot(self):
-        return self._latest_frame.copy() if self._latest_frame is not None else None
-
+        self.wait()
 
 class LookupWorker(QtCore.QThread):
     lookup_finished = QtCore.pyqtSignal(str, object)
     lookup_status = QtCore.pyqtSignal(str)
 
-    def __init__(self, backend_host: str, parent=None):
+    def __init__(self, backend_host: str, action: str, parent=None):
         super().__init__(parent)
         self.backend_host = backend_host.rstrip("/")
+        self.action = action
         self._running = False
         self._queue = queue.Queue()
 
@@ -237,11 +225,20 @@ class LookupWorker(QtCore.QThread):
             try:
                 response = requests.get(
                     f"{self.backend_host}/api/v1/vehicles/lookup",
-                    params={"license_plate": normalized},
-                    timeout=5
+                    params={
+                        "license_plate": normalized,
+                        "action": self.action,
+                    },
+                    timeout=5,
                 )
+
                 if response.status_code == 200:
                     return response.json()
+
+                if response.status_code == 404:
+                    self.lookup_status.emit(f"Không tìm thấy phương tiện: {normalized}")
+                    return None
+
             except requests.RequestException:
                 time.sleep(0.15)
 
@@ -253,171 +250,431 @@ class LookupWorker(QtCore.QThread):
         self.wait(3000)
 
 
-class HomePageWidget(QtWidgets.QWidget):
-    toggle_camera_signal = QtCore.pyqtSignal(bool)
+class SecurityConsoleUI(QtWidgets.QMainWindow):
+    def __init__(self):
+        super().__init__()
 
-    def __init__(self, parent=None):
-        super().__init__(parent)
-        layout = QtWidgets.QVBoxLayout(self)
-        layout.setSpacing(12)
-        layout.setContentsMargins(12, 12, 12, 12)
+        base_dir = os.path.dirname(__file__)
+        candidate_paths = [
+            os.path.join(base_dir, "security_console.ui"),
+            os.path.join(base_dir, "GUI_security", "security_console.ui"),
+        ]
 
-        header_frame = QtWidgets.QFrame()
-        header_frame.setStyleSheet("background-color:#0f172a; border-radius:14px; padding:14px;")
-        header_layout = QtWidgets.QHBoxLayout(header_frame)
-        header_layout.addWidget(self._styled_label("BẢNG ĐIỀU KHIỂN BẢO VỆ", color="#f8fafc", size=22, bold=True))
-        header_layout.addStretch()
-        self.toggle_btn = QtWidgets.QPushButton("Camera bật")
-        self.toggle_btn.setCheckable(True)
-        self.toggle_btn.setChecked(True)
-        self.toggle_btn.setMinimumHeight(40)
-        self.toggle_btn.setStyleSheet("font-weight:600; padding:8px 18px; border-radius:10px; background-color:#14b8a6; color:white;")
-        self.toggle_btn.toggled.connect(self._handle_toggle)
-        header_layout.addWidget(self.toggle_btn)
-        layout.addWidget(header_frame)
+        ui_path = next((path for path in candidate_paths if os.path.exists(path)), None)
+        if ui_path is None:
+            raise FileNotFoundError(
+                "Không tìm thấy file UI. Đã thử: " + ", ".join(candidate_paths)
+            )
 
-        body_frame = QtWidgets.QFrame()
-        body_layout = QtWidgets.QHBoxLayout(body_frame)
-        body_layout.setSpacing(12)
+        uic.loadUi(ui_path, self)
 
-        left_column = QtWidgets.QVBoxLayout()
-        left_column.setSpacing(12)
+        self.current_plate: str | None = None
+        self.current_info: dict | None = None
+        self.current_action = SECURITY_GATE_ACTION
 
-        operator_frame = QtWidgets.QFrame()
-        operator_frame.setStyleSheet("background-color:#1f2937; border-radius:12px; padding:16px;")
-        operator_layout = QtWidgets.QFormLayout(operator_frame)
-        operator_layout.setHorizontalSpacing(20)
-        operator_layout.setVerticalSpacing(10)
-        operator_layout.addRow("Nhân viên:", QtWidgets.QLabel("Nguyễn Văn A"))
-        operator_layout.addRow("Mã bảo vệ:", QtWidgets.QLabel("SEC-204"))
-        camera_source_label = QtWidgets.QLabel(settings.CAMERA_RTSP_URL or "Chưa cấu hình RTSP")
-        operator_layout.addRow("Camera RTSP:", camera_source_label)
-        left_column.addWidget(operator_frame)
+        self._setup_initial_ui()
+        self._connect_events()
 
-        detection_frame = QtWidgets.QFrame()
-        detection_frame.setStyleSheet("background-color:#111b2b; border-radius:12px; padding:16px;")
-        detection_layout = QtWidgets.QFormLayout(detection_frame)
-        detection_layout.setHorizontalSpacing(20)
-        detection_layout.setVerticalSpacing(10)
-        self.license_label = QtWidgets.QLabel("-")
-        self.vehicle_type_label = QtWidgets.QLabel("-")
-        self.match_status_label = QtWidgets.QLabel("Chưa có dữ liệu")
-        self.match_status_label.setStyleSheet("color:#34d399; font-weight:600;")
-        detection_layout.addRow("Biển số:", self.license_label)
-        detection_layout.addRow("Loại xe:", self.vehicle_type_label)
-        detection_layout.addRow("Trạng thái:", self.match_status_label)
-        left_column.addWidget(detection_frame)
+    def _setup_initial_ui(self) -> None:
+        self.lbl_camera_view.setText("Camera đang kết nối...")
+        self.lbl_camera_view.setAlignment(QtCore.Qt.AlignmentFlag.AlignCenter)
 
-        stats_frame = QtWidgets.QFrame()
-        stats_frame.setStyleSheet("background-color:#1f2937; border-radius:12px; padding:16px;")
-        stats_layout = QtWidgets.QHBoxLayout(stats_frame)
-        active_plan_label = QtWidgets.QLabel("Kế hoạch đang hoạt động: Không")
-        active_plan_label.setStyleSheet("color:#f8fafc; font-weight:600;")
-        stats_layout.addWidget(active_plan_label)
-        stats_layout.addStretch()
-        self.register_btn = QtWidgets.QPushButton("Đăng ký ca trực mới")
-        self.register_btn.setMinimumHeight(36)
-        self.register_btn.setStyleSheet("font-weight:600; padding:6px 16px; background-color:#2563eb; color:white; border-radius:10px;")
-        stats_layout.addWidget(self.register_btn)
-        left_column.addWidget(stats_frame)
+        self.lbl_status.setText("Đang chờ camera...")
+        self.lbl_last_payload.setText("Lần quét gần nhất: -")
+        self.lbl_last_time.setText("Thời gian quét gần nhất: -")
 
-        body_layout.addLayout(left_column, 1)
+        self.lbl_checkin_time_value.setText("Thời điểm vào: -")
+        self.lbl_checkout_time_value.setText("Thời điểm ra: -")
+        self.lbl_total_time_value.setText("Tổng thời gian: -")
 
-        side_layout = QtWidgets.QHBoxLayout()
-        feed_frame = QtWidgets.QFrame()
-        feed_frame.setStyleSheet("border-radius:18px; padding:12px; background-color:#0f172a;")
-        feed_layout = QtWidgets.QHBoxLayout(feed_frame)
-        self.video_label = QtWidgets.QLabel("Camera đang kết nối...")
-        self.video_label.setAlignment(QtCore.Qt.AlignmentFlag.AlignCenter)
-        self.video_label.setMinimumHeight(320)
-        self.video_label.setStyleSheet("background:#0f172a; color:white; border-radius:12px;")
-        feed_layout.addWidget(self.video_label, 2)
+        self.lbl_user_name_value.setText("Tên người dùng: -")
+        self.lbl_user_code_value.setText("Mã người dùng: -")
+        self.lbl_subscription_value.setText("Gói gửi xe: -")
 
-        detection_log_frame = QtWidgets.QFrame()
-        detection_log_frame.setStyleSheet("background-color:#1f2740; border-radius:12px; padding:16px;")
-        detection_log_layout = QtWidgets.QVBoxLayout(detection_log_frame)
-        self.detection_label = self._styled_label("Tiến trình phát hiện", color="#f8fafc", size=16, bold=True)
-        detection_log_layout.addWidget(self.detection_label)
-        self.last_plate = QtWidgets.QLabel("-")
-        self.last_plate.setStyleSheet("font-size:20px; font-weight:700; color:#f97316;")
-        detection_log_layout.addWidget(self.last_plate)
-        self.last_time = QtWidgets.QLabel("-")
-        detection_log_layout.addWidget(self.last_time)
-        self.detection_history = QtWidgets.QListWidget()
-        self.detection_history.setStyleSheet("border:none; padding:4px; background-color:transparent;")
-        detection_log_layout.addWidget(self.detection_history)
-        self.status_label = QtWidgets.QLabel("Đang chờ camera...")
-        self.status_label.setStyleSheet("font-weight:600; color:#f8fafc; margin-top:8px;")
-        detection_log_layout.addWidget(self.status_label)
+        self.lbl_payment_value.setText("Tổng tiền: -")
+        self.lbl_vehicle_type_value.setText("Loại phương tiện: -")
+        self.lbl_session_status_value.setText("Trạng thái: -")
 
-        side_layout.addWidget(feed_frame, 2)
-        side_layout.addWidget(detection_log_frame, 1)
-        body_layout.addLayout(side_layout, 2)
+        self.btn_checkin.setEnabled(False)
+        if self.current_action == "CHECK_OUT":
+            self.btn_checkin.setText("Xác nhận xe ra")
+            self.lbl_status.setText("Chế độ: Xe ra - đang chờ camera...")
+        else:
+            self.btn_checkin.setText("Xác nhận xe vào")
+            self.lbl_status.setText("Chế độ: Xe vào - đang chờ camera...")
+        self.setStyleSheet("""
+            QMainWindow {
+                background: #f8fafc;
+            }
 
-        layout.addWidget(body_frame)
+            QFrame {
+                background: #ffffff;
+                border: 1px solid #e2e8f0;
+                border-radius: 12px;
+            }
 
-    def _styled_label(self, text: str, color: str = "#f8fafc", size: int = 14, bold: bool = False) -> QtWidgets.QLabel:
-        label = QtWidgets.QLabel(text)
-        style = f"color:{color}; font-size:{size}px;"
-        if bold:
-            style += " font-weight:700;"
-        label.setStyleSheet(style)
-        return label
+            QLabel {
+                color: #0f172a;
+                font-size: 14px;
+                font-weight: 600;
+            }
 
-    def _handle_toggle(self, enabled: bool) -> None:
-        self.toggle_btn.setText("Camera bật" if enabled else "Camera tắt")
-        self.toggle_camera_signal.emit(enabled)
+            QListWidget {
+                border: 1px solid #e2e8f0;
+                border-radius: 10px;
+                padding: 8px;
+                background: #ffffff;
+                color: #0f172a;
+                font-size: 13px;
+            }
 
-    def update_detection_info(self, plate: str, info: dict | None = None) -> None:
-        normalized = plate.strip()
+            QPushButton {
+                background: #43B14B;
+                color: #ffffff;
+                border: none;
+                border-radius: 10px;
+                font-size: 14px;
+                font-weight: 700;
+                padding: 10px 16px;
+            }
+
+            QPushButton:disabled {
+                background: #cbd5e1;
+                color: #ffffff;
+            }
+
+            QPushButton:hover:!disabled {
+                background: #4fc257;
+            }
+
+            #frm_camera {
+                background: #0f172a;
+            }
+
+            #lbl_camera_view {
+                background: #020617;
+                color: #ffffff;
+                border-radius: 10px;
+            }
+
+            #lbl_payment_value {
+                color: #16a34a;
+                font-size: 18px;
+                font-weight: 800;
+            }
+
+            #lbl_session_status_value {
+                color: #2563eb;
+                font-weight: 800;
+            }
+        """)
+
+    def _connect_events(self) -> None:
+        self.btn_checkin.clicked.connect(self._confirm_action)
+
+    def _format_time(self, value: object) -> str:
+        if not value:
+            return "-"
+
+        if isinstance(value, str):
+            try:
+                dt = datetime.fromisoformat(value.replace("Z", "+00:00"))
+                if dt.tzinfo is not None:
+                    dt = dt.astimezone().replace(tzinfo=None)
+                return dt.strftime("%Y-%m-%d %H:%M:%S")
+            except ValueError:
+                return value
+
+        if isinstance(value, datetime):
+            return value.strftime("%Y-%m-%d %H:%M:%S")
+
+        return str(value)
+
+    def _format_money(self, amount: object) -> str:
+        if amount is None or amount == "":
+            return "-"
+
+        try:
+            value = int(float(amount))
+        except (TypeError, ValueError):
+            return str(amount)
+
+        return f"{value:,} VND".replace(",", ".")
+
+    def _format_duration(self, check_in: object, check_out: object) -> str:
+        if not check_in:
+            return "-"
+
+        try:
+            if isinstance(check_in, str):
+                start = datetime.fromisoformat(check_in.replace("Z", "+00:00"))
+            elif isinstance(check_in, datetime):
+                start = check_in
+            else:
+                return "-"
+
+            if check_out:
+                if isinstance(check_out, str):
+                    end = datetime.fromisoformat(check_out.replace("Z", "+00:00"))
+                elif isinstance(check_out, datetime):
+                    end = check_out
+                else:
+                    end = datetime.now()
+            else:
+                end = datetime.now()
+
+            if start.tzinfo is not None:
+                start = start.astimezone().replace(tzinfo=None)
+
+            if end.tzinfo is not None:
+                end = end.astimezone().replace(tzinfo=None)
+
+            total_seconds = int((end - start).total_seconds())
+
+            if total_seconds < 0:
+                return "-"
+
+            hours = total_seconds // 3600
+            minutes = (total_seconds % 3600) // 60
+            seconds = total_seconds % 60
+
+            return f"{hours:02d}:{minutes:02d}:{seconds:02d}"
+        except Exception:
+            return "-"
+
+    def update_detection_info(
+        self,
+        plate: str,
+        info: dict | None = None,
+        *,
+        lookup_completed: bool = False,
+    ) -> None:
+        normalized = plate.strip().upper()
+
         if not normalized:
             return
-        now = datetime.now().strftime("%H:%M:%S")
-        self.last_plate.setText(normalized)
-        self.last_time.setText(now)
-        item = QtWidgets.QListWidgetItem(f"{now} - {normalized}")
-        self.detection_history.insertItem(0, item)
-        self.detection_history.setCurrentRow(0)
+        
+        if info is None:
+            self.current_plate = normalized
+            self.current_info = None
 
-        if info:
-            self.license_label.setText(info.get("license_plate", normalized))
-            self.vehicle_type_label.setText(info.get("vehicle_type", "Không xác định"))
-            user_name = info.get("user_full_name", "Khách")
-            vehicle_type = info.get("vehicle_type", "Không xác định")
-            self.match_status_label.setText(f"Đã đối chiếu: {user_name} ({vehicle_type})")
-            self.match_status_label.setStyleSheet("color:#34d399; font-weight:600;")
+            self.lbl_status.setText(
+                "Không tìm thấy phương tiện trong hệ thống."
+                if lookup_completed
+                else "Đã nhận biển số, đang chờ lookup..."
+            )
+
+            self.lbl_last_payload.setText(f"Lần quét gần nhất: {normalized}")
+            self.lbl_last_time.setText(
+                f"Thời gian quét gần nhất: {datetime.now().strftime('%Y-%m-%d %H:%M:%S')}"
+            )
+
+            self.lbl_user_name_value.setText("Tên người dùng: -")
+            self.lbl_user_code_value.setText("Mã người dùng: -")
+            self.lbl_subscription_value.setText("Gói gửi xe: -")
+            self.lbl_payment_value.setText("Tổng tiền: -")
+            self.lbl_vehicle_type_value.setText("Loại phương tiện: -")
+            self.lbl_session_status_value.setText("Trạng thái: -")
+
+            self.btn_checkin.setEnabled(False)
+
+            if lookup_completed:
+                self.lst_detection_history.insertItem(
+                    0,
+                    f"{datetime.now().strftime('%H:%M:%S')} - {normalized} - NOT FOUND",
+                )
+
+            return
+
+        now = datetime.now()
+
+        self.current_plate = normalized
+        self.current_info = info
+
+        user_code = info.get("user_code") if info else None
+        user_name = info.get("user_full_name") if info else None
+        vehicle_type = info.get("vehicle_type") if info else None
+        subscription = info.get("active_subscription") if info else None
+
+        if isinstance(subscription, dict):
+            subscription_label = subscription.get("plans_type") or "-"
         else:
-            self.license_label.setText(normalized)
-            self.vehicle_type_label.setText("Chưa rõ loại")
-            self.match_status_label.setText("Khách hoặc không có dữ liệu")
-            self.match_status_label.setStyleSheet("color:#facc15; font-weight:600;")
+            subscription_label = "-"
 
+        active_session = info.get("active_session") if info else None
+
+        check_in_time = None
+        check_out_time = None
+        session_status = "-"
+
+        if active_session and isinstance(active_session, dict):
+            check_in_time = active_session.get("check_in_time")
+            check_out_time = active_session.get("check_out_time")
+            session_status = active_session.get("status") or "-"
+
+        if not check_in_time:
+            check_in_time = now
+
+        fee_breakdown = info.get("fee_breakdown") if info else None
+        amount_due = None
+
+        if fee_breakdown and isinstance(fee_breakdown, dict):
+            amount_due = fee_breakdown.get("total_amount")
+
+        if amount_due is None and active_session and isinstance(active_session, dict):
+            amount_due = active_session.get("total_amount")
+
+        self.lbl_checkin_time_value.setText(
+            f"Thời điểm vào: {self._format_time(check_in_time)}"
+        )
+        self.lbl_checkout_time_value.setText(
+            f"Thời điểm ra: {self._format_time(check_out_time)}"
+        )
+        self.lbl_total_time_value.setText(
+            f"Tổng thời gian: {self._format_duration(check_in_time, check_out_time)}"
+        )
+
+        self.lbl_user_name_value.setText(
+            f"Tên người dùng: {user_name if user_name else '-'}"
+        )
+        self.lbl_user_code_value.setText(
+            f"Mã người dùng: {user_code if user_code else '-'}"
+        )
+        self.lbl_subscription_value.setText(
+            f"Gói gửi xe: {subscription_label}"
+        )
+
+        self.lbl_payment_value.setText(
+            f"Tổng tiền: {self._format_money(amount_due)}"
+        )
+        self.lbl_vehicle_type_value.setText(
+            f"Loại phương tiện: {vehicle_type if vehicle_type else '-'}"
+        )
+        self.lbl_session_status_value.setText(
+            f"Trạng thái: {session_status}"
+        )
+
+        self.lbl_status.setText("Đã nhận biển số, chờ xác nhận.")
+        self.lbl_last_payload.setText(f"Lần quét gần nhất: {normalized}")
+        self.lbl_last_time.setText(
+            f"Thời gian quét gần nhất: {datetime.now().strftime('%Y-%m-%d %H:%M:%S')}"
+        )
+
+        self.lst_detection_history.insertItem(
+            0,
+            f"{datetime.now().strftime('%H:%M:%S')} - {normalized}",
+        )
+
+        self.btn_checkin.setEnabled(True)
+
+    def _confirm_action(self) -> None:
+        if not self.current_plate:
+            return
+
+        plate = self.current_plate
+
+        self.btn_checkin.setEnabled(False)
+        self.lbl_status.setText("Đang xử lý...")
+
+        try:
+            res = requests.post(
+                f"{settings.BACKEND_HOST}/api/v1/parking_sessions/plate/confirm",
+                json={
+                    "license_plate": plate,
+                    "action": self.current_action,
+                },
+                timeout=6,
+            )
+
+            if res.ok:
+                data = res.json()
+
+                action_label = (
+                    "CHECK-OUT"
+                    if self.current_action == "CHECK_OUT"
+                    else "CHECK-IN"
+                )
+
+                check_in_time = data.get("check_in_time")
+                check_out_time = data.get("check_out_time")
+                when = check_out_time or check_in_time or ""
+
+                fee_breakdown = data.get("fee_breakdown") or {}
+                total_amount = (
+                    fee_breakdown.get("total_amount")
+                    if isinstance(fee_breakdown, dict)
+                    else data.get("total_amount")
+                )
+
+                if total_amount is None:
+                    total_amount = data.get("total_amount")
+
+                self.lbl_status.setText(
+                    f"OK: {action_label} @ {self._format_time(when)}"
+                )
+                self.lbl_session_status_value.setText(f"Trạng thái: {action_label}")
+
+                self.lbl_checkin_time_value.setText(
+                    f"Thời điểm vào: {self._format_time(check_in_time)}"
+                )
+                self.lbl_checkout_time_value.setText(
+                    f"Thời điểm ra: {self._format_time(check_out_time)}"
+                )
+                self.lbl_total_time_value.setText(
+                    f"Tổng thời gian: {self._format_duration(check_in_time, check_out_time)}"
+                )
+
+                self.lbl_payment_value.setText(
+                    f"Tổng tiền: {self._format_money(total_amount)}"
+                )
+
+                self.lst_detection_history.insertItem(
+                    0,
+                    f"{datetime.now().strftime('%H:%M:%S')} - {plate} - {action_label}",
+                )
+
+                return
+
+            error_message = f"Thất bại ({res.status_code})"
+
+            try:
+                error_data = res.json()
+                error_message = error_data.get("detail") or error_message
+            except Exception:
+                pass
+
+            self.lbl_status.setText(error_message)
+            self.btn_checkin.setEnabled(True)
+
+        except Exception as e:
+            self.lbl_status.setText(str(e))
+            self.btn_checkin.setEnabled(True)
+            
     def set_frame(self, frame: QtGui.QImage) -> None:
         if frame is None:
-            self.video_label.clear()
-            self.video_label.setText("Camera đang kết nối...")
+            self.lbl_camera_view.clear()
+            self.lbl_camera_view.setText("Camera đang kết nối...")
             return
+
         pixmap = QtGui.QPixmap.fromImage(frame)
-        size = self.video_label.size()
+        size = self.lbl_camera_view.size()
+
         if size.width() > 0 and size.height() > 0:
             pixmap = pixmap.scaled(
                 size,
                 QtCore.Qt.AspectRatioMode.KeepAspectRatio,
                 QtCore.Qt.TransformationMode.SmoothTransformation,
             )
-        self.video_label.setPixmap(pixmap)
+
+        self.lbl_camera_view.setPixmap(pixmap)
 
     def set_status(self, text: str) -> None:
-        self.status_label.setText(text or "Đang chờ camera...")
+        self.lbl_status.setText(text or "Đang chờ camera...")
 
-
-class SecurityConsole(QtWidgets.QMainWindow):
+class SecurityConsole(SecurityConsoleUI):
     def __init__(self):
         super().__init__()
-        self.setWindowTitle("Parking Security Console")
-        self.resize(1380, 880)
 
-        self.home_page = HomePageWidget()
         self.worker = None
         self.lookup_worker = None
 
@@ -425,43 +682,21 @@ class SecurityConsole(QtWidgets.QMainWindow):
         self.last_lookup_time = 0.0
         self.pending_lookup_plates = set()
 
-        self.setCentralWidget(self.build_ui())
-
         self.start_lookup_worker()
         self.start_worker()
 
-    def build_ui(self) -> QtWidgets.QWidget:
-        self.home_page.toggle_camera_signal.connect(self.toggle_camera)
-
-        container = QtWidgets.QWidget()
-        layout = QtWidgets.QHBoxLayout(container)
-        layout.setSpacing(0)
-
-        content_frame = QtWidgets.QFrame()
-        content_layout = QtWidgets.QVBoxLayout(content_frame)
-        content_layout.setSpacing(12)
-
-        header = QtWidgets.QFrame()
-        header.setStyleSheet("border-radius:14px; padding:12px;")
-        header_layout = QtWidgets.QHBoxLayout(header)
-        header_layout.addWidget(QtWidgets.QLabel("Operator console"))
-        header_layout.addStretch()
-        header_layout.addWidget(QtWidgets.QLabel("Nguyễn Văn A"))
-
-        content_layout.addWidget(header)
-        content_layout.addWidget(self.home_page)
-
-        layout.addWidget(content_frame)
-        return container
-
     def _camera_source(self):
-        return settings.CAMERA_RTSP_URL or 0
+        return 0
 
     def start_lookup_worker(self) -> None:
         self.stop_lookup_worker()
-        self.lookup_worker = LookupWorker(settings.BACKEND_HOST)
+
+        self.lookup_worker = LookupWorker(
+            settings.BACKEND_HOST,
+            action=self.current_action,
+        )
         self.lookup_worker.lookup_finished.connect(self.on_lookup_finished)
-        self.lookup_worker.lookup_status.connect(self.home_page.set_status)
+        self.lookup_worker.lookup_status.connect(self.set_status)
         self.lookup_worker.start()
 
     def stop_lookup_worker(self) -> None:
@@ -473,9 +708,9 @@ class SecurityConsole(QtWidgets.QMainWindow):
         self.stop_worker()
 
         self.worker = CameraWorker(camera_source=self._camera_source())
-        self.worker.frame_ready.connect(self.home_page_frame)
+        self.worker.frame_ready.connect(self.set_frame)
         self.worker.detection_ready.connect(self.record_detection)
-        self.worker.status_changed.connect(self.home_page.set_status)
+        self.worker.status_changed.connect(self.set_status)
         self.worker.error_occurred.connect(self.on_camera_error)
         self.worker.start()
 
@@ -484,18 +719,8 @@ class SecurityConsole(QtWidgets.QMainWindow):
             self.worker.stop()
             self.worker = None
 
-    def toggle_camera(self, enabled: bool) -> None:
-        if enabled:
-            self.start_worker()
-        else:
-            self.stop_worker()
-            self.home_page.set_status("Camera paused")
-
-    def home_page_frame(self, image: QtGui.QImage) -> None:
-        self.home_page.set_frame(image)
-
     def on_camera_error(self, message: str) -> None:
-        self.home_page.set_status(message)
+        self.set_status(message)
         print(message)
 
     def should_lookup(self, plate: str) -> bool:
@@ -508,20 +733,24 @@ class SecurityConsole(QtWidgets.QMainWindow):
         if normalized in self.pending_lookup_plates:
             return False
 
-        if normalized == self.last_lookup_plate and (now - self.last_lookup_time) < LOOKUP_DEBOUNCE_SECONDS:
+        if (
+            normalized == self.last_lookup_plate
+            and (now - self.last_lookup_time) < LOOKUP_DEBOUNCE_SECONDS
+        ):
             return False
 
         self.last_lookup_plate = normalized
         self.last_lookup_time = now
+
         return True
 
     def record_detection(self, plate: str) -> None:
         normalized = plate.strip().upper()
+
         if not normalized:
             return
 
-        # Cập nhật UI trước cho mượt
-        self.home_page.update_detection_info(normalized, None)
+        self.update_detection_info(normalized, None, lookup_completed=False)
 
         if self.lookup_worker and self.should_lookup(normalized):
             self.pending_lookup_plates.add(normalized)
@@ -529,14 +758,14 @@ class SecurityConsole(QtWidgets.QMainWindow):
 
     def on_lookup_finished(self, plate: str, info: dict | None) -> None:
         normalized = plate.strip().upper()
+
         self.pending_lookup_plates.discard(normalized)
-        self.home_page.update_detection_info(normalized, info)
+        self.update_detection_info(normalized, info, lookup_completed=True)
 
     def closeEvent(self, event: QtGui.QCloseEvent) -> None:
         self.stop_worker()
         self.stop_lookup_worker()
         super().closeEvent(event)
-
 
 def main() -> None:
     app = QtWidgets.QApplication(sys.argv)

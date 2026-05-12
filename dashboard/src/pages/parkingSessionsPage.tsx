@@ -4,8 +4,10 @@ import {
   Box,
   Button,
   Chip,
+  InputAdornment,
   MenuItem,
   Paper,
+  Popover,
   Stack,
   TablePagination,
   TextField,
@@ -16,56 +18,78 @@ import { useTranslation } from 'react-i18next';
 import { SoftDataGrid } from '../components/common/SoftDataGrid';
 import { useDebouncedValue } from '../hooks/useDebouncedValue';
 import type { ParkingSessionAdminRow } from '../api/types';
-import { formatCurrency, formatDateTime } from '../ultis/format';
+import { formatCurrency, formatDateTime, toLocalDateTimeInputValue } from '../ultis/format';
 import { useParkingSessionsPaginated } from '../api/parkingSessions';
-
-const pad2 = (value: number) => String(value).padStart(2, '0');
-const toLocalDateTimeInputValue = (date: Date) => {
-  const year = date.getFullYear();
-  const month = pad2(date.getMonth() + 1);
-  const day = pad2(date.getDate());
-  const hours = pad2(date.getHours());
-  const minutes = pad2(date.getMinutes());
-  const seconds = pad2(date.getSeconds());
-  return `${year}-${month}-${day}T${hours}:${minutes}:${seconds}`;
-};
+import FilterListIcon from '@mui/icons-material/FilterList';
+import KeyboardArrowDownIcon from '@mui/icons-material/KeyboardArrowDown';
+import { userTypes, vehicleTypeOptions } from '../constant/config';
+import { PageHeader } from '../components/common/PageHeader';
 
 type TimePreset = 'CUSTOM' | 'TODAY' | 'YESTERDAY' | 'LAST_7_DAYS';
 
+type ParkingSessionsFiltersState = {
+  userCode: string;
+  vehicleType: string;
+  status: string;
+};
+
+type ParkingSessionsTimeState = {
+  preset: TimePreset;
+  from: string;
+  to: string;
+};
+
 export const ParkingSessionsPage: React.FC = () => {
   const { t } = useTranslation();
-  const [query, setQuery] = useState('');
-  const [userCode, setUserCode] = useState('');
-  const [vehicleType, setVehicleType] = useState('');
-  const [status, setStatus] = useState('');
-  const [timePreset, setTimePreset] = useState<TimePreset>('CUSTOM');
-  const [fromTime, setFromTime] = useState('');
-  const [toTime, setToTime] = useState('');
+  const [filters, setFilters] = useState<ParkingSessionsFiltersState>({
+    userCode: '',
+    vehicleType: '',
+    status: '',
+  });
+  const [time, setTime] = useState<ParkingSessionsTimeState>({
+    preset: 'CUSTOM',
+    from: '',
+    to: '',
+  });
+  const [timeRangeAnchorEl, setTimeRangeAnchorEl] = useState<HTMLElement | null>(null);
   const [page, setPage] = useState(0);
   const [rowsPerPage, setRowsPerPage] = useState(5);
 
-  const dQuery = useDebouncedValue(query, 400);
-  const dUserCode = useDebouncedValue(userCode, 400);
-  const dVehicleType = useDebouncedValue(vehicleType, 400);
-  const dStatus = useDebouncedValue(status, 200);
-  const dFromTime = useDebouncedValue(fromTime, 400);
-  const dToTime = useDebouncedValue(toTime, 400);
+  const updateFilters = (updater: (prev: ParkingSessionsFiltersState) => ParkingSessionsFiltersState) => {
+    setFilters((prev) => updater(prev));
+    setPage(0);
+  };
 
-  const filters = useMemo(
+  const updateTime = (updater: (prev: ParkingSessionsTimeState) => ParkingSessionsTimeState) => {
+    setTime((prev) => updater(prev));
+    setPage(0);
+  };
+
+  const debouncedFields = useDebouncedValue(
+    {
+      userCode: filters.userCode,
+      vehicleType: filters.vehicleType,
+      status: filters.status,
+      from: time.from,
+      to: time.to,
+    },
+    400
+  );
+
+  const queryFilters = useMemo(
     () => ({
       page: page + 1,
       limit: rowsPerPage,
-      query: dQuery.trim() || undefined,
-      user_code: dUserCode.trim() || undefined,
-      vehicle_type: dVehicleType || undefined,
-      status: (dStatus || undefined) as 'ACTIVE' | 'DONE' | undefined,
-      from_time: dFromTime || undefined,
-      to_time: dToTime || undefined,
+      user_code: debouncedFields.userCode.trim() || undefined,
+      vehicle_type: debouncedFields.vehicleType || undefined,
+      status: (debouncedFields.status || undefined) as 'ACTIVE' | 'DONE' | undefined,
+      from_time: debouncedFields.from || undefined,
+      to_time: debouncedFields.to || undefined,
     }),
-    [dFromTime, dQuery, dStatus, dToTime, dUserCode, dVehicleType, page, rowsPerPage]
+    [debouncedFields, page, rowsPerPage]
   );
 
-  const { data: paginated, isLoading, isError } = useParkingSessionsPaginated(filters);
+  const { data: paginated, isLoading, isError } = useParkingSessionsPaginated(queryFilters);
   const rows = useMemo(() => paginated?.data ?? [], [paginated]);
   const total = paginated?.total ?? 0;
 
@@ -77,30 +101,45 @@ export const ParkingSessionsPage: React.FC = () => {
         minWidth: 220,
         flex: 1,
         sortable: false,
-        renderCell: (params) => (
-          <Stack spacing={0.25}>
-            <Typography variant="subtitle2">
-              {params.row.user_full_name ?? params.row.user_code ?? '—'}
-            </Typography>
-            <Typography variant="caption" color="text.secondary">
-              {params.row.user_code ?? 'Guest'}
-            </Typography>
-          </Stack>
-        ),
+        renderCell: (params) => {
+          const userType = String(params.row.user_type || '').toUpperCase();
+          const isGuess = userType === userTypes.GUEST || !params.row.user_code;
+
+          if (isGuess) {
+            return (
+              <Stack spacing={0.25}>
+                <Typography variant="subtitle2">
+                  GUESS
+                </Typography>
+              </Stack>
+            );
+          }
+
+          return (
+            <Stack spacing={0.25}>
+              <Typography variant="subtitle2">
+                {params.row.user_full_name ?? params.row.user_code ?? '-'}
+              </Typography>
+              <Typography variant="caption" color="text.secondary">
+                {params.row.user_code ?? '-'}
+              </Typography>
+            </Stack>
+          );
+        },
+      },
+      {
+        field: 'vehicle_type',
+        headerName: 'Vehicle type',
+        minWidth: 160,
+        sortable: false,
+        renderCell: (params) => <span>{params.row.vehicle_type ?? '-'}</span>,
       },
       {
         field: 'license_plate',
-        headerName: 'Vehicle',
-        minWidth: 200,
+        headerName: 'License plate',
+        minWidth: 160,
         sortable: false,
-        renderCell: (params) => (
-          <Stack spacing={0.25}>
-            <Typography variant="subtitle2">{params.row.license_plate ?? '—'}</Typography>
-            <Typography variant="caption" color="text.secondary">
-              {params.row.vehicle_type ?? '—'}
-            </Typography>
-          </Stack>
-        ),
+        renderCell: (params) => <span>{params.row.license_plate === '' ? '-' : params.row.license_plate}</span>,
       },
       {
         field: 'check_in_time',
@@ -113,22 +152,6 @@ export const ParkingSessionsPage: React.FC = () => {
         headerName: 'Check out',
         minWidth: 180,
         renderCell: (p) => <span>{formatDateTime(p.value)}</span>,
-      },
-      {
-        field: 'duration',
-        headerName: 'Duration',
-        minWidth: 140,
-        sortable: false,
-        renderCell: (params) => {
-          const start = params.row.check_in_time ? new Date(params.row.check_in_time) : null;
-          const end = params.row.check_out_time ? new Date(params.row.check_out_time) : null;
-          if (!start || Number.isNaN(start.getTime())) return <span>—</span>;
-          if (!end || Number.isNaN(end.getTime())) return <span>Running</span>;
-          const seconds = Math.max(0, Math.floor((end.getTime() - start.getTime()) / 1000));
-          const hours = Math.floor(seconds / 3600);
-          const minutes = Math.floor((seconds % 3600) / 60);
-          return <span>{hours ? `${hours}h ${minutes}m` : `${minutes}m`}</span>;
-        },
       },
       {
         field: 'status',
@@ -149,70 +172,111 @@ export const ParkingSessionsPage: React.FC = () => {
         sortable: false,
         renderCell: (params) => <span>{formatCurrency(params.row.total_amount)}</span>,
       },
-      { field: 'id', headerName: 'Session ID', minWidth: 220 },
     ];
   }, []);
 
   const handleClearFilters = () => {
-    setQuery('');
-    setUserCode('');
-    setVehicleType('');
-    setStatus('');
-    setTimePreset('CUSTOM');
-    setFromTime('');
-    setToTime('');
+    setFilters({ userCode: '', vehicleType: '', status: '' });
+    setTime({ preset: 'CUSTOM', from: '', to: '' });
+    setTimeRangeAnchorEl(null);
     setPage(0);
+  };
+
+  const timeRangeDisplay = useMemo(() => {
+    const presetLabel =
+      time.preset === 'TODAY'
+        ? 'Today'
+        : time.preset === 'YESTERDAY'
+          ? 'Yesterday'
+          : time.preset === 'LAST_7_DAYS'
+            ? 'Last 7 days'
+            : 'Custom';
+    if (time.preset !== 'CUSTOM') return presetLabel;
+    if (!time.from && !time.to) return presetLabel;
+    const fromLabel = time.from ? formatDateTime(time.from) : '-';
+    const toLabel = time.to ? formatDateTime(time.to) : '-';
+    return `${fromLabel} → ${toLabel}`;
+  }, [time.from, time.preset, time.to]);
+
+  const applyTimePreset = (next: TimePreset) => {
+    const now = new Date();
+    if (next === 'CUSTOM') {
+      updateTime((prev) => ({ ...prev, preset: 'CUSTOM' }));
+      return;
+    }
+
+    const startOfDay = (date: Date) => new Date(date.getFullYear(), date.getMonth(), date.getDate(), 0, 0, 0);
+    const endOfDay = (date: Date) => new Date(date.getFullYear(), date.getMonth(), date.getDate(), 23, 59, 59);
+
+    if (next === 'TODAY') {
+      updateTime(() => ({
+        preset: 'TODAY',
+        from: toLocalDateTimeInputValue(startOfDay(now)),
+        to: toLocalDateTimeInputValue(endOfDay(now)),
+      }));
+      return;
+    }
+    if (next === 'YESTERDAY') {
+      const yesterday = new Date(now);
+      yesterday.setDate(now.getDate() - 1);
+      updateTime(() => ({
+        preset: 'YESTERDAY',
+        from: toLocalDateTimeInputValue(startOfDay(yesterday)),
+        to: toLocalDateTimeInputValue(endOfDay(yesterday)),
+      }));
+      return;
+    }
+    if (next === 'LAST_7_DAYS') {
+      const from = new Date(now);
+      from.setDate(now.getDate() - 6);
+      updateTime(() => ({
+        preset: 'LAST_7_DAYS',
+        from: toLocalDateTimeInputValue(startOfDay(from)),
+        to: toLocalDateTimeInputValue(endOfDay(now)),
+      }));
+    }
   };
 
   return (
     <Box sx={{ display: 'flex', flexDirection: 'column', gap: 2 }}>
-      <Stack spacing={0.5}>
-        <Typography variant="h5">{t('parkingSessionsPage.title')}</Typography>
-      </Stack>
+      <PageHeader title={t('parkingSessionsPage.title')} subtitle={t('parkingSessionsPage.description')} />
 
       <Stack direction="row" flexWrap="wrap" gap={2} alignItems="center">
-        <TextField
-          size="small"
-          label={t('parkingSessionsPage.search.label')}
-          value={query}
-          onChange={(e) => {
-            setQuery(e.target.value);
-            setPage(0);
-          }}
-        />
+        <Box sx={{ display: 'flex', gap: 0.5, alignItems: 'center' }}>
+          <FilterListIcon color="action" />
+          <Typography variant="body2">{t('common.filters.search')}</Typography>
+        </Box>
         <TextField
           size="small"
           label={t('parkingSessionsPage.search.userCode')}
-          value={userCode}
+          value={filters.userCode}
           onChange={(e) => {
-            setUserCode(e.target.value);
-            setPage(0);
+            updateFilters((prev) => ({ ...prev, userCode: e.target.value }));
           }}
         />
         <TextField
           select
           size="small"
           label={t('parkingSessionsPage.search.vehicleType')}
-          value={vehicleType}
+          value={filters.vehicleType}
           onChange={(e) => {
-            setVehicleType(e.target.value);
-            setPage(0);
+            updateFilters((prev) => ({ ...prev, vehicleType: e.target.value }));
           }}
           sx={{ minWidth: 170 }}
         >
-          <MenuItem value="">All</MenuItem>
-          <MenuItem value="MOTORBIKE">Motorbike</MenuItem>
-          <MenuItem value="BICYCLE">Bicycle</MenuItem>
-          <MenuItem value="ELECTRIC_BICYCLE">Electric bicycle</MenuItem>
+          {Object.keys(vehicleTypeOptions).map((option) => (
+            <MenuItem key={option} value={option}>
+              {t(`comon.vehicleTypeOptions.${option}`, { defaultValue: option })}
+            </MenuItem>
+          ))}
         </TextField>
         <TextField
           select
           size="small"
           label="Status"
-          value={status}
+          value={filters.status}
           onChange={(e) => {
-            setStatus(e.target.value);
-            setPage(0);
+            updateFilters((prev) => ({ ...prev, status: e.target.value }));
           }}
           sx={{ minWidth: 140 }}
         >
@@ -222,76 +286,70 @@ export const ParkingSessionsPage: React.FC = () => {
         </TextField>
 
         <TextField
-          select
           size="small"
-          label="Time range"
-          value={timePreset}
-          onChange={(e) => {
-            const next = e.target.value as TimePreset;
-            setTimePreset(next);
-            setPage(0);
-
-            const now = new Date();
-            if (next === 'CUSTOM') return;
-
-            const startOfDay = (date: Date) => new Date(date.getFullYear(), date.getMonth(), date.getDate(), 0, 0, 0);
-            const endOfDay = (date: Date) => new Date(date.getFullYear(), date.getMonth(), date.getDate(), 23, 59, 59);
-
-            if (next === 'TODAY') {
-              setFromTime(toLocalDateTimeInputValue(startOfDay(now)));
-              setToTime(toLocalDateTimeInputValue(endOfDay(now)));
-              return;
-            }
-            if (next === 'YESTERDAY') {
-              const yesterday = new Date(now);
-              yesterday.setDate(now.getDate() - 1);
-              setFromTime(toLocalDateTimeInputValue(startOfDay(yesterday)));
-              setToTime(toLocalDateTimeInputValue(endOfDay(yesterday)));
-              return;
-            }
-            if (next === 'LAST_7_DAYS') {
-              const from = new Date(now);
-              from.setDate(now.getDate() - 6);
-              setFromTime(toLocalDateTimeInputValue(startOfDay(from)));
-              setToTime(toLocalDateTimeInputValue(endOfDay(now)));
-            }
+          label={t('parkingSessionsPage.search.timeRange', { defaultValue: 'Search time range' })}
+          value={timeRangeDisplay}
+          onClick={(event) => setTimeRangeAnchorEl(event.currentTarget)}
+          InputProps={{
+            readOnly: true,
+            endAdornment: (
+              <InputAdornment position="end">
+                <KeyboardArrowDownIcon fontSize="small" />
+              </InputAdornment>
+            ),
           }}
-          sx={{ minWidth: 160 }}
+          sx={{ minWidth: 260 }}
+        />
+
+        <Popover
+          open={Boolean(timeRangeAnchorEl)}
+          anchorEl={timeRangeAnchorEl}
+          onClose={() => setTimeRangeAnchorEl(null)}
+          anchorOrigin={{ vertical: 'bottom', horizontal: 'left' }}
+          transformOrigin={{ vertical: 'top', horizontal: 'left' }}
         >
-          <MenuItem value="CUSTOM">Custom</MenuItem>
-          <MenuItem value="TODAY">Today</MenuItem>
-          <MenuItem value="YESTERDAY">Yesterday</MenuItem>
-          <MenuItem value="LAST_7_DAYS">Last 7 days</MenuItem>
-        </TextField>
-
-        <TextField
-          size="small"
-          label="From"
-          type="datetime-local"
-          value={fromTime}
-          onChange={(e) => {
-            setFromTime(e.target.value);
-            setTimePreset('CUSTOM');
-            setPage(0);
-          }}
-          inputProps={{ step: 1 }}
-          InputLabelProps={{ shrink: true }}
-        />
-        <TextField
-          size="small"
-          label="To"
-          type="datetime-local"
-          value={toTime}
-          onChange={(e) => {
-            setToTime(e.target.value);
-            setTimePreset('CUSTOM');
-            setPage(0);
-          }}
-          inputProps={{ step: 1 }}
-          InputLabelProps={{ shrink: true }}
-        />
-        <Button variant="outlined" size="small" onClick={handleClearFilters}>
-          {t('button.clear')}
+          <Box sx={{ p: 2, maxWidth: 'calc(100vw - 32px)' }}>
+            <Stack direction="row" flexWrap="wrap" gap={2} alignItems="center">
+              <TextField
+                select
+                size="small"
+                label="Time range"
+                value={time.preset}
+                onChange={(e) => applyTimePreset(e.target.value as TimePreset)}
+                sx={{ minWidth: 180 }}
+              >
+                <MenuItem value="CUSTOM">Custom</MenuItem>
+                <MenuItem value="TODAY">Today</MenuItem>
+                <MenuItem value="YESTERDAY">Yesterday</MenuItem>
+                <MenuItem value="LAST_7_DAYS">Last 7 days</MenuItem>
+              </TextField>
+              <TextField
+                size="small"
+                label="From"
+                type="datetime-local"
+                value={time.from}
+                onChange={(e) => {
+                  updateTime((prev) => ({ ...prev, preset: 'CUSTOM', from: e.target.value }));
+                }}
+                inputProps={{ step: 1 }}
+                InputLabelProps={{ shrink: true }}
+              />
+              <TextField
+                size="small"
+                label="To"
+                type="datetime-local"
+                value={time.to}
+                onChange={(e) => {
+                  updateTime((prev) => ({ ...prev, preset: 'CUSTOM', to: e.target.value }));
+                }}
+                inputProps={{ step: 1 }}
+                InputLabelProps={{ shrink: true }}
+              />
+            </Stack>
+          </Box>
+        </Popover>
+        <Button variant="text" onClick={handleClearFilters}>
+          {t('common.filters.reset')}
         </Button>
       </Stack>
 

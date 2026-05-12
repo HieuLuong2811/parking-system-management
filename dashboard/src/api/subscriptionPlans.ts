@@ -4,8 +4,15 @@ import { httpDelete, httpGet, httpPatch, httpPost } from './httpClient';
 import type { SubscriptionPlanRecord } from './types';
 
 export type SubscriptionPlanCreatePayload = {
-  plans_type: 'UNLICENSED_VEHICLE' | 'LICENSED_VEHICLE';
+  plans_type: 'BASIC' | 'STARTUP' | 'ENTERPRISE';
   price_per_day: number;
+  allow_monthly_payment?: boolean | null;
+  allow_full_payment?: boolean | null;
+  max_licensed_vehicle?: number | null;
+  max_unlicensed_vehicle?: number | null;
+  after_18_fee?: number | null;
+  waive_after_18_fee?: boolean | null;
+  status?: string | null;
 };
 
 export type SubscriptionPlanUpdatePayload = Partial<SubscriptionPlanCreatePayload & { deleted_at?: string | null }>;

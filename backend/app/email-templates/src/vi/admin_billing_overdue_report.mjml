@@ -1,0 +1,87 @@
+<mjml>
+  <mj-head>
+    <mj-title>Báo cáo gói gửi xe chưa thanh toán đúng hạn</mj-title>
+    <mj-preview>Báo cáo danh sách người dùng còn công nợ gói gửi xe</mj-preview>
+
+    <mj-attributes>
+      <mj-all font-family="Arial, Helvetica, sans-serif" />
+      <mj-text color="#0f172a" font-size="14px" line-height="22px" />
+      <mj-button background-color="#2563eb" color="#ffffff" border-radius="8px" font-weight="700" />
+    </mj-attributes>
+  </mj-head>
+
+  <mj-body background-color="#f1f5f9">
+    <mj-section background-color="#ffffff" padding="24px 24px 12px">
+      <mj-column>
+        <mj-image
+          width="72px"
+          align="left"
+          src="{{school_logo_url}}"
+          alt="Logo trường"
+          padding="0 0 16px 0"
+        />
+
+        <mj-text font-size="20px" font-weight="700" color="#0f172a" padding="0">
+          Báo cáo gói gửi xe chưa thanh toán đúng hạn
+        </mj-text>
+
+        <mj-text color="#64748b" padding="8px 0 0">
+          Hệ thống {{project_name}} gửi báo cáo tổng hợp các gói gửi xe còn công nợ hoặc chưa thanh toán đúng hạn.
+        </mj-text>
+      </mj-column>
+    </mj-section>
+
+    <mj-section background-color="#ffffff" padding="8px 24px 16px">
+      <mj-column>
+        <mj-table font-size="14px" color="#0f172a" cellpadding="8px">
+          <tr style="background-color:#eff6ff;">
+            <td style="font-weight:700;">Ngày báo cáo</td>
+            <td>{{report_date}}</td>
+          </tr>
+          <tr>
+            <td style="font-weight:700;">Thời gian tạo</td>
+            <td>{{report_time}}</td>
+          </tr>
+          <tr style="background-color:#eff6ff;">
+            <td style="font-weight:700;">Số bản ghi công nợ</td>
+            <td>{{rows_count}}</td>
+          </tr>
+        </mj-table>
+      </mj-column>
+    </mj-section>
+
+    <mj-section background-color="#ffffff" padding="0 24px 20px">
+      <mj-column>
+        <mj-text padding="0 0 8px" font-weight="700">
+          File Excel đính kèm bao gồm các thông tin:
+        </mj-text>
+
+        <mj-text color="#475569" padding="0">
+          Mã người dùng, họ tên, email, số điện thoại, mã gói đăng ký gửi xe,
+          loại gói, học kỳ, ngày đăng ký, trạng thái, tổng tiền, số tiền đã thanh toán và số tiền nợ.
+        </mj-text>
+      </mj-column>
+    </mj-section>
+
+    <mj-section background-color="#fff7ed" padding="16px 24px">
+      <mj-column>
+        <mj-text color="#9a3412" font-weight="700" padding="0 0 6px">
+          Lưu ý xử lý
+        </mj-text>
+
+        <mj-text color="#9a3412" padding="0">
+          Vui lòng kiểm tra file đính kèm và liên hệ các người dùng còn công nợ để xử lý thanh toán.
+          Các gói có trạng thái đã hủy nhưng còn công nợ vẫn cần được theo dõi cho đến khi tất toán.
+        </mj-text>
+      </mj-column>
+    </mj-section>
+
+    <mj-section background-color="#ffffff" padding="18px 24px 24px">
+      <mj-column>
+        <mj-text color="#64748b" font-size="13px" padding="0">
+          Đây là email tự động từ hệ thống {{project_name}}. Vui lòng không trả lời trực tiếp email này.
+        </mj-text>
+      </mj-column>
+    </mj-section>
+  </mj-body>
+</mjml>

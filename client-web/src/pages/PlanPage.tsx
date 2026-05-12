@@ -1,19 +1,71 @@
 import { Box, Button, Typography } from '@mui/material';
-import ArrowBackIcon from '@mui/icons-material/ArrowBack';
 import { useEffect, useState } from 'react';
 import { useTranslation } from 'react-i18next';
-import { Link, useSearchParams } from 'react-router-dom';
+import { useSearchParams, useNavigate } from 'react-router-dom';
 import { useSubscriptionPlans } from '../api/subscription_plans';
-import PlanCheckoutPanel from '../components/plan/PlanCheckoutPanel';
+import { clientHttp } from '../api/clientApi';
 import { getPlanCardKey } from '../ultis/planCards';
-
-const priceFormatter = new Intl.NumberFormat('en-US', { maximumFractionDigits: 0 });
+import CheckCircleIcon from '@mui/icons-material/CheckCircle';
+import CancelIcon from '@mui/icons-material/Cancel';
+import { formatCurrency, getBooleanLabel, getPlanDisplayKey } from '../ultis/formatters';
+import { getPlanIcon } from '../ultis/status';
+import { useConfirmDialog } from '../hooks/useConfirmDialog';
 
 export default function PlanPage() {
   const { t } = useTranslation();
   const { data: plans = [] } = useSubscriptionPlans();
   const [searchParams] = useSearchParams();
   const [selectedPlanId, setSelectedPlanId] = useState<string | null>(null);
+  const navigate = useNavigate();
+  const { confirm, ConfirmDialog } = useConfirmDialog();
+
+  const confirmExistingBillingSubscription = async () => {
+    try {
+      const res = await clientHttp.get<any[]>('/subscriptions/me');
+      const subscriptions = Array.isArray(res.data) ? res.data : [];
+      const current = subscriptions[0];
+      
+      if (!current) return true;
+
+      const statusLabel = t(
+        `profile.subscriptions.status.${String(current.status || '').toLowerCase()}`,
+        {
+          defaultValue: current.status || '—',
+        },
+      );
+
+      const planLabel = t(
+        `plan.cards.${String(current.subscription_plan?.plans_type || '').toLowerCase()}`,
+        {
+          defaultValue: current.subscription_plan?.plans_type || 'gói hiện tại',
+        },
+      );
+
+      const totalAmount = Number(current?.total_amount || 0);
+      const paidAmount = Number(current?.paid_amount || 0);
+      const debtAmount = Math.max(totalAmount - paidAmount, 0);
+
+      return await confirm({
+        title: t('plan.overrideActivePlanDialog.title', {
+          defaultValue: 'Bạn đang có gói gửi xe cần xử lý',
+        }),
+        message: t('plan.overrideActivePlanDialog.message', {
+          plan: planLabel,
+          status: statusLabel,
+          debt: formatCurrency(debtAmount),
+          defaultValue:
+            `Bạn đang có gói ${planLabel} với trạng thái ${statusLabel}. ` +
+            `Nếu đăng ký gói mới, gói cũ sẽ được chuyển sang trạng thái đã hủy nhưng vẫn tiếp tục được theo dõi công nợ nếu còn thiếu. ` +
+            `Số tiền còn thiếu: ${formatCurrency(debtAmount)}. Bạn có muốn tiếp tục?`,
+        }),
+        cancelText: t('common.cancel', { defaultValue: 'Huỷ' }),
+        confirmText: t('common.continue', { defaultValue: 'Tiếp tục' }),
+        danger: true,
+      });
+    } catch {
+      return true;
+    }
+  };
 
   useEffect(() => {
     if (plans.length === 0) {
@@ -21,6 +73,7 @@ export default function PlanPage() {
     }
 
     const planIdParam = (searchParams.get('planId') || '').trim();
+
     if (planIdParam && plans.some((plan) => plan.id === planIdParam)) {
       if (selectedPlanId !== planIdParam) {
         setSelectedPlanId(planIdParam);
@@ -29,8 +82,12 @@ export default function PlanPage() {
     }
 
     const planKeyParam = (searchParams.get('planKey') || '').trim();
+
     if (planKeyParam) {
-      const matched = plans.find((plan) => getPlanCardKey(plan.plans_type) === planKeyParam);
+      const matched = plans.find(
+        (plan) => getPlanCardKey(plan.plans_type) === planKeyParam,
+      );
+
       if (matched && selectedPlanId !== matched.id) {
         setSelectedPlanId(matched.id);
         return;
@@ -42,34 +99,47 @@ export default function PlanPage() {
     }
   }, [plans, searchParams, selectedPlanId]);
 
-  const selectedPlan = plans.find((plan) => plan.id === selectedPlanId) ?? null;
-  const initialVehicleId = (searchParams.get('vehicleId') || '').trim() || undefined;
-  const isPrefilledFlow = Boolean(initialVehicleId && (searchParams.get('planKey') || searchParams.get('planId')));
+  const initialVehicleId =
+    (searchParams.get('vehicleId') || '').trim() || undefined;
+
+  const isPrefilledFlow = Boolean(
+    initialVehicleId && (searchParams.get('planKey') || searchParams.get('planId')),
+  );
 
   const dayLabel = t('plan.perDay');
-  // const priceLabel = t('plan.priceLabel');
+
+  const handlePlanClick = async (
+    event: React.MouseEvent<HTMLDivElement>,
+    plan: any
+  ) => {
+    event.stopPropagation();
+
+    if (plan?.is_in_use) {
+      navigate("/profile/subscriptions");
+      return;
+    }
+
+    const confirmed = await confirmExistingBillingSubscription();
+    if (!confirmed) return;
+
+    navigate(`/plan/checkout?planId=${plan.id}&type=${plan.plans_type}`);
+  };
 
   return (
     <Box className="plan-page-shell">
-      <Box className='plan-page-shell-body'>
+      <Box className="plan-page-shell-body">
         <Box className="plan-page-header">
-          <Button
-            component={Link}
-            to="/vehicle"
-            startIcon={<ArrowBackIcon />}
-            className="plan-back-link"
-          >
-            {t('plan.backToVehicles')}
-          </Button>
-          <Typography variant="h4" gutterBottom>
+          <Typography fontSize={24} fontWeight={700} mb={2} className="plan-page-title">
             {t('plan.sectionTitle')}
           </Typography>
-          <Typography variant="body2" color="text.secondary">
+
+          <Typography variant="body1" className="plan-page-description" m='0 auto' maxWidth={1000} lineHeight={1.8}>
             {t('plan.sectionDescription')}
           </Typography>
         </Box>
 
-        <Box className="plan-page-body">
+        <Box className="plan-pricing-panel">
+
           {!isPrefilledFlow && (
             <Box className="plan-option-grid">
               {plans.length === 0 && (
@@ -81,63 +151,142 @@ export default function PlanPage() {
               )}
 
               {plans.map((plan) => {
-                const planKey = getPlanCardKey(plan.plans_type);
-                const title =
-                  planKey !== null
-                    ? t(`plan.cards.${planKey}.title`, { defaultValue: plan.plans_type })
-                    : plan.plans_type;
-                const subtitle =
-                  planKey !== null
-                    ? t(`plan.cards.${planKey}.subtitle`, { defaultValue: '' })
-                    : '';
-                const priceValue = `${priceFormatter.format(plan.price_per_day)} VND`;
+                const isActive = selectedPlanId === plan.id;
+                const isInUse = Boolean(plan.is_in_use);
+
+                const planKey = getPlanDisplayKey(plan.plans_type);
+
+                const title = t(`plan.cards.${planKey}`, {
+                  defaultValue: plan.plans_type,
+                });
+
+                const dailyFee = plan.price_per_day ?? plan.price_per_day;
+                const after18Fee = plan.after_18_fee;
+                const waiveAfter18 = Boolean(plan.waive_after_18_fee);
+
+                const features = [
+                  getBooleanLabel(
+                    plan.allow_monthly_payment,
+                    t('plan.features.monthlyPayment'),
+                    t('plan.features.noMonthlyPayment'),
+                  ),
+                  getBooleanLabel(
+                    plan.allow_full_payment,
+                    t('plan.features.fullPayment'),
+                    t('plan.features.noFullPayment'),
+                  ),
+                  {
+                    enabled: true,
+                    label: t('plan.features.licensedVehicleLimit', {
+                      count: plan.max_licensed_vehicle ?? 0,
+                    }),
+                  },
+                  {
+                    enabled: true,
+                    label: t('plan.features.unlicensedVehicleLimit', {
+                      count: plan.max_unlicensed_vehicle ?? 0,
+                    }),
+                  },
+                  {
+                    enabled: true,
+                    label: t('plan.features.dailyFee', {
+                      amount: formatCurrency(dailyFee),
+                    }),
+                  },
+                  {
+                    enabled: true,
+                    label: waiveAfter18
+                      ? t('plan.features.after18Waived')
+                      : t('plan.features.after18Fee', {
+                          amount: formatCurrency(after18Fee),
+                        }),
+                  },
+                ];
 
                 return (
                   <Box
                     key={plan.id}
-                    className={`plan-option-card ${selectedPlanId === plan.id ? 'plan-option-card--active' : ''}`}
+                    className={`plan-option-card ${
+                      isActive ? 'plan-option-card--active' : ''
+                    } ${isInUse ? 'plan-option-card--in-use' : ''}`}
+                    onClick={() => setSelectedPlanId(plan.id)}
                   >
-                    <Box className="plan-card-meta">
-                      {subtitle ? (
-                        <Typography variant="h6" textTransform="unset" className="plan-card-label">
-                          {subtitle}
+                    {isInUse && (
+                      <Box className="plan-in-use-badge">
+                        <CheckCircleIcon fontSize="small" />
+                        <Typography component="span" fontSize={12} fontWeight={600}>
+                          {t('plan.inUseBadge')}
+                        </Typography>
+                      </Box>
+                    )}
+                    <Box className="plan-card-icon">
+                     {getPlanIcon(plan.plans_type)}
+
+                      {title ? (
+                        <Typography className="plan-card-title" fontSize={20} fontWeight={700} lineHeight={1.25}>
+                          {title}
                         </Typography>
                       ) : null}
-                      <Typography variant="h5" fontWeight={600} className="plan-card-title">
-                        {title}
+                    </Box>
+
+                    <Box className="plan-card-price-line">
+                      <Typography
+                        component="span"
+                        fontWeight={700}
+                        fontSize="2rem"
+                        className="plan-card-price"
+                      >
+                        {formatCurrency(dailyFee)}
+                      </Typography>
+
+                      <Typography component="span" fontSize={14} className="plan-card-per-day">
+                        {dayLabel}
                       </Typography>
                     </Box>
-                    <Typography variant="h5" mt={1} className="plan-card-price-line">
-                      {priceValue}
-                      <span className="plan-card-per-day">{dayLabel}</span>
-                    </Typography>
+
+                    <Box className="plan-card-feature-list">
+                      {features.map((feature, featureIndex) => (
+                        <Box
+                          key={`${plan.id}-feature-${featureIndex}`}
+                          className="plan-card-feature-item"
+                        >
+                          {feature.enabled ? (
+                            <CheckCircleIcon className="plan-card-feature-icon" fontSize='small' color='success' />
+                          ) : (
+                            <CancelIcon className="plan-card-feature-icon plan-card-feature-icon--disabled" fontSize='small' color='disabled'  />
+                          )}
+
+                          <Typography className="plan-card-feature-text" fontSize={14} lineHeight={1.9} fontWeight={600}>
+                            {feature.label}
+                          </Typography>
+                        </Box>
+                      ))}
+                    </Box>
                     <Button
-                      variant={selectedPlanId === plan.id ? 'contained' : 'outlined'}
-                      onClick={() => setSelectedPlanId(plan.id)}
+                      fullWidth
+                      variant="contained"
+                      className={`plan-card-button ${
+                        isInUse ? 'plan-card-button--view-current' : ''
+                      }`}
+                      sx={{
+                        mt: 2,
+                        borderRadius: 2,
+                        textTransform: 'none',
+                        fontWeight: 700,
+                        boxShadow: 'none',
+                      }}
+                      onClick={(event) => handlePlanClick(event as any, plan)}
                     >
-                      {t('plan.cta')}
+                      {isInUse ? t('plan.viewCurrentPlan') : t('plan.cta')}
                     </Button>
                   </Box>
                 );
               })}
             </Box>
           )}
-
-          {selectedPlan ? (
-            <Box className="plan-checkout-frame">
-              <Box className="plan-checkout-header">
-                <Typography variant="h5">{t('plan.checkoutTitle')}</Typography>
-                <Typography variant="body2">{t('plan.checkoutSubtitle')}</Typography>
-              </Box>
-              <PlanCheckoutPanel plan={selectedPlan} initialVehicleId={initialVehicleId} />
-            </Box>
-          ) : (
-            <Box className="plan-checkout-placeholder">
-              <Typography variant="body1">{t('plan.notChosen')}</Typography>
-            </Box>
-          )}
         </Box>
       </Box>
+      <ConfirmDialog />
     </Box>
   );
 }

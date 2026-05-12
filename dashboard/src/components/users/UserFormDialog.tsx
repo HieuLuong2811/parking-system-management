@@ -10,12 +10,16 @@ import {
 } from '@mui/material';
 import { useTranslation } from 'react-i18next';
 import { FormInput } from '../common/FormInput';
+import type { RoleSummary } from '../../api/types';
+import { RoleSelectField } from './RoleSelectField';
 
 export type UserFormValues = {
   user_code: string;
   full_name: string;
   email: string;
   phone_number?: string;
+  password?: string;
+  role_id?: string;
 };
 
 export type UserFormMode = 'create' | 'edit';
@@ -25,6 +29,7 @@ export interface UserFormDialogProps {
   mode: UserFormMode;
   values: UserFormValues;
   loading: boolean;
+  availableRoles: RoleSummary[];
   onClose: () => void;
   onSubmit: () => void;
   onChange: (field: keyof UserFormValues, value: string) => void;
@@ -36,6 +41,7 @@ export const UserFormDialog: React.FC<UserFormDialogProps> = ({
   mode,
   values,
   loading,
+  availableRoles,
   onClose,
   onSubmit,
   onChange,
@@ -64,6 +70,7 @@ export const UserFormDialog: React.FC<UserFormDialogProps> = ({
         >
           <Box>
             <FormInput
+              name="user_code"
               label={t('usersPage.form.userCode')}
               required
               value={values.user_code}
@@ -77,6 +84,7 @@ export const UserFormDialog: React.FC<UserFormDialogProps> = ({
 
           <Box>
             <FormInput
+              name="full_name"
               label={t('usersPage.form.fullName')}
               required
               value={values.full_name}
@@ -87,10 +95,11 @@ export const UserFormDialog: React.FC<UserFormDialogProps> = ({
 
           <Box>
             <FormInput
+              name="email"
               label={t('usersPage.form.email')}
-              required
               type="email"
               value={values.email}
+              placeholder='Example@gmail.com'
               onChange={(e) => onChange('email', e.target.value)}
               error={errors.email}
             />
@@ -98,11 +107,25 @@ export const UserFormDialog: React.FC<UserFormDialogProps> = ({
 
           <Box>
             <FormInput
+              name="phone_number"
               label={t('usersPage.form.phoneNumber')}
               value={values.phone_number ?? ''}
               onChange={(e) => onChange('phone_number', toDigitsOnly(e.target.value))}
               inputMode="numeric"
               pattern="[0-9]*"
+              error={errors.phone_number}
+            />
+          </Box>
+
+          <Box>
+            <RoleSelectField
+              label={t('usersPage.form.role', { defaultValue: 'Role' })}
+              value={values.role_id ?? ''}
+              options={availableRoles}
+              includeAllOption
+              allLabel={t('usersPage.filters.allRoles')}
+              onChange={(next) => onChange('role_id', next)}
+              useTypographyLabel={true}
             />
           </Box>
         </Box>

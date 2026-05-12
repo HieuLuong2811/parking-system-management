@@ -16,3 +16,7 @@ export const fetchCurrentUser = async (): Promise<CurrentUser> => {
 export const exchangeAuthCode = async (code: string): Promise<void> => {
   await axios.post(`${API_BASE_URL}/auth/exchange-code`, { code }, { withCredentials: true });
 };
+
+export const logoutAuth = async (): Promise<void> => {
+  await axios.post(`${API_BASE_URL}/auth/logout`, null, { withCredentials: true });
+};

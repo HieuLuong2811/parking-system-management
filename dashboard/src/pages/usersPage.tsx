@@ -4,13 +4,8 @@ import {
   Box,
   Button,
   Chip,
-  Drawer,
-  FormControl,
   IconButton,
-  InputLabel,
-  MenuItem,
   Paper,
-  Select,
   Snackbar,
   Stack,
   Tab,
@@ -22,15 +17,16 @@ import {
 import type { GridColDef } from '@mui/x-data-grid';
 import DeleteIcon from '@mui/icons-material/Delete';
 import EditIcon from '@mui/icons-material/Edit';
-import FormatListBulletedIcon from '@mui/icons-material/FormatListBulleted';
+import VisibilityIcon from '@mui/icons-material/Visibility';
 import { useQueryClient } from '@tanstack/react-query';
 import { useNavigate } from 'react-router-dom';
 import { useTranslation } from 'react-i18next';
-
+import axios from 'axios';
+import FilterListIcon from '@mui/icons-material/FilterList';
 import { SoftDataGrid } from '../components/common/SoftDataGrid';
 import { RoleSelector } from '../components/users/RoleSelector';
+import { RoleSelectField } from '../components/users/RoleSelectField';
 import { ImportUsersDialog } from '../components/users/ImportUsersDialog';
-import { DrawerUserSubscription } from '../components/users/DrawerUserSubscription';
 import { UserFormDialog } from '../components/users/UserFormDialog';
 import type { UserFormValues, UserFormMode } from '../components/users/UserFormDialog';
 import {
@@ -39,16 +35,32 @@ import {
   useFetchUsers,
   useUpdateUser,
 } from '../api/users';
-import type { AdminUser, RoleSummary, UserSubscriptionDetailRecord } from '../api/types';
-import { useSubscriptionDetails } from '../api/subscriptions';
+import type { AdminUser, RoleSummary } from '../api/types';
 import { useAdminRoles } from '../api/roles';
+import { useAssignUserRole } from '../api/userRoles';
 import { defaultUserFormValues } from '../constant/userForm';
 import { useDebouncedValue } from '../hooks/useDebouncedValue';
+import { PageHeader } from '../components/common/PageHeader';
 
 type ToastState = {
   severity: 'success' | 'error';
   message: string;
 } | null;
+
+type UserFiltersState = {
+  nameEmail: string;
+  phone: string;
+  userCode: string;
+  role: string;
+};
+
+type UserFormState = {
+  open: boolean;
+  mode: UserFormMode;
+  values: UserFormValues;
+  errors: Partial<Record<keyof UserFormValues, string>>;
+  editingUser: AdminUser | null;
+};
 
 export const UsersPage: React.FC = () => {
   const { t } = useTranslation();
@@ -56,16 +68,18 @@ export const UsersPage: React.FC = () => {
   const createMutation = useCreateUser();
   const updateMutation = useUpdateUser();
   const deleteMutation = useDeleteUser();
+  const assignRoleMutation = useAssignUserRole();
   const navigate = useNavigate();
 
-  type RequiredUserFormField = 'user_code' | 'full_name' | 'email';
-  const requiredFieldKeys: RequiredUserFormField[] = ['user_code', 'full_name', 'email'];
+  type RequiredUserFormField = 'user_code' | 'full_name' | 'email' | 'password';
+  const requiredFieldKeys: RequiredUserFormField[] = ['user_code', 'full_name', 'email', 'password'];
 
   const fieldLabels = useMemo<Record<RequiredUserFormField, string>>(
     () => ({
       user_code: t('usersPage.form.userCode'),
       full_name: t('usersPage.form.fullName'),
       email: t('usersPage.form.email'),
+      password: t('usersPage.form.password', { defaultValue: 'Password' }),
     }),
     [t]
   );
@@ -73,46 +87,52 @@ export const UsersPage: React.FC = () => {
   const buildRequiredError = (field: RequiredUserFormField) =>
     t('validation.requiredField', { field: fieldLabels[field] });
 
-  const [drawerOpen, setDrawerOpen] = useState(false);
-  const [selectedUser, setSelectedUser] = useState<AdminUser | UserSubscriptionDetailRecord | null>(null);
-  const [formState, setFormState] = useState<{ open: boolean; mode: UserFormMode; values: UserFormValues }>({
+  const [form, setForm] = useState<UserFormState>({
     open: false,
     mode: 'create',
     values: defaultUserFormValues,
+    errors: {},
+    editingUser: null,
   });
-  const [formErrors, setFormErrors] = useState<Partial<Record<keyof UserFormValues, string>>>({});
-  const [editingUser, setEditingUser] = useState<AdminUser | null>(null);
   const [toast, setToast] = useState<ToastState>(null);
-  const [importDialog, setImportDialog] = useState<{ roleCode: string; roleLabel: string } | null>(null);
+  const [importOpen, setImportOpen] = useState(false);
 
-  const [nameEmailFilter, setNameEmailFilter] = useState('');
-  const [phoneFilter, setPhoneFilter] = useState('');
-  const [userCodeFilter, setUserCodeFilter] = useState('');
-  const [roleFilter, setRoleFilter] = useState('');
+  const [filters, setFilters] = useState<UserFiltersState>({
+    nameEmail: '',
+    phone: '',
+    userCode: '',
+    role: '',
+  });
   const [statusTab, setStatusTab] = useState<'active' | 'inactive'>('active');
 
   const [page, setPage] = useState(0);
   const [rowsPerPage, setRowsPerPage] = useState(5);
 
-  const debouncedUserCodeFilter = useDebouncedValue(userCodeFilter, 450);
-  const debouncedNameEmailFilter = useDebouncedValue(nameEmailFilter, 450);
-  const debouncedPhoneFilter = useDebouncedValue(phoneFilter, 450);
-  const debouncedRoleFilter = useDebouncedValue(roleFilter, 450);
+  const debouncedUserCodeFilter = useDebouncedValue(filters.userCode, 450);
+  const debouncedNameEmailFilter = useDebouncedValue(filters.nameEmail, 450);
+  const debouncedPhoneFilter = useDebouncedValue(filters.phone, 450);
+  const debouncedRoleFilter = useDebouncedValue(filters.role, 450);
 
-  const handleClearFilters = useCallback(() => {
-    setNameEmailFilter('');
-    setPhoneFilter('');
-    setRoleFilter('');
-    setUserCodeFilter('');
+  const updateFilters = useCallback((updater: (prev: UserFiltersState) => UserFiltersState) => {
+    setFilters((prev) => updater(prev));
     setPage(0);
   }, []);
+
+  const handleClearFilters = useCallback(() => {
+    updateFilters(() => ({
+      nameEmail: '',
+      phone: '',
+      userCode: '',
+      role: '',
+    }));
+  }, [updateFilters]);
 
   const handleTabChange = useCallback((_: React.SyntheticEvent, value: 'active' | 'inactive') => {
     setStatusTab(value);
     setPage(0);
   }, []);
 
-  const filters = useMemo(
+  const queryFilters = useMemo(
     () => ({
       user_code: debouncedUserCodeFilter?.trim() || undefined,
       nameOrEmail: debouncedNameEmailFilter?.trim() || undefined,
@@ -125,7 +145,7 @@ export const UsersPage: React.FC = () => {
     [debouncedNameEmailFilter, debouncedPhoneFilter, debouncedRoleFilter, statusTab, page, rowsPerPage, debouncedUserCodeFilter]
   );
 
-  const { data: paginatedData, isLoading } = useFetchUsers(filters);
+  const { data: paginatedData, isLoading } = useFetchUsers(queryFilters);
 
   const usersWithRoles = useMemo(() => 
     paginatedData?.data ?? [],
@@ -133,41 +153,31 @@ export const UsersPage: React.FC = () => {
   )
   const totalUsers = paginatedData?.total ?? 0;
 
-  const { data: subscriptionDetails = [], isLoading: isSubscriptionsLoading } = useSubscriptionDetails();
   const { data: availableRoles = [] } = useAdminRoles();
+  const importRoleCode = 'user';
+  const importRoleLabel = t('usersPage.importModal.title');
 
   const users = useMemo(() => 
     usersWithRoles.map(({ user, roles } : {user: AdminUser, roles: RoleSummary[]}) => ({ ...user, roles })), 
     [usersWithRoles]
   );
 
-  // const [sortConfig, setSortConfig] = useState<{ field: string; direction: 'asc' | 'desc' } | null>(null);
-
-  const openSubscriptionsDrawer = useCallback((user: AdminUser) => {
-    setSelectedUser(user);
-    setDrawerOpen(true);
-  }, []);
-
-  const closeDrawer = useCallback(() => {
-    setDrawerOpen(false);
-    setSelectedUser(null);
-  }, []);
-
-  const handleViewSubscriptions = useCallback(() => {
-    closeDrawer();
-    setSelectedUser(null);
-    navigate('/subscriptions');
-  }, [navigate, closeDrawer]);
+  const handleViewProfile = useCallback((user: AdminUser) => {
+    navigate(`/users/${user.user_code}/user-details`);
+  }, [navigate]);
 
   const openCreateForm = useCallback(() => {
-    setEditingUser(null);
-    setFormState({ open: true, mode: 'create', values: defaultUserFormValues });
-    setFormErrors({});
+    setForm({
+      open: true,
+      mode: 'create',
+      values: defaultUserFormValues,
+      errors: {},
+      editingUser: null,
+    });
   }, []);
 
   const openEditForm = useCallback((user: AdminUser) => {
-    setEditingUser(user);
-    setFormState({
+    setForm({
       open: true,
       mode: 'edit',
       values: {
@@ -175,56 +185,78 @@ export const UsersPage: React.FC = () => {
         full_name: user.full_name,
         email: user.email,
         phone_number: user.phone_number ?? "",
+        role_id: "",
       },
+      errors: {},
+      editingUser: user,
     });
-    setFormErrors({});
   }, []);
 
   const closeForm = () => {
-    setFormState((prev) => ({ ...prev, open: false }));
-    setFormErrors({});
+    setForm((prev) => ({ ...prev, open: false, errors: {} }));
   };
 
   const handleFormChange = (field: keyof UserFormValues, value: string | boolean) => {
-    setFormState((prev) => ({
-      ...prev,
-      values: {
-        ...prev.values,
-        [field]: value,
-      },
-    }));
-    setFormErrors((prev) => {
-      const next = { ...prev };
-      delete next[field];
-      return next;
+    setForm((prev) => {
+      const nextErrors = { ...prev.errors };
+      delete nextErrors[field];
+      return {
+        ...prev,
+        values: {
+          ...prev.values,
+          [field]: value,
+        },
+        errors: nextErrors,
+      };
     });
   };
 
   const handleFormSubmit = () => {
-    const nextErrors: typeof formErrors = {};
-    requiredFieldKeys.forEach((field) => {
-      const value = formState.values[field];
+    const nextErrors: UserFormState['errors'] = {};
+    requiredFieldKeys
+      .filter((field) => (form.mode === 'create' ? true : field !== 'password'))
+      .forEach((field) => {
+      const value = form.values[field];
       const normalized = typeof value === 'string' ? value.trim() : String(value ?? '').trim();
       if (!normalized) {
         nextErrors[field] = buildRequiredError(field);
       }
     });
     if (Object.keys(nextErrors).length) {
-      setFormErrors(nextErrors);
+      setForm((prev) => ({ ...prev, errors: nextErrors }));
       return;
     }
-    setFormErrors({});
+    setForm((prev) => ({ ...prev, errors: {} }));
 
     const payload: Record<string, unknown> = {
-      user_code: formState.values.user_code,
-      full_name: formState.values.full_name,
-      email: formState.values.email,
-      phone_number: formState.values.phone_number,
+      user_code: form.values.user_code,
+      full_name: form.values.full_name,
+      email: form.values.email,
+      phone_number: form.values.phone_number,
     };
 
-    if (formState.mode === 'create') {
+    if (form.mode === 'create') {
+      (payload).password = form.values.password;
       createMutation.mutate(payload as Parameters<typeof createMutation.mutate>[0], {
-        onSuccess: () => {
+        onSuccess: async () => {
+          const roleId = String(form.values.role_id || '').trim();
+          if (roleId) {
+            try {
+              await assignRoleMutation.mutateAsync({
+                user_code: String(payload.user_code),
+                role_id: roleId,
+              });
+            } catch (error) {
+              setToast({
+                severity: 'error',
+                message:
+                  error instanceof Error
+                    ? error.message
+                    : t('usersPage.actions.error'),
+              });
+              // keep going; user already created
+            }
+          }
           queryClient.invalidateQueries({ queryKey: ['admin', 'users'] });
           setToast({
             severity: 'success',
@@ -233,6 +265,18 @@ export const UsersPage: React.FC = () => {
           closeForm();
         },
         onError: (error: unknown) => {
+          if (axios.isAxiosError(error)) {
+            const detail = (error.response?.data)?.detail;
+            const field = detail?.field as keyof UserFormValues | undefined;
+            const message = (detail?.message as string | undefined) ?? error.message;
+            if (field && message) {
+              setForm((prev) => ({
+                ...prev,
+                errors: { ...prev.errors, [field]: message },
+              }));
+              return;
+            }
+          }
           setToast({
             severity: 'error',
             message: error instanceof Error ? error.message : t('usersPage.actions.error'),
@@ -242,7 +286,7 @@ export const UsersPage: React.FC = () => {
       return;
     }
 
-    if (!editingUser) return;
+    if (!form.editingUser) return;
     const updatePayload: Record<string, unknown> = {
       full_name: payload.full_name,
       email: payload.email,
@@ -250,13 +294,13 @@ export const UsersPage: React.FC = () => {
     };
 
     updateMutation.mutate(
-      { userCode: editingUser.user_code, payload: updatePayload },
+      { userCode: form.editingUser.user_code, payload: updatePayload },
       {
         onSuccess: () => {
           queryClient.invalidateQueries({ queryKey: ['admin', 'users'] });
           setToast({
             severity: 'success',
-            message: t('usersPage.actions.updated', { user: editingUser.user_code }),
+            message: t('usersPage.actions.updated', { user: form.editingUser!.user_code }),
           });
           closeForm();
         },
@@ -272,7 +316,12 @@ export const UsersPage: React.FC = () => {
 
   const handleDeleteUser = useCallback(
     (user: AdminUser) => {
-      if (!window.confirm(t('usersPage.actions.deleteConfirm', { user: user.user_code }))) {
+      const confirmMessage =
+        user.deleted_at == null
+          ? t('usersPage.actions.deleteConfirmActiveWarning', { user: user.user_code })
+          : t('usersPage.actions.deleteConfirm', { user: user.user_code });
+
+      if (!window.confirm(confirmMessage)) {
         return;
       }
       deleteMutation.mutate(user.user_code, {
@@ -359,29 +408,26 @@ export const UsersPage: React.FC = () => {
         sortable: false,
         renderCell: (params) => (
           <Stack direction="row" spacing={1}>
-            <IconButton size="small" onClick={() => openSubscriptionsDrawer(params.row as AdminUser)}>
-              <FormatListBulletedIcon fontSize="small" />
+            <IconButton size="small" onClick={() => handleViewProfile(params.row as AdminUser)}>
+              <VisibilityIcon fontSize="small" />
             </IconButton>
             <IconButton size="small" onClick={() => openEditForm(params.row as AdminUser)}>
               <EditIcon fontSize="small" />
             </IconButton>
-            <IconButton size="small" onClick={() => handleDeleteUser(params.row as AdminUser)}>
-              <DeleteIcon fontSize="small" />
-            </IconButton>
+            {params.row.roles?.some((role: RoleSummary) => role.role_code === 'user') && (
+              <IconButton size="small" onClick={() => handleDeleteUser(params.row as AdminUser)}>
+                <DeleteIcon fontSize="small" />
+              </IconButton>
+            )}
           </Stack>
         ),
       },
     ],
-    [t, notifyRoleChange, openEditForm, handleDeleteUser, openSubscriptionsDrawer]
+    [t, notifyRoleChange, openEditForm, handleDeleteUser, handleViewProfile]
   );
 
-  // const handleSort = (field: string, direction: 'asc' | 'desc') => {
-  //   setSortConfig({ field, direction });
-  //   setPage(0);
-  // };
-
   const openImportDialog = () => {
-    setImportDialog({ roleCode: 'user', roleLabel: t('usersPage.importModal.title') });
+    setImportOpen(true);
   };
 
   const handleImportSuccess = (imported: number, skipped: number) => {
@@ -399,9 +445,7 @@ export const UsersPage: React.FC = () => {
   return (
     <Box sx={{ display: 'flex', flexDirection: 'column', gap: 2 }}>
       <Stack direction="row" justifyContent="space-between" alignItems="center" flexWrap="wrap" gap={2}>
-        <Box>
-          <Typography variant="h5">{t('usersPage.title')}</Typography>
-        </Box>
+        <PageHeader title={t('usersPage.title')} subtitle={t('usersPage.description')} />
       </Stack>
 
       <Tabs
@@ -418,14 +462,18 @@ export const UsersPage: React.FC = () => {
       <Stack direction="row" justifyContent="space-between" alignItems="center" flexWrap="wrap" gap={2}>
         <Box sx={{ display: 'flex', gap: 1, alignItems: 'center', flex: 1 }}>
           <Stack direction="row" spacing={1} alignItems="center">
+            <Box sx={{ display: 'flex', gap: 0.5, alignItems: 'center' }}>
+              <FilterListIcon color="action" />
+              <Typography variant="body2">{t('common.filters.search')}</Typography>
+            </Box>
             <TextField
               size="small"
               variant="outlined"
-              value={userCodeFilter}
+              value={filters.userCode}
               label={t('usersPage.filters.userCode')}
               onChange={(event) => {
-                setUserCodeFilter(event.target.value.replace(/\D+/g, ''));
-                setPage(0);
+                const nextValue = event.target.value.replace(/\D+/g, '');
+                updateFilters((prev) => ({ ...prev, userCode: nextValue }));
               }}
               type="text"
               inputProps={{ inputMode: 'numeric', pattern: '[0-9]*' }}
@@ -433,46 +481,35 @@ export const UsersPage: React.FC = () => {
             <TextField
               size="small"
               variant="outlined"
-              value={nameEmailFilter}
+              value={filters.nameEmail}
               label={t('usersPage.filters.nameOrEmail')}
               onChange={(event) => {
-                setNameEmailFilter(event.target.value);
-                setPage(0);
+                updateFilters((prev) => ({ ...prev, nameEmail: event.target.value }));
               }}
             />
             <TextField
               size="small"
               variant="outlined"
-              value={phoneFilter}
+              value={filters.phone}
               label={t('usersPage.filters.phoneNumber')}
               onChange={(event) => {
-                setPhoneFilter(event.target.value.replace(/\D+/g, ''));
-                setPage(0);
+                const nextValue = event.target.value.replace(/\D+/g, '');
+                updateFilters((prev) => ({ ...prev, phone: nextValue }));
               }}
               type="text"
               inputProps={{ inputMode: 'numeric', pattern: '[0-9]*' }}
             />
-            <FormControl sx={{ minWidth: 160 }} size="small">
-              <InputLabel shrink>{t('usersPage.filters.role')}</InputLabel>
-              <Select
-                value={roleFilter}
-                displayEmpty
-                onChange={(event) => {
-                  setRoleFilter(event.target.value);
-                  setPage(0);
-                }}
-                label={t('usersPage.filters.role')}
-              >
-                <MenuItem value="">{t('usersPage.filters.allRoles')}</MenuItem>
-                {availableRoles.map((role) => (
-                  <MenuItem key={role.id} value={role.role_code}>
-                    {role.role_code}
-                  </MenuItem>
-                ))}
-              </Select>
-            </FormControl>
-            <Button size="small" variant="text" onClick={handleClearFilters}>
-              {t('button.clear')}
+            <RoleSelectField
+              label={t('usersPage.filters.role')}
+              value={filters.role}
+              options={availableRoles}
+              valueKey="role_code"
+              includeAllOption
+              allLabel={t('usersPage.filters.allRoles')}
+              onChange={(next) => updateFilters((prev) => ({ ...prev, role: next }))}
+            />
+            <Button variant="text" onClick={handleClearFilters}>
+              {t('common.filters.reset')}
             </Button>
           </Stack>
         </Box>
@@ -485,26 +522,6 @@ export const UsersPage: React.FC = () => {
           </Button>
         </Stack>
       </Stack>
-
-      <Drawer anchor="right" open={drawerOpen} onClose={closeDrawer}>
-        <Box
-          sx={{
-            width: { xs: 320, sm: 380 },
-            height: '100%',
-            display: 'flex',
-            flexDirection: 'column',
-            gap: 2,
-            p: 3,
-          }}
-        >
-          <DrawerUserSubscription
-            selectedUser={selectedUser}
-            subscriptionDetails={subscriptionDetails}
-            isLoading={isSubscriptionsLoading}
-            onViewSubscriptions={handleViewSubscriptions}
-          />
-        </Box>
-      </Drawer>
 
       <Paper elevation={0}>
         <SoftDataGrid
@@ -532,29 +549,30 @@ export const UsersPage: React.FC = () => {
         />
       </Paper>
 
-      {importDialog && (
+      {importOpen && (
         <ImportUsersDialog
           open
-          roleCode={importDialog.roleCode}
-          roleLabel={importDialog.roleLabel}
-          onClose={() => setImportDialog(null)}
+          roleCode={importRoleCode}
+          roleLabel={importRoleLabel}
+          onClose={() => setImportOpen(false)}
           onImported={({ imported, skipped }) => {
             handleImportSuccess(imported, skipped);
-            setImportDialog(null);
+            setImportOpen(false);
           }}
           onError={(message) => handleImportError(message)}
         />
       )}
 
       <UserFormDialog
-        open={formState.open}
-        mode={formState.mode}
-        values={formState.values}
+        open={form.open}
+        mode={form.mode}
+        values={form.values}
         loading={isLoading}
+        availableRoles={availableRoles}
         onClose={closeForm}
         onChange={handleFormChange}
         onSubmit={handleFormSubmit}
-        errors={formErrors}
+        errors={form.errors}
       />
 
       <Snackbar

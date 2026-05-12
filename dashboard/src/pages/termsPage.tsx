@@ -5,7 +5,7 @@ import DeleteIcon from '@mui/icons-material/Delete';
 import EditIcon from '@mui/icons-material/Edit';
 import React, { useCallback, useMemo, useState } from 'react';
 import { useTranslation } from 'react-i18next';
-
+import FilterListIcon from '@mui/icons-material/FilterList';
 import { AcademicTermModal, type AcademicTermFormPayload } from '../components/modals/AcademicTermModal';
 import { SoftDataGrid } from '../components/common/SoftDataGrid';
 import {
@@ -16,6 +16,7 @@ import {
 } from '../api/terms';
 import type { AcademicTermRecord } from '../api/types';
 import { formatDateTime } from '../ultis/format';
+import { PageHeader } from '../components/common/PageHeader';
 
 type ToastSeverity = 'success' | 'error';
 
@@ -166,15 +167,17 @@ export const TermsPage: React.FC = () => {
   return (
     <>
       <Box sx={{ display: 'flex', flexDirection: 'column', gap: 2 }}>
-        <Stack spacing={0.5}>
-          <Typography variant="h5">{t('termsPage.title', 'Academic Terms')}</Typography>
-          <Typography variant="body2" color="text.secondary">
-            {t('termsPage.description', 'Define academic terms and their application periods.')}
-          </Typography>
-        </Stack>
+        <PageHeader
+          title={t('termsPage.title', 'Academic Terms')}
+          subtitle={t('termsPage.description', 'Define academic terms and their application periods.')}
+        />
 
         <Stack direction="row" justifyContent="space-between" alignItems="center" flexWrap="wrap" gap={2}>
           <Box display="flex" alignItems="center" gap={1}>
+            <Box sx={{ display: 'flex', gap: 0.5, alignItems: 'center' }}>
+              <FilterListIcon color="action" />
+              <Typography variant="body2">{t('common.filters.search')}</Typography>
+            </Box>
             <TextField
               size="small"
               variant="outlined"
@@ -182,8 +185,8 @@ export const TermsPage: React.FC = () => {
               label={t('termsPage.searchTerm.name', { defaultValue: 'Search by term name' })}
               onChange={(event) => setSearchTerm(event.target.value)}
             />
-            <Button size="small" onClick={handleClearFilters}>
-              {t('button.clear', { defaultValue: 'Clear' })}
+            <Button variant="text" onClick={handleClearFilters}>
+              {t('common.filters.reset')}
             </Button>
           </Box>
           <Stack direction="row" spacing={1}>

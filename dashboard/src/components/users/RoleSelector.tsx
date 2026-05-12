@@ -80,7 +80,7 @@ export const RoleSelector: React.FC<RoleSelectorProps> = ({ userCode, roles, onN
         onNotify?.(
           'success',
           t('usersPage.roleSelector.removeSuccess', {
-            role: role?.role_code ?? roleId,
+            role: role ? t(`common.roleTypes.${role.role_code}`) : roleId,
           })
         );
       } catch (error) {
@@ -88,7 +88,7 @@ export const RoleSelector: React.FC<RoleSelectorProps> = ({ userCode, roles, onN
           error instanceof Error
             ? error.message
             : t('usersPage.roleSelector.removeError', {
-                role: role?.role_code ?? roleId,
+                role: role ? t(`common.roleTypes.${role.role_code}`) : roleId,
               });
 
         onNotify?.('error', message);
@@ -121,7 +121,7 @@ export const RoleSelector: React.FC<RoleSelectorProps> = ({ userCode, roles, onN
           onNotify?.(
             'success',
             t('usersPage.roleSelector.assignSuccess', {
-              role: role?.role_code ?? roleId,
+              role: role ? t(`common.roleTypes.${role.role_code}`) : roleId,
             })
           );
         } catch (error) {
@@ -129,7 +129,7 @@ export const RoleSelector: React.FC<RoleSelectorProps> = ({ userCode, roles, onN
             error instanceof Error
               ? error.message
               : t('usersPage.roleSelector.assignError', {
-                  role: role?.role_code ?? roleId,
+                  role: role ? t(`common.roleTypes.${role.role_code}`) : roleId,
                 });
 
           onNotify?.('error', message);
@@ -148,13 +148,19 @@ export const RoleSelector: React.FC<RoleSelectorProps> = ({ userCode, roles, onN
       <Box sx={{ display: 'flex', flexWrap: 'wrap', gap: 0.5 }}>
         {selected.map((id) => {
           const role = roleMap.get(id);
-          const label = role?.role_code ?? id;
+          const label = role ? t(`common.roleTypes.${role.role_code}`) : role;
 
           return (
             <Tooltip placement='top' key={id} title={t('usersPage.roleSelector.removeTooltip', { role: label })}>
               <Chip
                 label={label}
                 size="small"
+                onMouseDown={(event) => {
+                  event.stopPropagation();
+                }}
+                onClick={(event) => {
+                  event.stopPropagation();
+                }}
                 onDelete={() => handleRemoveRole(id)}
                 deleteIcon={<CloseIcon fontSize="small" />}
               />
@@ -195,7 +201,7 @@ export const RoleSelector: React.FC<RoleSelectorProps> = ({ userCode, roles, onN
             ) : (
               unassignedRoles.map((role) => (
                 <MenuItem key={role.id} value={role.id}>
-                  {t('usersPage.roleSelector.optionLabel', { role: role.role_code })}
+                  {t(`common.roleTypes.${role.role_code}`)}
                 </MenuItem>
               ))
             )}

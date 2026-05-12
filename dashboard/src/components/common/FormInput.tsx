@@ -3,6 +3,7 @@ import { Box, Typography } from '@mui/material';
 
 type FormInputProps = {
   label: string;
+  name: string;
   required?: boolean;
   type?: React.HTMLInputTypeAttribute;
   value: string;
@@ -20,7 +21,9 @@ type FormInputProps = {
 
 export const FormInput: React.FC<FormInputProps> = ({
   label,
+  name,
   required = false,
+  type = 'text',
   value,
   onChange,
   error,
@@ -37,7 +40,7 @@ export const FormInput: React.FC<FormInputProps> = ({
   const inputStyle = useMemo<React.CSSProperties>(
     () => ({
       width: '100%',
-      padding: '10px 12px',
+      padding: '15px 12px',
       border: `1px solid ${error ? '#d32f2f' : '#ccc'}`,
       borderRadius: 6,
       fontSize: 14,
@@ -49,18 +52,21 @@ export const FormInput: React.FC<FormInputProps> = ({
 
   return (
     <Box>
-      <Typography variant="body2" component="label" sx={{ display: 'block', mb: 0.75 }}>
-        {label}
-        {required && (
-          <Typography component="span" color="error" sx={{ ml: 0.25, fontWeight: 700 }}>
-            *
-          </Typography>
-        )}
+      <Typography
+        id={`${name}-label`}
+        htmlFor={name}
+        variant="body2"
+        component="label"
+        className="required-label"
+      >
+        {label} {required && <span className="required-icon" style={{ color: '#d32f2f'}}>*</span>}
       </Typography>
 
-      <Box sx={{ position: 'relative' }}>
+      <Box className="input-wrapper">
         {multiline ? (
           <textarea
+            id={name}
+            name={name}
             value={value}
             onChange={onChange}
             disabled={disabled}
@@ -70,7 +76,9 @@ export const FormInput: React.FC<FormInputProps> = ({
           />
         ) : (
           <input
-            type={'text'}
+            id={name}
+            name={name}
+            type={type}
             value={value}
             onChange={onChange}
             disabled={disabled}

@@ -29,13 +29,7 @@
     },
     "plugins": [
       "expo-secure-store",
-      "expo-localization",
-      [
-        "@stripe/stripe-react-native",
-        {
-          "enableGooglePay": false
-        }
-      ]
+      "expo-localization"
     ]
   }
 }

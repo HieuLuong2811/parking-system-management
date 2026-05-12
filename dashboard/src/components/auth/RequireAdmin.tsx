@@ -1,42 +1,39 @@
-import React, { useEffect } from 'react';
-import { Navigate, Outlet } from 'react-router-dom';
-import { Box, CircularProgress, Typography } from '@mui/material';
-
-import { VITE_LOGIN_URL } from '../../constant/config';
+import React from 'react';
+import { Navigate, Outlet, useLocation } from 'react-router-dom';
+import { Box, CircularProgress } from '@mui/material';
 import { useAuth } from '../../contexts/useAuth';
-
-const bypassAuth = import.meta.env.VITE_BYPASS_AUTH === 'true';
+import { AUTH_STATUS } from '../../contexts/authContextCore';
 
 export const RequireAdmin: React.FC<{ children?: React.ReactNode }> = ({ children }) => {
-  const { status } = useAuth();
-  
-  useEffect(() => {
-    if (status === 'unauthorized') {
-      window.location.href = VITE_LOGIN_URL;
-    }
-  }, [status]);
+  const { status, user } = useAuth();
+  const location = useLocation();
 
-  if (bypassAuth) {
-    return children ? <>{children}</> : <Outlet />;
-  }
-
-  if (status === 'loading') {
+  if (status === AUTH_STATUS.LOADING) {
     return (
       <Box sx={{ height: '100vh', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
-        <Box sx={{ textAlign: 'center' }}>
-          <CircularProgress />
-          <Typography sx={{ mt: 2 }}>Đang xác thực quyền truy cập...</Typography>
-        </Box>
+        <CircularProgress />
       </Box>
     );
   }
 
-  if (status === 'forbidden') {
+  if (status === AUTH_STATUS.FORBIDDEN) {
     return <Navigate to="/access-denied" replace />;
   }
 
-  if (status === 'unauthorized') {
+  if (status !== AUTH_STATUS.AUTHENTICATED) {
     return null;
+  }
+
+  const roles = (user?.roles || []).map((r) => String(r || '').trim().toUpperCase());
+  const isAdmin = roles.includes('ADMIN');
+  const isSecurity = roles.includes('SECURITY');
+
+  if (!isAdmin && isSecurity) {
+    // Security users can only access the parking sessions screen.
+    const allowed = location.pathname === '/parking_sessions';
+    if (!allowed) {
+      return <Navigate to="/parking_sessions" replace />;
+    }
   }
 
   return children ? <>{children}</> : <Outlet />;

@@ -3,134 +3,69 @@ import {
   Box,
   Button,
   CircularProgress,
-  Divider,
   Paper,
   Snackbar,
   Stack,
-  Tab,
-  Tabs,
   Table,
   TableBody,
   TableCell,
   TableContainer,
   TableHead,
   TableRow,
+  TablePagination,
   Typography,
+  Tooltip,
+  IconButton,
+  TextField,
 } from '@mui/material';
-import React, { useEffect, useMemo, useState } from 'react';
+import { useEffect, useMemo, useState } from 'react';
 import { useTranslation } from 'react-i18next';
 import { useNavigate } from 'react-router-dom';
-import SectionCard from '../components/shared/SectionCard';
 import VehicleRegistrationModal from '../components/vehicle/VehicleRegistrationModal';
 import { VehicleInfo } from '../api/clientApi';
-import { useSubscriptionPlans } from '../api/subscription_plans';
-import { useUserSubscriptions } from '../api/user_subscriptions';
-import { useDeleteVehicle, useVehicles } from '../api/vehicles';
+import { useDeleteVehicle, useMyVehiclesPaginated } from '../api/vehicles';
 import useDebouncedValue from '../hooks/useDebouncedValue';
 import useModal from '../hooks/useModal';
-import QRCode from 'qrcode';
-import { vehicles_tab } from '../constant/config';
-import { getPlanCardKey } from '../ultis/planCards';
+import JsBarcode from 'jsbarcode';
 import type { GridColDef } from '@mui/x-data-grid';
+import DeleteIcon from '@mui/icons-material/Delete';
+import EditIcon from '@mui/icons-material/Edit';
+import DownloadIcon from '@mui/icons-material/Download';
+import FilterListIcon from "@mui/icons-material/FilterList";
 
 const vehicleColumns: GridColDef[] = [
-  { field: 'user_code', headerName: 'User Code', width: 500 },
-  { field: 'vehicle_type', headerName: 'Vehicle Type', width: 200 },
-  { field: 'license_plate', headerName: 'License Plate', width: 200 },
-  { field: 'qr_code', headerName: 'QR Code', width: 200 },
-  { field: 'created_at', headerName: 'Created At', width: 250 },
-  { field: 'actions', headerName: 'Actions', width: 30 },
+  { field: 'vehicle_type', width: 200 },
+  { field: 'license_plate', width: 200 },
+  { field: 'barcode_token', width: 220 },
+  { field: 'created_at', width: 250 },
+  { field: 'actions', width: 30 },
 ];
-
-interface QRCodeCellProps {
-  value: string;
-}
-
-function QRCodeCell({ value }: QRCodeCellProps) {
-  const [src, setSrc] = useState<string>();
-
-  useEffect(() => {
-    let mounted = true;
-
-    QRCode.toDataURL(value, { width: 200, margin: 1 })
-      .then((dataUrl) => {
-        if (mounted) {
-          setSrc(dataUrl);
-        }
-      })
-      .catch(() => {
-        if (mounted) {
-          setSrc('');
-        }
-      });
-
-    return () => {
-      mounted = false;
-    };
-  }, [value]);
-
-  if (!src) {
-    return (
-      <Box display="flex" alignItems="center" justifyContent="center" minHeight="120px">
-        <CircularProgress size={16} />
-      </Box>
-    );
-  }
-
-  return (
-    <Box
-      component="img"
-      alt="QR code"
-      src={src}
-      sx={{ width: '120px', height: '100px', border: '1px solid #e0e0e0' }}
-    />
-  );
-}
-
-const getTabLabelKeys = {
-  withPlate: 'vehicle.tabs.withPlate',
-  withoutPlate: 'vehicle.tabs.withoutPlate',
-};
 
 export default function VehiclePage() {
   const { t } = useTranslation();
   const navigate = useNavigate();
   const [userCodeFilter, setUserCodeFilter] = useState('');
   const [licenseFilter, setLicenseFilter] = useState('');
-  const [vehicleTab, setVehicleTab] = useState<'withPlate' | 'withoutPlate'>('withPlate');
+  const [page, setPage] = useState(0);
+  const [rowsPerPage, setRowsPerPage] = useState(5);
   const [editingVehicle, setEditingVehicle] = useState<VehicleInfo | null>(null);
   const [snackbar, setSnackbar] = useState<{ message: string; severity: 'success' | 'info' | 'error' } | null>(null);
   const debouncedUserCodeFilter = useDebouncedValue(userCodeFilter, 420);
   const debouncedLicenseFilter = useDebouncedValue(licenseFilter, 420);
-  const { data: vehicles = [], isLoading, isError } = useVehicles();
-  const { data: plans = [] } = useSubscriptionPlans();
-  const { data: subscriptions = [], isLoading: subscriptionsLoading } = useUserSubscriptions();
+  const { data: paginated, isLoading, isError } = useMyVehiclesPaginated({
+    page: page + 1,
+    limit: rowsPerPage,
+    user_code: debouncedUserCodeFilter.trim() || undefined,
+    license_plate: debouncedLicenseFilter.trim() || undefined,
+  });
+  const vehicles = useMemo(() => paginated?.data ?? [], [paginated]);
+  const total = paginated?.total ?? 0;
   const deleteVehicle = useDeleteVehicle();
   const registerModal = useModal();
-
-  const filteredVehicles = useMemo(() => {
-    return vehicles.filter((vehicle: VehicleInfo) => {
-      const matchesUser =
-        !debouncedUserCodeFilter ||
-        vehicle.user_code?.toLowerCase().includes(debouncedUserCodeFilter.toLowerCase());
-      const matchesLicense =
-        !debouncedLicenseFilter ||
-        (vehicle.license_plate &&
-          vehicle.license_plate.toLowerCase().includes(debouncedLicenseFilter.toLowerCase()));
-      return matchesUser && matchesLicense;
-    });
-  }, [vehicles, debouncedUserCodeFilter, debouncedLicenseFilter]);
-
-  const handleTabChange = (_event: React.SyntheticEvent, newValue: 'withPlate' | 'withoutPlate') => {
-    setVehicleTab(newValue);
-  };
-
-  const visibleVehicles = useMemo(() => {
-    return filteredVehicles.filter((vehicle) => {
-      const hasPlate = Boolean(vehicle.license_plate?.trim());
-      return vehicleTab === vehicles_tab.withPlate ? hasPlate : !hasPlate;
-    });
-  }, [filteredVehicles, vehicleTab]);
+  
+  useEffect(() => {
+    setPage(0);
+  }, [debouncedUserCodeFilter, debouncedLicenseFilter]);
 
   const handleEdit = (vehicle: VehicleInfo) => {
     setEditingVehicle(vehicle);
@@ -138,7 +73,26 @@ export default function VehiclePage() {
   };
 
   const handleDelete = (vehicle: VehicleInfo) => {
-    deleteVehicle.mutate({ vehicleId: vehicle.id });
+    deleteVehicle.mutate(
+      { vehicleId: vehicle.id },
+      {
+        onSuccess: () => {
+          setSnackbar({
+            severity: "success",
+            message: t("vehicle.toast.deleteSuccess"),
+          });
+        },
+        onError: (error) => {
+          setSnackbar({
+            severity: "error",
+            message:
+              error instanceof Error
+                ? error.message
+                : t("vehicle.toast.deleteError"),
+          });
+        },
+      },
+    );
   };
 
   const handleOpenCreate = () => {
@@ -151,91 +105,159 @@ export default function VehiclePage() {
     registerModal.closeModal();
   };
 
-  const showToast = (message: string, severity: 'success' | 'info' | 'error' = 'info') => {
-    setSnackbar({ message, severity });
+  const handleRegisterPlan = () => {
+    navigate(`/plan`);
   };
 
-  const handleRegisterPlan = (vehicle: VehicleInfo) => {
-    const hasPlate = Boolean(vehicle.license_plate?.trim());
-    const planKey = hasPlate ? 'withPlate' : 'noPlate';
+  const handleVehicleSaved = (mode: "create" | "update") => {
+    setSnackbar({
+      severity: "success",
+      message:
+        mode === "create"
+          ? t("vehicle.toast.createSuccess")
+          : t("vehicle.toast.updateSuccess"),
+    });
+  };
 
-    if (!hasPlate) {
-      if (subscriptionsLoading) {
-        showToast(t('common.loading'), 'info');
-        return;
-      }
-
-      const alreadyRegistered = subscriptions.some((subscription) => {
-        const matchesVehicle = subscription.vehicle?.id === vehicle.id;
-        const isActiveLike = subscription.status !== 'EXPIRED';
-        return matchesVehicle && isActiveLike;
+  const handleDownload = (barcode_token: string, vehicle_type: string) => {
+    try {
+      const canvas = document.createElement('canvas');
+      JsBarcode(canvas, barcode_token || '-', {
+        format: 'CODE128',
+        displayValue: true,
+        margin: 8,
       });
-
-      if (alreadyRegistered) {
-        showToast(t('vehicle.alerts.noPlateAlreadyRegistered'), 'info');
-        return;
-      }
+      const link = document.createElement('a');
+      link.href = canvas.toDataURL('image/png');
+      link.download = `${vehicle_type}_barcode.png`;
+      link.click();
+    } catch (err) {
+      console.error('Failed to generate barcode', err);
     }
-
-    const matchedPlanId = plans.find((plan) => getPlanCardKey(plan.plans_type) === planKey)?.id ?? null;
-    const params = new URLSearchParams();
-    params.set('vehicleId', vehicle.id);
-    params.set('planKey', planKey);
-    if (matchedPlanId) {
-      params.set('planId', matchedPlanId);
-    }
-
-    navigate(`/plan?${params.toString()}`);
-  };
-
-  const visibleColumbs = useMemo(() => {
-    if (vehicleTab === vehicles_tab.withoutPlate) {
-      return vehicleColumns.filter((column) => column.field !== 'license_plate');
-    }
-    else if (vehicleTab === vehicles_tab.withPlate) {
-      return vehicleColumns.filter((column) => column.field !== 'qr_code');
-    }
-    return vehicleColumns;
-  }, [vehicleTab]);
+  }
 
   return (
-    <SectionCard>
-      <Stack spacing={1}>
-        <Stack direction="row" justifyContent="space-between" flexWrap="wrap" spacing={1}>
-          <Typography variant="h5">{t('vehicle.subtitle')}</Typography>
-          <Stack direction="row" spacing={1}>
-            <Button variant="contained" onClick={handleOpenCreate} disabled={isError}>
+    <Box className="profile-page-shell">
+      <Box sx={{ mb: 3 }}>
+        <Typography variant="h5" sx={{ fontWeight: 700, color: 'text.primary', mb: 0.5 }}>
+          {t('vehicle.title')}
+        </Typography>
+        <Typography variant="body2" fontSize="medium" color="text.secondary">
+          {t('vehicle.subtitle', {
+            defaultValue: 'Quản lý phương tiện cá nhân và đăng ký gửi xe nhanh chóng.',
+          })}
+        </Typography>
+      </Box>
+
+      <Box
+        sx={{
+          mb: 3,
+          p: 2,
+          borderRadius: 3,
+          bgcolor: '#F8FAFC',
+          border: '1px solid #E5E7EB',
+        }}
+      >
+        <Stack
+          direction={{ xs: 'column', md: 'row' }}
+          spacing={1.5}
+          alignItems={{ xs: 'flex-start', md: 'center' }}
+          justifyContent="space-between"
+        >
+
+        <Stack direction={{ xs: 'column', sm: 'row' }} spacing={2} flexWrap="wrap" alignItems="center" mb={2}>
+          <Box
+            sx={{
+              display: "flex",
+              gap: 1,
+              alignItems: "center",
+              minWidth: 130,
+            }}
+          >
+            <FilterListIcon color="primary" fontSize="small" />
+            <Typography variant="body2" fontWeight={600}>
+              {t("common.filters.search")}
+            </Typography>
+          </Box>
+          <TextField
+            label={t('vehicle.search.userCode', {
+              defaultValue: 'Mã người dùng',
+            })}
+            placeholder={t('vehicle.search.userCodePlaceholder', {
+              defaultValue: 'Nhập mã người dùng',
+            })}
+            value={userCodeFilter}
+            onChange={(event) => setUserCodeFilter(event.target.value)}
+            disabled={isLoading || isError}
+            size="small"
+            sx={{
+              minWidth: { xs: '100%', sm: 220 },
+              bgcolor: '#FFFFFF',
+              '& .MuiOutlinedInput-root': {
+                borderRadius: 2,
+              },
+            }}
+          />
+
+          <TextField
+            label={t('vehicle.search.license', {
+              defaultValue: 'Biển số',
+            })}
+            placeholder={t('vehicle.search.licensePlaceholder', {
+              defaultValue: 'Nhập biển số xe',
+            })}
+            value={licenseFilter}
+            onChange={(event) => setLicenseFilter(event.target.value)}
+            disabled={isLoading || isError}
+            size="small"
+            sx={{
+              minWidth: { xs: '100%', sm: 220 },
+              bgcolor: '#FFFFFF',
+              '& .MuiOutlinedInput-root': {
+                borderRadius: 2,
+              },
+            }}
+          />
+        <Button
+          variant="outlined"
+          onClick={() => {
+            setUserCodeFilter('');
+            setLicenseFilter('');
+            setPage(0);
+          }}
+          disabled={isLoading || isError || (!userCodeFilter && !licenseFilter)}
+          sx={{
+            borderRadius: 2,
+            textTransform: 'none',
+            px: 2.5,
+            bgcolor: '#FFFFFF',
+          }}
+        >
+          {t('common.filters.reset', {
+            defaultValue: 'Xóa bộ lọc',
+          })}
+        </Button>
+        </Stack>
+
+          <Stack direction="row" spacing={1} flexWrap="wrap">
+            <Button
+              variant="outlined"
+              onClick={handleRegisterPlan}
+              sx={{ textTransform: 'none', fontWeight: 700, borderRadius: 2 }}
+            >
+              {t('vehicle.registerPlanButton')}
+            </Button>
+            <Button
+              variant="contained"
+              onClick={handleOpenCreate}
+              disabled={isError}
+              sx={{ textTransform: 'none', fontWeight: 700, borderRadius: 2}}
+            >
               {t('vehicle.registerVehicleButton')}
             </Button>
           </Stack>
         </Stack>
-        <Tabs value={vehicleTab} onChange={handleTabChange} sx={{ mt: 2 }} indicatorColor="primary">
-          <Tab value="withPlate" label={t(getTabLabelKeys.withPlate)} />
-          <Tab value="withoutPlate" label={t(getTabLabelKeys.withoutPlate)} />
-        </Tabs>
-      </Stack>
-
-      <Divider sx={{ mb: 2 }} />
-
-      <Stack direction={{ xs: 'column', sm: 'row' }} spacing={2} flexWrap="wrap" alignItems="center" mb={2}>
-        <input
-          placeholder={t('vehicle.search.userCode')}
-          className="plain-input"
-          value={userCodeFilter}
-          onChange={(event) => setUserCodeFilter(event.target.value)}
-          disabled={isLoading || isError}
-        />
-        <input
-          placeholder={t('vehicle.search.license')}
-          className="plain-input"
-          value={licenseFilter}
-          onChange={(event) => setLicenseFilter(event.target.value)}
-          disabled={isLoading || isError}
-        />
-        <Button variant="text" onClick={() => {setUserCodeFilter(''); setLicenseFilter(''); }} disabled={isLoading || isError}>
-          {t('vehicle.clearFilter')}
-        </Button>
-      </Stack>
+      </Box>
 
       {isError && (
         <Typography color="error" mb={2}>
@@ -248,38 +270,63 @@ export default function VehiclePage() {
           <CircularProgress />
         </Box>
       ) : (
-        <Paper elevation={0} sx={{ boxShadow: 'none' }}>
-          <TableContainer component={Box}>
-            <Table size="small">
+        <TableContainer
+          component={Paper}
+          elevation={0}
+          sx={{
+            borderRadius: 3,
+            border: '1px solid #E5E7EB',
+            overflow: 'hidden',
+            bgcolor: '#FFFFFF',
+          }}
+        >
+          <Table size="small">
               <TableHead>
-                <TableRow>
-                  {visibleColumbs.map((column) => (
-                    <TableCell key={String(column.field)} sx={{ fontWeight: 600 }}>
-                      {t(column.headerName?? column.field)}
+                <TableRow
+                  sx={{
+                    bgcolor: '#F8FAFC',
+                    '& th': {
+                      fontWeight: 700,
+                      color: '#334155',
+                      fontSize: 14,
+                      py: 1.75,
+                      borderBottom: '1px solid #E5E7EB',
+                      whiteSpace: 'nowrap',
+                    },
+                  }}
+                >
+                  {vehicleColumns.map((column) => (
+                    <TableCell key={String(column.field)}>
+                      {t(`vehicle.table.${column.field}`)}
                     </TableCell>
                   ))}
                 </TableRow>
               </TableHead>
               <TableBody>
-                {visibleVehicles.length === 0 ? (
+                {vehicles.length === 0 ? (
                   <TableRow>
                     <TableCell colSpan={vehicleColumns.length} align="center" sx={{ py: 4 }}>
                       <Typography color="text.secondary">{t('vehicle.empty')}</Typography>
                     </TableCell>
                   </TableRow>
                 ) : (
-                  visibleVehicles.map((vehicle: VehicleInfo) => (
-                    <TableRow key={vehicle.id} hover>
-                      <TableCell>{vehicle.user_code}</TableCell>
+                  vehicles.map((vehicle: VehicleInfo) => (
+                    <TableRow
+                      key={vehicle.id}
+                      hover
+                      sx={{
+                        '& td': {
+                          py: 1.8,
+                          fontSize: 14,
+                          borderBottom: '1px solid #EEF2F7',
+                        },
+                      }}
+                    >
                       <TableCell>{vehicle.vehicle_type}</TableCell>
-                      {vehicleTab === vehicles_tab.withPlate && (
                         <TableCell>{vehicle.license_plate}</TableCell>
-                      )}
-                      {vehicleTab === vehicles_tab.withoutPlate ? (
                         <TableCell>
-                          <QRCodeCell value={vehicle.qr_code || '-'} />
+                          {vehicle.barcode_token || '-'}
                         </TableCell>
-                      ) : null}
                       <TableCell>
                         {new Date(vehicle.created_at).toLocaleString(undefined, {
                           year: 'numeric',
@@ -289,68 +336,49 @@ export default function VehiclePage() {
                       </TableCell>
                       <TableCell>
                         <Stack direction="row" spacing={1}>
-                          <Button size="small" variant="contained" onClick={() => handleRegisterPlan(vehicle)}>
-                            {t('vehicle.registerPlanButton')}
-                          </Button>
-                          <Button size="small" variant="outlined" onClick={() => handleEdit(vehicle)}>
-                            {t('vehicle.table.actionsMenu.edit')}
-                          </Button>
-                          {
-                            vehicleTab === vehicles_tab.withoutPlate && (
-                              vehicle.qr_code && (
-                                <Button variant='outlined' size='small' 
-                                onClick={() => {
-                                  const qrImage = vehicle.qr_code || '-';
-                                  QRCode.toDataURL(qrImage, {width: 200, margin: 1 })
-                                    .then((qrImage) => {
-                                      const canvas = document.createElement('canvas');
-                                      const context = canvas.getContext('2d');
-                                      const img = new Image();
-                                      img.src = qrImage;
-                                      img.onload = () => {
-                                        canvas.width = img.width;
-                                        canvas.height = img.height;
-                                        context?.drawImage(img, 0, 0);
-    
-                                        const link = document.createElement('a');
-                                        link.href = canvas.toDataURL('image/png');
-                                        link.download = `${vehicle.vehicle_type}_qr_code.png`;
-                                        link.click();
-                                      };
-                                    })
-                                    .catch((err) => {
-                                      console.error('Failed to generate QR code', err);
-                                    })
-                                }}>
-                                  Download QR code
-                                </Button>
-                              )
-                            )
-                          }
-                          <Button
-                            size="small"
-                            variant="contained"
-                            color="error"
-                            onClick={() => handleDelete(vehicle)}
-                            disabled={isLoading}
-                          >
-                            {t('vehicle.table.actionsMenu.delete')}
-                          </Button>
+                          <Tooltip placement="top" title={t('vehicle.table.actionsMenu.edit')}>
+                            <IconButton size="small" onClick={() => handleEdit(vehicle)}>
+                              <EditIcon />
+                            </IconButton>
+                          </Tooltip>
+                          <Tooltip placement="top" title={t('vehicle.table.actionsMenu.download')}>
+                            <IconButton size="small"  onClick={() => handleDownload(vehicle?.barcode_token || '', vehicle.vehicle_type)}>
+                              <DownloadIcon />
+                            </IconButton>
+                          </Tooltip>
+                          <Tooltip placement="top" title={t('vehicle.table.actionsMenu.delete')} disableInteractive>
+                            <IconButton onClick={() => handleDelete(vehicle)}>
+                              <DeleteIcon />
+                            </IconButton>
+                          </Tooltip>
                         </Stack>
                       </TableCell>
                     </TableRow>
                   ))
                 )}
               </TableBody>
-            </Table>
-          </TableContainer>
-        </Paper>
+          </Table>
+
+          <TablePagination
+            component="div"
+            count={total}
+            page={page}
+            onPageChange={(_event, newPage) => setPage(newPage)}
+            rowsPerPage={rowsPerPage}
+            onRowsPerPageChange={(event) => {
+              setRowsPerPage(parseInt(event.target.value, 10));
+              setPage(0);
+            }}
+            rowsPerPageOptions={[5, 10, 20, 50, 100]}
+          />
+        </TableContainer>
       )}
 
       <VehicleRegistrationModal
         open={registerModal.open}
         onClose={handleCloseModal}
         vehicle={editingVehicle}
+        onSuccess={handleVehicleSaved}
       />
 
       <Snackbar
@@ -363,6 +391,6 @@ export default function VehiclePage() {
           {snackbar?.message ?? ''}
         </Alert>
       </Snackbar>
-    </SectionCard>
+    </Box>
   );
 }

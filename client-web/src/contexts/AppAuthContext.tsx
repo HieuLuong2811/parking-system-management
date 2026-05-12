@@ -23,7 +23,7 @@ const removeAuthCodeFromUrl = (): void => {
 
 export interface AppAuthContextValue {
   user: UserInfo | null;
-  status: 'loading' | 'ready' | 'error';
+  status: 'loading' | 'ready' | 'unauthenticated' | 'error';
   error: string | null;
   refresh: () => Promise<void>;
   logout: () => Promise<void>;
@@ -35,11 +35,11 @@ export const AppAuthContext = createContext<AppAuthContextValue | undefined>(und
 export const AppAuthProvider = ({ children }: { children: React.ReactNode }) => {
   const { t } = useTranslation();
   const [user, setUser] = useState<UserInfo | null>(null);
-  const [status, setStatus] = useState<'loading' | 'ready' | 'error'>('loading');
   const [error, setError] = useState<string | null>(null);
   const patchUser = useCallback((patch: Partial<UserInfo>) => {
     setUser((prev) => (prev ? { ...prev, ...patch } : prev));
   }, []);
+  const [status, setStatus] = useState<AppAuthContextValue['status']>('loading');
 
   const refresh = useCallback(async () => {
     setStatus('loading');
@@ -48,12 +48,15 @@ export const AppAuthProvider = ({ children }: { children: React.ReactNode }) => 
       const me = await requestWithContext(clientHttp.get<UserInfo>('/auth/me'), 'Load current user');
       setUser(me);
       setStatus('ready');
-    } catch (err) {
+    } catch (err: any) {
       setUser(null);
-      setStatus('error');
-      const message =
-        err instanceof Error ? err.message : 'Unable to authenticate the session';
-      setError(message);
+
+      if (err?.response?.status === 401) {
+        setStatus('unauthenticated');
+      } else {
+        setStatus('error');
+        setError(err instanceof Error ? err.message : 'Unknown error');
+      }
     }
   }, []);
 
@@ -61,10 +64,10 @@ export const AppAuthProvider = ({ children }: { children: React.ReactNode }) => 
     try {
       await clientHttp.post('/auth/logout');
     } catch {
-      // ignore
+      console.warn('Logout request failed, proceeding to clear session locally.');
     } finally {
       setUser(null);
-      setStatus('error');
+      setStatus('unauthenticated');
       window.location.href = VITE_LOGIN_URL;
     }
   }, []);
@@ -108,16 +111,18 @@ export const AppAuthProvider = ({ children }: { children: React.ReactNode }) => 
           gap: 2,
         }}
       >
-        {/* <CircularProgress /> */}
         <Typography>{t('common.loading')}</Typography>
       </Box>
     );
   }
 
+  if (status === 'unauthenticated') {
+    window.location.href = VITE_LOGIN_URL;
+    return null;
+  }
+
   if (status === 'error') {
-    return (
-      <AuthRequiredNotice onRetry={refresh} loginUrl={VITE_LOGIN_URL} />
-    );
+    return <AuthRequiredNotice onRetry={refresh} loginUrl={VITE_LOGIN_URL} />;
   }
 
   return <AppAuthContext.Provider value={value}>{children}</AppAuthContext.Provider>;

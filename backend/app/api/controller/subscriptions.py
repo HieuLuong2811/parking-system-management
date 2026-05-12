@@ -1,10 +1,12 @@
+from app.models.user_subscription_vehicles import UserSubscriptionVehiclesUpdate
 from sqlalchemy.ext.asyncio import AsyncSession
 
-from app.enums.parking import SubscriptionStatus
+from app.enums.parking import PaymentType, SubscriptionPlanType, SubscriptionStatus
 from app.models.responses import DeleteResponse
 from app.models.subscriptions import (
+    UserSubscriptionAdminView,
+    UserSubscriptionClientView,
     UserSubscriptionCreate,
-    UserSubscriptionDetail,
     UserSubscriptionRead,
     UserSubscriptionUpdate,
 )
@@ -21,46 +23,75 @@ class SubscriptionController:
         return await subscriptionService.create_subscription(payload, db)
 
     @staticmethod
-    async def get_subscription_ctrl(subscription_id: str, db: AsyncSession) -> UserSubscriptionRead:
-        return await subscriptionService.get_subscription(subscription_id, db)
-
-    @staticmethod
-    async def get_all_subscriptions_ctrl(db: AsyncSession) -> list[UserSubscriptionRead]:
-        return await subscriptionService.get_all_subscriptions(db)
-
-    @staticmethod
-    async def get_subscriptions_by_user_ctrl(user_code: str, db: AsyncSession) -> list[UserSubscriptionRead]:
-        subscriptions = await subscriptionService.get_subscriptions_by_user_code(user_code, db)
-        return subscriptions
+    async def get_user_subscriptions_by_user_paginated_ctrl(
+        user_code: str,
+        db: AsyncSession,
+        *,
+        status: SubscriptionStatus | None = None,
+        page: int = 1,
+        limit: int = 5,
+    ) -> PaginatedResponse[UserSubscriptionClientView]:
+        return await subscriptionService.get_user_subscriptions_with_details_paginated(
+            db,
+            user_code=user_code,
+            status=status,
+            page=page,
+            limit=limit,
+        )
 
     @staticmethod
     async def get_user_subscriptions_by_user_ctrl(
-        user_code: str, db: AsyncSession
-    ) -> list[UserSubscriptionDetail]:
-        return await subscriptionService.get_user_subscriptions_with_details(user_code, db)
-
-    @staticmethod
-    async def get_all_subscription_details_ctrl(db: AsyncSession) -> list[UserSubscriptionDetail]:
-        return await subscriptionService.get_all_subscriptions_with_details(db)
+        user_code: str,
+        db: AsyncSession,
+        *,
+        status: SubscriptionStatus | None = None,
+        statuses: list[SubscriptionStatus] | None = None,
+    ) -> list[UserSubscriptionAdminView]:
+        return await subscriptionService.get_user_subscriptions_with_details(
+            db,
+            user_code=user_code,
+            status=status,
+            statuses=statuses,
+        )
 
     @staticmethod
     async def get_all_subscription_details_paginated_ctrl(
         db: AsyncSession,
         *,
         search: str | None = None,
+        user_code: str | None = None,
+        full_name: str | None = None,
+        plan_type: SubscriptionPlanType | None = None,
+        payment_type: PaymentType | None = None,
         status: SubscriptionStatus | None = None,
         page: int = 1,
-        limit: int = 20,
-    ) -> PaginatedResponse[UserSubscriptionDetail]:
+        limit: int = 5,
+    ) -> PaginatedResponse[UserSubscriptionAdminView]:
         return await subscriptionService.get_all_subscriptions_with_details_paginated(
-            db, search=search, status=status, page=page, limit=limit
+            db,
+            search=search,
+            user_code=user_code,
+            full_name=full_name,
+            plan_type=plan_type,
+            payment_type=payment_type,
+            status=status,
+            page=page,
+            limit=limit,
         )
 
     @staticmethod
-    async def update_subscription_ctrl(
-        subscription_id: str, payload: UserSubscriptionUpdate, db: AsyncSession, current_user: AuthUser
-    ) -> UserSubscriptionRead:
-        return await subscriptionService.update_subscription_for_user(subscription_id, payload, db, current_user)
+    async def update_subscription_vehicles_ctrl(
+        subscription_id: str,
+        payload: UserSubscriptionVehiclesUpdate,
+        db: AsyncSession,
+        current_user: AuthUser,
+    ):
+        return await subscriptionService.update_subscription_vehicles_for_user(
+            subscription_id=subscription_id,
+            vehicle_ids=payload.vehicle_ids,
+            db=db,
+            current_user=current_user,
+        )
 
     @staticmethod
     async def delete_subscription_ctrl(subscription_id: str, db: AsyncSession) -> DeleteResponse:

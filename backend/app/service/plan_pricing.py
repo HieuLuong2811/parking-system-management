@@ -7,7 +7,7 @@ from fastapi import HTTPException
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.enums.parking import PaymentType
-from app.models.pricing import PlanPaymentModePricing, PlanPricingResponse
+from app.models.pricing import PaymentPlanPricingDetail, PaymentPlanPricingResponse
 from app.service.holiday import HolidayService
 from app.service.payment_plans import paymentPlanService
 from app.service.plans import planService
@@ -53,7 +53,11 @@ def calculate_term_months(start_date: date, end_date: date) -> int:
 
 class planPricingService:
     @staticmethod
-    async def get_plan_pricing(plan_id: str, term_id: str, db: AsyncSession) -> PlanPricingResponse:
+    async def get_plan_pricing(
+        plan_id: str,
+        term_id: str,
+        db: AsyncSession,
+    ) -> PaymentPlanPricingResponse:
         plan = await planService.get_plan(plan_id, db)
         if not plan:
             raise HTTPException(status_code=404, detail="Subscription plan not found")
@@ -72,36 +76,40 @@ class planPricingService:
         if not payment_plans:
             raise HTTPException(status_code=404, detail="Payment plans not configured")
 
-        payment_modes: list[PlanPaymentModePricing] = []
+        payment_plan_details: list[PaymentPlanPricingDetail] = []
+
         for payment_plan in payment_plans:
             if not payment_plan.is_active:
                 continue
+
             discount_percent = payment_plan.discount_percent
+
             if payment_plan.payment_type == PaymentType.MONTHLY:
                 total_months = calculate_term_months(term.start_date, term.end_date)
-                if total_months > 0:
-                    base_amount = int(round(total_amount / total_months))
-                else:
-                    base_amount = total_amount
+                base_amount = int(round(total_amount / total_months)) if total_months > 0 else total_amount
             else:
                 base_amount = total_amount
+
             final_amount = base_amount
+
             if discount_percent:
                 final_amount = int(round(final_amount * (100 - discount_percent) / 100))
-            payment_modes.append(
-                PlanPaymentModePricing(
+
+            payment_plan_details.append(
+                PaymentPlanPricingDetail(
                     payment_plan_id=payment_plan.id,
                     payment_type=payment_plan.payment_type,
                     discount_percent=discount_percent,
+                    is_active=payment_plan.is_active,
                     original_amount=base_amount,
                     amount=final_amount,
                 )
             )
 
-        if not payment_modes:
+        if not payment_plan_details:
             raise HTTPException(status_code=404, detail="No active payment plans available")
 
-        return PlanPricingResponse(
+        return PaymentPlanPricingResponse(
             plan_id=plan.id,
             term_id=term.id,
             price_per_day=plan.price_per_day,
@@ -111,5 +119,5 @@ class planPricingService:
             holiday_days=holiday_days,
             sundays_skipped=sundays_skipped,
             total_amount=total_amount,
-            payment_modes=payment_modes,
+            payment_plan_details=payment_plan_details,
         )

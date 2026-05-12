@@ -31,6 +31,10 @@ class UserController:
         )
 
     @staticmethod
+    async def get_user_by_userCode_ctrl(user_code: str, db: AsyncSession) -> UsersRead | None:
+        return await userService.get_users_by_user_codes(user_code, db)
+
+    @staticmethod
     async def seed_users_ctrl(db: AsyncSession) -> list[UsersRead]:
         return await userService.seed_users(db)
 

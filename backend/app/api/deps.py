@@ -15,7 +15,6 @@ def _extract_token_from_header(authorization: str | None) -> str | None:
     try:
         scheme, token = authorization.split(" ", 1)
     except ValueError:
-        print("Malformed authorization header:", authorization)
         raise HTTPException(status_code=status.HTTP_401_UNAUTHORIZED, detail="Malformed authorization header")
     if scheme.lower() != "bearer":
         raise HTTPException(status_code=status.HTTP_401_UNAUTHORIZED, detail="Invalid authentication scheme")
@@ -43,5 +42,6 @@ async def get_current_user(token: str = Depends(get_access_token), db: AsyncSess
         user_code=user.user_code,
         full_name=user.full_name,
         email=user.email,
+        phone_number=user.phone_number,
         roles=roles,
     )

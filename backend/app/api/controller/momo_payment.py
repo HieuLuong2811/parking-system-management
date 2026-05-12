@@ -39,17 +39,3 @@ class MomoPaymentController:
             user_code=current_user.user_code,
             db=db,
         )
-
-    @staticmethod
-    async def momo_confirm_with_background_ctrl(
-        payload: dict,
-        db: AsyncSession,
-        current_user: AuthUser,
-        background_tasks: BackgroundTasks | None = None,
-    ):
-        return await MomoPaymentService.confirm_from_redirect(
-            payload,
-            user_code=current_user.user_code,
-            db=db,
-            background_tasks=background_tasks,
-        )

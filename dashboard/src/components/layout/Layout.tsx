@@ -24,18 +24,17 @@ export const Layout: React.FC = () => {
       <Navbar
         onMenuClick={handleDrawerToggle}
         collapsed={collapsed}
-        onCollapseToggle={handleCollapseToggle}
-      />
+        />
       <Sidebar
         mobileOpen={mobileOpen}
         onClose={() => setMobileOpen(false)}
         collapsed={collapsed}
+        onCollapseToggle={handleCollapseToggle}
       />
       <Box
         component="main"
         sx={{
           flexGrow: 1,
-          p: 4,
           width: { xs: '100%', md: `calc(100% - ${drawerWidth}px)` },
           ml: { md: `${drawerWidth}px` },
           transition: 'margin 0.3s ease, width 0.3s ease',
@@ -43,7 +42,7 @@ export const Layout: React.FC = () => {
         }}
       >
         <Toolbar />
-        <Box p={4} bgcolor='#fff'>
+        <Box p={4} height='100vh' bgcolor='#fff'>
           <Outlet />
         </Box>
       </Box>

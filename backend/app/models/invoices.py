@@ -20,10 +20,9 @@ class InvoiceBase(SQLModel):
     status: InvoiceStatus = Field(
         sa_column=SAColumn(Enum(InvoiceStatus, name="invoice_status_enum", create_type=False), nullable=False)
     )
-    stripe_invoice_id: Optional[str] = Field(
+    payment_order_id: Optional[str] = Field(
         default=None,
-        max_length=255,
-        sa_column=SAColumn(String(255), nullable=True),
+        sa_column=SAColumn(String(120), nullable=True, unique=True, index=True),
     )
 
 
@@ -47,4 +46,4 @@ class InvoiceUpdate(SQLModel):
     total_amount: Optional[int] = None
     payment_method: Optional[PaymentMethod] = None
     status: Optional[InvoiceStatus] = None
-    stripe_invoice_id: Optional[str] = None
+    payment_order_id: Optional[str] = None

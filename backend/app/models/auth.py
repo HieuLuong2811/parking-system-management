@@ -48,6 +48,7 @@ class AuthUser(BaseModel):
     user_code: str
     full_name: str
     email: EmailStr
+    phone_number: str | None
     roles: List[str] = []
 
 
@@ -62,5 +63,23 @@ class UserBulkImportRequest(BaseModel):
     entries: List[UserImportEntry]
 
 
-class LogoutRequest(BaseModel):
-    app_id: str
+class ForgotPasswordRequest(BaseModel):
+    user_code: str
+    email: EmailStr
+
+
+class ForgotPasswordRequestResponse(BaseModel):
+    expires_at: datetime
+    ttl_seconds: int
+    throttle_seconds: int
+
+
+class ForgotPasswordVerifyRequest(BaseModel):
+    user_code: str
+    code: str
+
+
+class ForgotPasswordResetRequest(BaseModel):
+    user_code: str
+    code: str
+    new_password: str
