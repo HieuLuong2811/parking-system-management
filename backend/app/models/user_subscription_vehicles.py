@@ -6,7 +6,7 @@ import uuid
 
 from sqlalchemy import Column as SAColumn, Enum, String
 from sqlmodel import Field, SQLModel
-
+from pydantic import BaseModel, Field as PydanticField
 from app.enums.parking import SubscriptionStatus
 from .mixins import SoftDeleteMixin, TimestampMixin
 
@@ -38,3 +38,6 @@ class UserSubscriptionVehicleRead(UserSubscriptionVehicleBase):
 class UserSubscriptionVehicleUpdate(SQLModel):
     status: Optional[SubscriptionStatus] = None
     deleted_at: Optional[datetime] = None
+
+class UserSubscriptionVehiclesUpdate(BaseModel):
+    vehicle_ids: list[str] = PydanticField(default_factory=list)

@@ -10,9 +10,6 @@ export const ErrorTranslations: Record<Language, TranslationMap> = {
   en: {
     'login.error.invalid': 'Incorrect username or password.',
   },
-  ja: {
-    'login.error.invalid': 'ユーザー名またはパスワードが間違っています。',
-  },
   th: {
     'login.error.invalid': 'ชื่อผู้ใช้หรือรหัสผ่านไม่ถูกต้อง',
   },

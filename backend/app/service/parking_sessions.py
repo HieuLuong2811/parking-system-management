@@ -8,6 +8,7 @@ from app.models.parking_sessions import (
     ParkingSession,
     ParkingSessionCreate,
     ParkingSessionAdminRead,
+    ParkingSessionRead,
     ParkingSessionUpdate,
 )
 from app.models.vehicles import Vehicle
@@ -175,7 +176,7 @@ class parkingSessionUserService:
         status: ParkingSessionStatus | None = None,
         from_time: datetime | None = None,
         to_time: datetime | None = None,
-    ) -> PaginatedResponse[ParkingSession]:
+    ) -> PaginatedResponse[ParkingSessionRead]:
         page = max(1, int(page or 1))
         limit = max(1, int(limit or 5))
 
@@ -186,9 +187,9 @@ class parkingSessionUserService:
             filters.append(ParkingSession.check_in_time >= from_time)
         if to_time is not None:
             filters.append(ParkingSession.check_in_time <= to_time)
-
+            
         base_statement = (
-            select(ParkingSession)
+            select(ParkingSession, Vehicle.vehicle_type, Vehicle.license_plate)
             .join(Vehicle, Vehicle.id == ParkingSession.vehicle_id)
             .where(*filters)
         )
@@ -201,7 +202,36 @@ class parkingSessionUserService:
         offset = (page - 1) * limit
         statement = base_statement.order_by(desc(ParkingSession.check_in_time)).offset(offset).limit(limit)
         result = await db.execute(statement)
-        data = result.scalars().all()
+        rows = result.all()
+        data: list[ParkingSessionRead] = []
+        for session, vehicle_type, vehicle_license_plate in rows:
+            resolved_license_plate = session.license_plate or vehicle_license_plate
+            if hasattr(ParkingSessionRead, "model_validate"):
+                data.append(
+                    ParkingSessionRead.model_validate(
+                        session,
+                        update={
+                            "vehicle_type": vehicle_type,
+                            "license_plate": resolved_license_plate,
+                        },
+                    )
+                )
+            else:
+                data.append(
+                    ParkingSessionRead(
+                        id=session.id,
+                        vehicle_id=session.vehicle_id,
+                        license_plate=resolved_license_plate,
+                        check_in_time=session.check_in_time,
+                        check_out_time=session.check_out_time,
+                        status=session.status,
+                        user_type=session.user_type,
+                        total_amount=session.total_amount,
+                        created_at=session.created_at,
+                        updated_at=session.updated_at,
+                        vehicle_type=vehicle_type,
+                    )
+                )
 
         return {
             "data": data,
@@ -251,3 +281,7 @@ class parkingSessionUserService:
         )
         result = await db.execute(statement)
         return result.all()
+    
+    @staticmethod
+    async def delete_session(session_id: str, db: AsyncSession) -> ParkingSession:
+        return await parkingSessionService.crud.delete(db, session_id)

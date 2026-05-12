@@ -24,32 +24,13 @@ import { useVehicles } from '../api/vehicles';
 import { usePaymentPlanPricing } from '../api/payment_plan_pricing';
 import { useAuth } from '../auth/AuthContext';
 import { useCheckoutMomo, useCheckoutRecurring } from '../api/checkout';
-import { getPlanMeta } from '../ultis/status';
-import { normalizeText } from '../ultis/format';
+import { getPlanMeta, getPlanNameKey } from '../ultis/status';
+import { formatCurrency, formatNumber } from '../ultis/format';
 
 type Nav = NativeStackNavigationProp<AppStackParamList>;
 type ScreenRoute = RouteProp<AppStackParamList, 'PlanCheckout'>;
 
 type PaymentMode = 'FULL' | 'MONTHLY';
-
-const formatNumber = (value: number | string | null | undefined) => {
-  const numberValue = Number(value || 0);
-  return new Intl.NumberFormat('vi-VN').format(numberValue);
-};
-
-const formatCurrency = (value: number | string | null | undefined) => {
-  return `${formatNumber(value)} VND`;
-};
-
-const getPlanNameKey = (plansType?: string | null) => {
-  const normalized = normalizeText(plansType);
-
-  if (normalized.includes('BASIC')) return 'plans.basic';
-  if (normalized.includes('STARTUP')) return 'plans.startup';
-  if (normalized.includes('ENTERPRISE')) return 'plans.enterprise';
-
-  return '';
-};
 
 const getVehicleName = (vehicle: any) => {
   if (vehicle?.license_plate) return vehicle.license_plate;

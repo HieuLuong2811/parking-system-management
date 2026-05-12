@@ -4,7 +4,7 @@ from sqlalchemy.ext.asyncio import AsyncSession
 from app.api.controller.vehicles import VehicleController
 from app.authen.current_user import AuthUser, required_roles
 from app.db.session import get_db
-from app.models.responses import DeleteResponse, VehicleLookupResponse
+from app.models.responses import DeleteResponse, PlateLookupAction, VehicleLookupResponse
 from app.models.vehicles import VehicleCreate, VehicleRead, VehicleUpdate, VehicleBarcodeVerify
 from app.utils.pagination import PaginatedResponse
 
@@ -77,6 +77,18 @@ async def verify_vehicle_barcode(
 ):
     return await VehicleController.verify_vehicle_barcode_ctrl(payload, db)
 
+@router.get("/lookup", response_model=VehicleLookupResponse)
+async def lookup_vehicle_by_plate(
+    license_plate: str,
+    action: PlateLookupAction,
+    db: AsyncSession = Depends(get_db),
+):  
+    print('Running lookup_vehicle_by_plate_ctrl')
+    return await VehicleController.lookup_vehicle_by_plate_ctrl(
+        license_plate,
+        action,
+        db,
+    )
 
 @router.get("/{vehicle_id}", response_model=VehicleRead)
 async def get_vehicle(vehicle_id: str, db: AsyncSession = Depends(get_db)):
@@ -93,7 +105,3 @@ async def update_vehicle(
 @router.delete("/{vehicle_id}", response_model=DeleteResponse)
 async def delete_vehicle(vehicle_id: str, db: AsyncSession = Depends(get_db)):
     return await VehicleController.delete_vehicle_ctrl(vehicle_id, db)
-
-@router.get("/lookup", response_model=VehicleLookupResponse)
-async def lookup_vehicle_by_plate(license_plate: str, db: AsyncSession = Depends(get_db)):
-    return await VehicleController.lookup_vehicle_by_plate_ctrl(license_plate, db)

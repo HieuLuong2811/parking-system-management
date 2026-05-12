@@ -10,6 +10,8 @@ const th = {
     vehicles: "ยานพาหนะ",
     sessions: "ประวัติการจอดรถ",
     invoices: "ใบแจ้งหนี้",
+    payments: "ใบแจ้งหนี้และการชำระเงิน",
+    transactions: "ประวัติธุรกรรม",
     profile: "โปรไฟล์ส่วนตัว",
     subscriptions: "แพ็กเกจที่สมัครแล้ว",
     management: "การจัดการส่วนตัว",
@@ -58,6 +60,8 @@ const th = {
   common: {
     loading: "กำลังโหลด...",
     error: "เกิดข้อผิดพลาด กรุณาลองอีกครั้ง",
+    tryAgainLater: "กรุณาลองใหม่ภายหลัง",
+    actions: "การกระทํา",
     button: {
       next: "ถัดไป",
       back: "ย้อนกลับ",
@@ -107,31 +111,38 @@ const th = {
     error: { load: "ไม่สามารถโหลดข้อมูลยานพาหนะได้ กรุณาลองใหม่ภายหลัง" },
     tabs: { withPlate: "มีป้ายทะเบียน", withoutPlate: "ไม่มีป้ายทะเบียน" },
     modal: {
-      title: "ยานพาหนะใหม่",
-      submit: "ลงทะเบียนยานพาหนะ",
+      title: "เพิ่มยานพาหนะ",
+      editTitle: "อัปเดตยานพาหนะ",
+      subtitle: "เลือกประเภทยานพาหนะและกรอกข้อมูลที่จำเป็น",
+
       cancel: "ยกเลิก",
-      tabs: { withPlate: "มีป้ายทะเบียน", withoutPlate: "ไม่มีป้ายทะเบียน" },
+      submit: "บันทึกยานพาหนะ",
+      save: "บันทึกการเปลี่ยนแปลง",
+
+      tabs: {
+        withPlate: "มีป้ายทะเบียน",
+        withoutPlate: "ไม่มีป้ายทะเบียน",
+      },
+
+      fields: {
+        userCode: "รหัสผู้ใช้",
+        vehicleType: "ประเภทยานพาหนะ",
+        vehicleTypePlaceholder: "เลือกประเภทยานพาหนะ",
+        licensePlate: "ป้ายทะเบียน",
+        licensePlatePlaceholder: "เช่น 30K12345",
+      },
+
       types: {
         motorbike: "รถจักรยานยนต์",
         bicycle: "จักรยาน",
         electricBicycle: "จักรยานไฟฟ้า",
       },
-      actions: { generateQr: "สร้างบาร์โค้ด" },
-      generatingQr: "กำลังสร้างบาร์โค้ด…",
-      fields: {
-        userCode: "รหัสผู้ใช้",
-        vehicleType: "ประเภทยานพาหนะ",
-        licensePlate: "ป้ายทะเบียน",
-        licensePlatePlaceholder: "เช่น 30K12345",
-        qrCode: "บาร์โค้ด",
-        description: "หมายเหตุ",
-        vehicleTypePlaceholder: "เลือกประเภทยานพาหนะ",
-      },
+
+      barcodeNote:
+        "ยานพาหนะที่ไม่มีป้ายทะเบียน ระบบจะสร้างบาร์โค้ดให้อัตโนมัติหลังจากบันทึก",
+
       errors: {
-        generic: "ไม่สามารถลงทะเบียนยานพาหนะได้ กรุณาลองอีกครั้ง",
-        qrGenerate: "กรุณากรอกข้อมูลที่จำเป็นก่อนสร้างบาร์โค้ด",
-        qrFailed: "ไม่สามารถสร้างบาร์โค้ดได้",
-        qrMissing: "กรุณาสร้างบาร์โค้ดก่อนลงทะเบียน",
+        generic: "ไม่สามารถบันทึกยานพาหนะได้ กรุณาลองอีกครั้ง",
       },
     },
     form: {
@@ -149,12 +160,18 @@ const th = {
       },
       saveButton: "บันทึกยานพาหนะ",
     },
+    toast: {
+      createSuccess: "เพิ่มยานพาหนะสำเร็จ",
+      updateSuccess: "อัปเดตยานพาหนะสำเร็จ",
+      deleteSuccess: "ลบยานพาหนะสำเร็จ",
+      deleteError: "ไม่สามารถลบยานพาหนะได้",
+    },
   },
   invoices: {
     sectionTitle: "รายการใบแจ้งหนี้",
-    subtitle: "ตรวจสอบใบเสร็จค่าจอดรถ สถานะการชำระเงิน และชำระเงินได้อย่างรวดเร็วเมื่อต้องการ",
+    subtitle:
+      "ตรวจสอบใบเสร็จค่าจอดรถ สถานะการชำระเงิน และชำระเงินได้อย่างรวดเร็วเมื่อต้องการ",
     loading: "กำลังโหลดใบแจ้งหนี้...",
-    error: "ไม่สามารถโหลดใบแจ้งหนี้ได้",
     filters: { from: "จาก", to: "ถึง" },
     resultsTitle: "ใบแจ้งหนี้ที่ตรงกัน",
     empty: "ไม่มีใบแจ้งหนี้ที่ตรงกับช่วงวันที่ที่เลือก",
@@ -175,7 +192,12 @@ const th = {
       retryPayment: "ลองชำระเงินอีกครั้ง",
       momoMissingUrl: "MoMo ไม่ได้ส่งลิงก์ชำระเงินกลับมา",
     },
-    status: { paid: "ชำระแล้ว", pending: "รอดำเนินการ", overdue: "เกินกำหนด", failed: "ไม่สามารถชำระได้" },
+    status: {
+      paid: "ชำระแล้ว",
+      pending: "รอดำเนินการ",
+      overdue: "เกินกำหนด",
+      failed: "ไม่สามารถชำระได้",
+    },
   },
   sessions: {
     sectionTitle: "ประวัติการจอดรถ",
@@ -251,8 +273,11 @@ const th = {
     },
     subscriptions: {
       heading: "รายการสมัครใช้งาน",
+      subtitle:
+        "ตรวจสอบข้อมูลแพ็กเกจที่จอดรถ ภาคการศึกษาที่เกี่ยวข้อง ยานพาหนะที่เชื่อมโยง และสถานะการใช้งานของคุณ",
       empty: "ยังไม่มีรายการสมัครใช้งาน",
       vehicleUpdated: "อัปเดตยานพาหนะสำเร็จ",
+      plan: "แพ็กเกจ",
       vehicle: "ยานพาหนะ",
       term: "ภาคการศึกษา",
       paymentPlan: "แผนการชำระเงิน",
@@ -262,12 +287,63 @@ const th = {
       unnamedPlan: "แพ็กเกจไม่มีชื่อ",
       noPaymentPlan: "ยังไม่ได้ตั้งค่าแผนการชำระเงิน",
       status: {
+        label: "สถานะ",
         active: "ใช้งานอยู่",
         pending: "รอดำเนินการ",
         expired: "หมดอายุ",
         suspended: "ระงับชั่วคราว",
         unknown: "รอดำเนินการ",
+        payment_due: "รอชำระเงิน",
+        inactive: "ไม่ใช้งาน",
       },
+      vehicleCount: "{{count}} vehicles",
+      noVehicle: "ยังไม่ได้เลือกรถ",
+      paymentTypes: {
+        monthly: "ต่อเดือน",
+        full: "ทั้งหมด",
+      },
+      drawer: {
+        title: "รายละเอียดแพ็กเกจที่ลงทะเบียน",
+        subtitle: "รหัสแพ็กเกจ: {{id}}",
+        planInfo: "ข้อมูลการลงทะเบียน",
+        periodLabel: "ระยะเวลา",
+        createdAtLabel: "วันที่ลงทะเบียน",
+        paymentSummary: "สรุปการชำระเงิน",
+        paidAmountLabel: "ชำระแล้ว",
+        remainingAmount: "ยอดคงเหลือ",
+        licensed: "รถที่มีป้ายทะเบียน",
+        unlicensed: "รถที่ไม่มีป้ายทะเบียน",
+        noLicensedVehicle: "ยังไม่มีรถที่มีป้ายทะเบียน",
+        noUnlicensedVehicle: "ยังไม่มีรถที่ไม่มีป้ายทะเบียน",
+        chooseVehicles: "ลงทะเบียนยานพาหนะสำหรับแพ็กเกจ",
+        selectLicensed: "เลือกรถที่มีป้ายทะเบียน",
+        selectUnlicensed: "เลือกรถที่ไม่มีป้ายทะเบียน",
+        addVehicle: "เพิ่มรถ",
+        registerVehicles: "ลงทะเบียนยานพาหนะ",
+      },
+    },
+  },
+  transactions: {
+    sectionTitle: "ประวัติธุรกรรม",
+    subtitle: "ติดตามการชำระเงินและสถานะใบแจ้งหนี้ที่เกี่ยวข้อง",
+    loadError: "ไม่สามารถโหลดประวัติธุรกรรมได้ โปรดลองอีกครั้ง",
+    empty: "ยังไม่มีธุรกรรม",
+    filters: {
+      invoiceId: "รหัสใบแจ้งหนี้",
+      invoiceIdPlaceholder: "กรุณาป้อนรหัสใบแจ้งหนี้ทั้งหมด",
+      transactionCode: "รหัสธุรกรรม",
+      transactionCodePlaceholder: "กรอกรหัสธุรกรรม",
+      from: "จาก",
+      to: "ถึง",
+      invalidRange: "วันที่สิ้นสุดต้องไม่เร็วกว่าวันที่เริ่มต้น",
+    },
+    table: {
+      invoiceId: "รหัสใบแจ้งหนี้",
+      transactionCode: "รหัสธุรกรรม",
+      amount: "จำนวนเงิน",
+      status: "สถานะ",
+      createdAt: "เวลา",
+      note: "หมายเหตุ",
     },
   },
   plan: {
@@ -275,7 +351,8 @@ const th = {
     sectionDescription:
       "เลือกแพ็กเกจที่จอดรถที่เหมาะกับความต้องการของคุณ ลงทะเบียนแพ็กเกจที่จอดรถตามภาคการศึกษา เลือกประเภทยานพาหนะที่ต้องการ และชำระเงินให้เสร็จเพื่อจองที่จอดรถ ราคาจะแสดงเป็น VND และอาจเปลี่ยนแปลงในแต่ละภาคการศึกษา",
     cta: "ลงทะเบียน",
-    ctaDisabled: "กำลังใช้งานอยู่",
+    viewCurrentPlan: "ดูข้อมูลการลงทะเบียนแผนปัจจุบัน",
+    inUseBadge: "กําลังใช้งาน",
     features: {
       monthlyPayment: "รองรับการชำระรายเดือน",
       noMonthlyPayment: "ไม่รองรับการชำระรายเดือน",
@@ -383,6 +460,12 @@ const th = {
         perkSupport: "รองรับโอนผ่านธนาคารและกระเป๋าเงิน",
       },
     },
+    overrideActivePlanDialog: {
+      title: "คุณมีแพ็กเกจที่ต้องดำเนินการอยู่",
+      message:
+        "คุณมีแพ็กเกจ {{plan}} ที่มีสถานะ {{status}} หากลงทะเบียนแพ็กเกจใหม่ แพ็กเกจเดิมจะถูกยกเลิกแต่ยอดค้างชำระจะยังถูกติดตามต่อไป ยอดคงเหลือ: {{debt}} คุณต้องการดำเนินการต่อหรือไม่?",
+    },
+    currentPlanFallback: "แพ็กเกจปัจจุบัน",
   },
 };
 

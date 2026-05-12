@@ -7,6 +7,7 @@ from app.models.users import Users
 from app.service.base import CRUDService
 from app.utils.pagination import PaginatedResponse
 from app.utils.pagination_db import paginate_scalars
+from app.enums.parking import VehicleType
 from fastapi import HTTPException, status
 from sqlalchemy import String, func, or_, select
 from sqlalchemy.ext.asyncio import AsyncSession
@@ -233,3 +234,43 @@ class vehicleService:
         if row is None:
             raise ValueError("Vehicle not found")
         return row
+
+    @staticmethod
+    async def get_by_license_plate_or_none(
+        license_plate: str,
+        db: AsyncSession,
+    ) -> tuple[Vehicle, Users | None] | None:
+        normalized_plate = license_plate.strip().upper()
+
+        statement = (
+            select(Vehicle, Users)
+            .outerjoin(Users, Users.user_code == Vehicle.user_code)
+            .where(
+                func.upper(func.coalesce(Vehicle.license_plate, "")) == normalized_plate,
+                Vehicle.deleted_at.is_(None),
+            )
+        )
+
+        result = await db.execute(statement)
+        row = result.first()
+
+        if row is None:
+            return None
+
+        return row
+    
+    @staticmethod
+    async def create_guest_vehicle_by_plate(
+        license_plate: str,
+        db: AsyncSession,
+    ) -> Vehicle:
+        vehicle = Vehicle(
+            user_code=None,
+            vehicle_type=VehicleType.MOTORBIKE,
+            license_plate=license_plate.strip().upper(),
+        )
+
+        db.add(vehicle)
+        await db.flush()
+
+        return await vehicleService._ensure_barcode_token(vehicle, db)

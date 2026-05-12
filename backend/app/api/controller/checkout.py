@@ -26,7 +26,6 @@ class CheckoutController:
     
     @staticmethod
     async def checkout_pay_debt_ctrl(payload, db, current_user):
-        print(payload)
         return await MomoPaymentService.create_momo_payment_for_invoice(
             invoice_id=str(payload.invoice_id),
             redirect_url=payload.redirect_url,
@@ -35,7 +34,6 @@ class CheckoutController:
                 "invoice_id": str(payload.invoice_id),
                 "payment_reason": "pay_debt",
             }),
-            # AuthUser doesn't include language; fall back to service default ("vi").
             lang=None,
             user_code=current_user.user_code,
             db=db,

@@ -53,3 +53,17 @@ class UserType(str, Enum):
     STUDENT = "STUDENT"
     STAFF = "STAFF"
     VISITOR = "VISITOR"
+
+class ParkingAccessCardHolderType(str, Enum):
+    STUDENT = "STUDENT"
+    TEACHER = "TEACHER"
+    GUEST = "GUEST"
+
+class ParkingAccessCardStatus(str, Enum):
+    AVAILABLE = "AVAILABLE"
+    ASSIGNED = "ASSIGNED"
+    ACTIVE = "ACTIVE"
+    DISABLED = "DISABLED"
+    LOST = "LOST"
+
+

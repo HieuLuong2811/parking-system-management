@@ -227,7 +227,7 @@ export default function InvoicesPage() {
                   <TableCell colSpan={5} align="center" sx={{ py: 6 }}>
                     <CircularProgress size={26} />
                     <Typography color="text.secondary" mt={1}>
-                      Đang tải danh sách hóa đơn...
+                      {t('invoices.loading')}
                     </Typography>
                   </TableCell>
                 </TableRow>
@@ -235,10 +235,7 @@ export default function InvoicesPage() {
                 <TableRow>
                   <TableCell colSpan={5} align="center" sx={{ py: 6 }}>
                     <Typography color="error" fontWeight={600}>
-                      Không thể tải danh sách hóa đơn
-                    </Typography>
-                    <Typography variant="body2" color="text.secondary" mt={0.5}>
-                      Vui lòng thử lại sau.
+                      {t('common.error')}
                     </Typography>
                   </TableCell>
                 </TableRow>
@@ -319,7 +316,7 @@ export default function InvoicesPage() {
                           <Button
                             variant="contained"
                             size="small"
-                            color="warning"
+                            sx={{ backgroundColor: '#43B14B'}}
                             onClick={() => handlePayInvoice(invoice.id)}
                             disabled={momoPaymentMutation.isPending}
                             startIcon={
@@ -329,9 +326,7 @@ export default function InvoicesPage() {
                             }
                           >
                             {isRetry
-                              ? t("invoices.actions.retryPayment", {
-                                  defaultValue: "Thanh toán lại",
-                                })
+                              ? t("invoices.actions.retryPayment")
                               : t("invoices.actions.payWithMomo")}
                           </Button>
                         ) : (

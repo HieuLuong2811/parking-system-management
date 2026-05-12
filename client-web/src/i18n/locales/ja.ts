@@ -8,6 +8,8 @@ const ja = {
     vehicles: "車両",
     sessions: "駐車履歴",
     invoices: "請求書",
+    payments: "請求書と支払い",
+    transactions: "取引履歴",
     profile: "個人プロフィール",
     subscriptions: "登録済みプラン",
     management: "個人管理",
@@ -56,6 +58,8 @@ const ja = {
   common: {
     loading: "読み込み中...",
     error: "エラーが発生しました。もう一度お試しください。",
+    tryAgainLater: "しばらくお待ちください。",
+    actions: "アクション",
     button: {
       next: "次へ",
       back: "戻る",
@@ -105,31 +109,38 @@ const ja = {
     error: { load: "車両を読み込めません。後でもう一度お試しください。" },
     tabs: { withPlate: "ナンバーあり", withoutPlate: "ナンバーなし" },
     modal: {
-      title: "新しい車両",
-      submit: "車両を登録",
+      title: "車両を追加",
+      editTitle: "車両を更新",
+      subtitle: "車両タイプを選択し、必要な情報を入力してください。",
+
       cancel: "キャンセル",
-      tabs: { withPlate: "ナンバーあり", withoutPlate: "ナンバーなし" },
+      submit: "車両を保存",
+      save: "変更を保存",
+
+      tabs: {
+        withPlate: "ナンバープレートあり",
+        withoutPlate: "ナンバープレートなし",
+      },
+
+      fields: {
+        userCode: "ユーザーコード",
+        vehicleType: "車両タイプ",
+        vehicleTypePlaceholder: "車両タイプを選択",
+        licensePlate: "ナンバープレート",
+        licensePlatePlaceholder: "例: 30K12345",
+      },
+
       types: {
         motorbike: "バイク",
         bicycle: "自転車",
         electricBicycle: "電動自転車",
       },
-      actions: { generateQr: "バーコードを生成" },
-      generatingQr: "バーコードを生成中…",
-      fields: {
-        userCode: "ユーザーコード",
-        vehicleType: "車両タイプ",
-        licensePlate: "ナンバープレート",
-        licensePlatePlaceholder: "例: 30K12345",
-        qrCode: "バーコード",
-        description: "メモ",
-        vehicleTypePlaceholder: "車両タイプを選択",
-      },
+
+      barcodeNote:
+        "ナンバープレートがない車両は、保存後にシステムがバーコードを自動生成します。",
+
       errors: {
-        generic: "車両を登録できません。もう一度お試しください。",
-        qrGenerate: "バーコードを生成する前に必須項目を入力してください。",
-        qrFailed: "バーコードを生成できません。",
-        qrMissing: "登録前にバーコードを生成してください。",
+        generic: "車両を保存できません。もう一度お試しください。",
       },
     },
     form: {
@@ -147,12 +158,18 @@ const ja = {
       },
       saveButton: "車両を保存",
     },
+    toast: {
+      createSuccess: "車両を追加しました",
+      updateSuccess: "車両を更新しました",
+      deleteSuccess: "車両を削除しました",
+      deleteError: "車両を削除できません",
+    },
   },
   invoices: {
     sectionTitle: "請求書一覧",
-    subtitle: "駐車料金の領収書や支払い状況を確認し、必要な時に迅速に支払いを行うことができます。",
+    subtitle:
+      "駐車料金の領収書や支払い状況を確認し、必要な時に迅速に支払いを行うことができます。",
     loading: "請求書を読み込み中...",
-    error: "請求書を読み込めません。",
     filters: { from: "開始日", to: "終了日" },
     resultsTitle: "一致する請求書",
     empty: "選択した期間に一致する請求書はありません。",
@@ -173,7 +190,12 @@ const ja = {
       retryPayment: "支払いを再試行",
       momoMissingUrl: "MoMoから支払いリンクが返されませんでした。",
     },
-    status: { paid: "支払い済み", pending: "保留中", overdue: "期限切れ", failed: "支払い失敗" },
+    status: {
+      paid: "支払い済み",
+      pending: "保留中",
+      overdue: "期限切れ",
+      failed: "支払い失敗",
+    },
   },
   sessions: {
     sectionTitle: "駐車履歴",
@@ -250,8 +272,11 @@ const ja = {
     },
     subscriptions: {
       heading: "登録済みサブスクリプション",
+      subtitle:
+        "駐車プラン、適用学期、登録車両、および利用状況を追跡できます。",
       empty: "登録済みサブスクリプションはまだありません。",
       vehicleUpdated: "車両が正常に更新されました。",
+      plan: "駐車プラン",
       vehicle: "車両",
       term: "学期",
       paymentPlan: "支払いプラン",
@@ -261,12 +286,63 @@ const ja = {
       unnamedPlan: "名称未設定のプラン",
       noPaymentPlan: "支払いプラン未設定",
       status: {
+        label: "ステータス",
         active: "有効",
         pending: "保留中",
         expired: "期限切れ",
         suspended: "停止中",
         unknown: "保留中",
+        payment_due: "支払い待ち",
+        inactive: "無効",
       },
+      vehicleCount: "{{count}}台の車両",
+      noVehicle: "まだ車両が選択されていません",
+      paymentTypes: {
+        monthly: "月払い",
+        full: "一括払い",
+      },
+      drawer: {
+        title: "登録済みプランの詳細",
+        subtitle: "プランID: {{id}}",
+        planInfo: "登録情報",
+        periodLabel: "期間",
+        createdAtLabel: "登録日",
+        paymentSummary: "支払い概要",
+        paidAmountLabel: "支払い済み",
+        remainingAmount: "未払い金額",
+        licensed: "ナンバープレートありの車両",
+        unlicensed: "ナンバープレートなしの車両",
+        noLicensedVehicle: "ナンバープレートありの車両はまだありません。",
+        noUnlicensedVehicle: "ナンバープレートなしの車両はまだありません。",
+        chooseVehicles: "このプランに車両を登録",
+        selectLicensed: "ナンバープレートありの車両を選択",
+        selectUnlicensed: "ナンバープレートなしの車両を選択",
+        addVehicle: "車両を追加",
+        registerVehicles: "車両を登録",
+      },
+    },
+  },
+  transactions: {
+    sectionTitle: "取引履歴",
+    subtitle: "支払いと関連する請求書ステータスを確認できます。",
+    loadError: "取引履歴を読み込めませんでした。もう一度お試しください。",
+    empty: "取引はまだありません。",
+    filters: {
+      invoiceId: "請求書ID",
+      invoiceIdPlaceholder: "請求書コードをすべて入力してください。",
+      transactionCode: "取引コード",
+      transactionCodePlaceholder: "取引コードをすべて入力してください。",
+      from: "開始日",
+      to: "終了日",
+      invalidRange: "終了日は開始日より前にできません。",
+    },
+    table: {
+      invoiceId: "請求書ID",
+      transactionCode: "取引コード",
+      amount: "金額",
+      status: "ステータス",
+      createdAt: "日時",
+      note: "メモ",
     },
   },
   plan: {
@@ -274,7 +350,8 @@ const ja = {
     sectionDescription:
       "ニーズに合った駐車パッケージを選択してください。学期ベースの駐車パッケージを登録し、希望する車両タイプを選択して支払いを完了すると、駐車スペースを確保できます。価格はVNDで表示され、学期ごとに変更される場合があります。",
     cta: "登録",
-    ctaDisabled: "使用中",
+    viewCurrentPlan: "現在のプラン登録状況を確認する",
+    inUseBadge: "使用中",
     features: {
       monthlyPayment: "月払い対応",
       noMonthlyPayment: "月払い非対応",
@@ -380,6 +457,12 @@ const ja = {
         perkSupport: "銀行振込・ウォレット対応",
       },
     },
+    overrideActivePlanDialog: {
+      title: "処理が必要な駐車プランがあります",
+      message:
+        "現在、{{status}} 状態の {{plan}} プランがあります。新しいプランを登録すると、以前のプランはキャンセルされますが、未払い金額がある場合は引き続き管理されます。未払い金額: {{debt}}。続行しますか？",
+    },
+    currentPlanFallback: "現在のプラン",
   },
 };
 

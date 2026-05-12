@@ -26,7 +26,12 @@ from app.service.base import CRUDService
 from app.utils.pagination import PaginatedResponse
 from app.utils.search import ilike_unaccent
 
-
+REPLACED_STATUSES = [
+    SubscriptionStatus.ACTIVE,
+    SubscriptionStatus.PAYMENT_DUE,
+    SubscriptionStatus.OVERDUE,
+    SubscriptionStatus.SUSPENDED,
+]
 class subscriptionService:
     crud = CRUDService(UserSubscription)
 
@@ -34,29 +39,53 @@ class subscriptionService:
     async def _inactivate_existing_active_subscriptions(
         user_code: str, db: AsyncSession
     ) -> None:
-        # Mark any existing ACTIVE subscriptions as INACTIVE before creating a new one.
-        existing = (
+
+        cancelable_statuses = [
+            SubscriptionStatus.ACTIVE,
+            SubscriptionStatus.PAYMENT_DUE,
+            SubscriptionStatus.OVERDUE,
+        ]
+
+        inactive_statuses = [
+            SubscriptionStatus.SUSPENDED,
+        ]
+
+        affected_ids = (
             await db.execute(
                 select(UserSubscription.id).where(
                     UserSubscription.user_code == user_code,
-                    UserSubscription.status == SubscriptionStatus.ACTIVE,
+                    UserSubscription.status.in_(
+                        cancelable_statuses + inactive_statuses
+                    ),
                 )
             )
         ).scalars().all()
 
-        if not existing:
+        if not affected_ids:
             return
 
         await db.execute(
             update(UserSubscription)
-            .where(UserSubscription.id.in_(existing))
+            .where(
+                UserSubscription.id.in_(affected_ids),
+                UserSubscription.status.in_(cancelable_statuses),
+            )
+            .values(status=SubscriptionStatus.CANCELED)
+        )
+
+        await db.execute(
+            update(UserSubscription)
+            .where(
+                UserSubscription.id.in_(affected_ids),
+                UserSubscription.status.in_(inactive_statuses),
+            )
             .values(status=SubscriptionStatus.INACTIVE)
         )
 
         await db.execute(
             update(UserSubscriptionVehicle)
             .where(
-                UserSubscriptionVehicle.user_subscription_id.in_(existing),
+                UserSubscriptionVehicle.user_subscription_id.in_(affected_ids),
                 UserSubscriptionVehicle.deleted_at.is_(None),
                 UserSubscriptionVehicle.status == SubscriptionStatus.ACTIVE,
             )
@@ -67,10 +96,8 @@ class subscriptionService:
     async def create_subscription(payload: UserSubscriptionCreate, db: AsyncSession) -> UserSubscription:
         await subscriptionService._inactivate_existing_active_subscriptions(payload.user_code, db)
 
-        # Backward compatible: if client still sends single `vehicle_id`, accept it.
         vehicle_ids = payload.vehicle_ids or ([] if payload.vehicle_id is None else [payload.vehicle_id])
 
-        # Validate ownership + plan limits (new package-based policy only when configured on plan).
         plan = await db.get(SubscriptionPlan, payload.sub_plan_id)
         if vehicle_ids:
             vehicles = (await db.execute(select(Vehicle).where(Vehicle.id.in_(vehicle_ids)))).scalars().all()
@@ -90,8 +117,6 @@ class subscriptionService:
                     raise HTTPException(status_code=400, detail="Licensed vehicle limit exceeded for this plan")
                 if max_unlicensed and unlicensed_count > max_unlicensed:
                     raise HTTPException(status_code=400, detail="Unlicensed vehicle limit exceeded for this plan")
-
-        # `vehicle_id` / `vehicle_ids` are not stored on `user_subscriptions` table anymore.
         create_payload = (
             payload.model_copy(update={"vehicle_id": None, "vehicle_ids": None})
             if hasattr(payload, "model_copy")
@@ -105,13 +130,12 @@ class subscriptionService:
         subscription = await subscriptionService.crud.create(db, create_payload)
         await db.flush()
 
-        # New mapping table preferred by new logic.
         if vehicle_ids:
             mappings = [
                 UserSubscriptionVehicle(
                     user_subscription_id=subscription.id,
                     vehicle_id=vehicle_id,
-                    status=subscription.status,
+                    status=SubscriptionStatus.ACTIVE,
                 )
                 for vehicle_id in vehicle_ids
             ]
@@ -163,19 +187,25 @@ class subscriptionService:
         return None, None, None
 
     @staticmethod
-    def subscription_grants_parking_benefit(subscription: UserSubscription | None) -> bool:
+    def subscription_grants_parking_benefit(
+        subscription: UserSubscription | None,
+    ) -> bool:
         if not subscription:
             return False
-        if subscription.status != SubscriptionStatus.ACTIVE:
+
+        if subscription.status not in {
+            SubscriptionStatus.ACTIVE,
+            SubscriptionStatus.PAYMENT_DUE,
+        }:
             return False
-        today = getattr(subscription, "start_date", None)
-        # Dates on subscription are required by schema; keep defensive guards.
+
         if subscription.start_date and subscription.end_date:
             from datetime import date as _date
 
             now = _date.today()
             if now < subscription.start_date or now > subscription.end_date:
                 return False
+
         return True
 
     @staticmethod
@@ -277,19 +307,40 @@ class subscriptionService:
         *,
         user_code: str,
         status: SubscriptionStatus | None = None,
+        statuses: list[SubscriptionStatus] | None = None,
     ) -> list[UserSubscriptionAdminView]:
         filters = [UserSubscription.user_code == user_code]
-        if status is not None:
-            filters.append(UserSubscription.status == status)
 
-        statement = subscriptionService._build_detail_statement(user_code, ordered=True).where(*filters)
+        billing_related_statuses = [
+            SubscriptionStatus.ACTIVE,
+            SubscriptionStatus.PAYMENT_DUE,
+            SubscriptionStatus.OVERDUE,
+            SubscriptionStatus.CANCELED,
+        ]
+
+        if statuses:
+            filters.append(UserSubscription.status.in_(statuses))
+        elif status is not None:
+            filters.append(UserSubscription.status == status)
+        else:
+            filters.append(UserSubscription.status.in_(billing_related_statuses))
+
+        statement = (
+            subscriptionService
+            ._build_detail_statement(user_code, ordered=True)
+            .where(*filters)
+        )
+
         result = await db.execute(statement)
         rows = result.all()
 
-        details: list[UserSubscriptionAdminView] = []
         covered_vehicle_map = await subscriptionService._get_covered_vehicles_by_subscription_ids(
-            [str(sub.id) for sub, *_ in rows], db
+            [str(sub.id) for sub, *_ in rows],
+            db,
         )
+
+        details: list[UserSubscriptionAdminView] = []
+
         for subscription, user, payment_plan, term, subscription_plan in rows:
             details.append(
                 SubscriptionMapper.to_admin_view(
@@ -302,6 +353,7 @@ class subscriptionService:
                     covered_vehicle_map.get(str(subscription.id)),
                 )
             )
+
         return details
 
     @staticmethod
@@ -401,156 +453,208 @@ class subscriptionService:
         return await subscriptionService.crud.update(db, subscription_id, payload)
 
     @staticmethod
-    async def update_subscription_for_user(
-        subscription_id: str, payload: UserSubscriptionUpdate, db: AsyncSession, current_user: AuthUser
+    async def delete_subscription(subscription_id: str, db: AsyncSession) -> UserSubscription:
+        return await subscriptionService.crud.delete(db, subscription_id)
+
+    async def update_subscription_vehicles_for_user(
+        subscription_id: str,
+        vehicle_ids: list[str],
+        db: AsyncSession,
+        current_user: AuthUser,
     ) -> UserSubscription:
         subscription = await subscriptionService.crud.get(db, subscription_id)
 
-        if is_admin_user(current_user):
-            return await subscriptionService.crud.update(db, subscription_id, payload)
+        if not subscription:
+            raise HTTPException(status_code=404, detail="Subscription not found")
 
-        if subscription.user_code != current_user.user_code:
-            raise HTTPException(status_code=403, detail="Not allowed to update this subscription")
+        if not is_admin_user(current_user) and subscription.user_code != current_user.user_code:
+            raise HTTPException(
+                status_code=403,
+                detail="Not allowed to update this subscription",
+            )
 
-        update_data = (
-            payload.model_dump(exclude_unset=True)
-            if hasattr(payload, "model_dump")
-            else payload.dict(exclude_unset=True)
+        normalized_vehicle_ids = subscriptionService._normalize_vehicle_ids(vehicle_ids)
+
+        vehicles = await subscriptionService._get_valid_user_vehicles(
+            vehicle_ids=normalized_vehicle_ids,
+            db=db,
+            current_user=current_user,
         )
-        if not update_data:
-            return subscription
 
-        allowed_fields = {"vehicle_id", "vehicle_ids"}
-        if any(key not in allowed_fields for key in update_data.keys()):
-            raise HTTPException(status_code=403, detail="Only vehicle_id / vehicle_ids can be updated")
+        await subscriptionService._validate_vehicle_limit(
+            subscription=subscription,
+            vehicles=vehicles,
+            db=db,
+        )
 
-        vehicle_ids = update_data.get("vehicle_ids")
-        if vehicle_ids is not None:
-            if not isinstance(vehicle_ids, list):
-                raise HTTPException(status_code=400, detail="vehicle_ids must be a list")
+        await subscriptionService._sync_subscription_vehicles(
+            subscription_id=str(subscription.id),
+            vehicles=vehicles,
+            db=db,
+        )
 
-            vehicle_ids = [str(v) for v in vehicle_ids if v]
-            vehicle_ids = list(dict.fromkeys(vehicle_ids))
+        await db.commit()
+        await db.refresh(subscription)  
 
-            if len(vehicle_ids) == 0:
-                raise HTTPException(status_code=400, detail="vehicle_ids must not be empty")
+        return subscription
 
-            vehicles = (
-                (await db.execute(select(Vehicle).where(Vehicle.id.in_(vehicle_ids))))
-            ).scalars().all()
-            if len(vehicles) != len(vehicle_ids):
-                raise HTTPException(status_code=400, detail="One or more vehicles not found")
-            if any(getattr(v, "deleted_at", None) is not None for v in vehicles):
-                raise HTTPException(status_code=400, detail="One or more vehicles were deleted")
-            if any(v.user_code != current_user.user_code for v in vehicles):
-                raise HTTPException(status_code=403, detail="One or more vehicles do not belong to current user")
+    @staticmethod
+    def _normalize_vehicle_ids(vehicle_ids: list[str]) -> list[str]:
+        normalized = [str(vehicle_id).strip() for vehicle_id in vehicle_ids if vehicle_id]
+        normalized = list(dict.fromkeys(normalized))
 
-            plan = await db.get(SubscriptionPlan, subscription.sub_plan_id)
-            if plan:
-                max_licensed = int(getattr(plan, "max_licensed_vehicle", 0) or 0)
-                max_unlicensed = int(getattr(plan, "max_unlicensed_vehicle", 0) or 0)
+        if not normalized:
+            raise HTTPException(
+                status_code=400,
+                detail="vehicle_ids must not be empty",
+            )
 
-                licensed_count = sum(1 for v in vehicles if (v.license_plate or "").strip())
-                unlicensed_count = len(vehicles) - licensed_count
+        return normalized
 
-                if max_licensed and licensed_count > max_licensed:
-                    raise HTTPException(status_code=400, detail="Licensed vehicle limit exceeded for this plan")
-                if max_unlicensed and unlicensed_count > max_unlicensed:
-                    raise HTTPException(status_code=400, detail="Unlicensed vehicle limit exceeded for this plan")
+    @staticmethod
+    async def _get_valid_user_vehicles(
+        vehicle_ids: list[str],
+        db: AsyncSession,
+        current_user: AuthUser,
+    ) -> list[Vehicle]:
+        vehicles = (
+            await db.execute(
+                select(Vehicle).where(
+                    Vehicle.id.in_(vehicle_ids),
+                    Vehicle.deleted_at.is_(None),
+                )
+            )
+        ).scalars().all()
 
-            # Replace current ACTIVE mappings with the selected vehicles.
+        if len(vehicles) != len(vehicle_ids):
+            raise HTTPException(
+                status_code=400,
+                detail="One or more vehicles not found",
+            )
+
+        if not is_admin_user(current_user):
+            invalid_owner = any(
+                vehicle.user_code != current_user.user_code
+                for vehicle in vehicles
+            )
+
+            if invalid_owner:
+                raise HTTPException(
+                    status_code=403,
+                    detail="One or more vehicles do not belong to current user",
+                )
+
+        return vehicles
+
+    @staticmethod
+    async def _validate_vehicle_limit(
+        subscription: UserSubscription,
+        vehicles: list[Vehicle],
+        db: AsyncSession,
+    ) -> None:
+        plan = await db.get(SubscriptionPlan, subscription.sub_plan_id)
+
+        if not plan:
+            raise HTTPException(
+                status_code=400,
+                detail="Subscription plan not found",
+            )
+
+        max_licensed = int(getattr(plan, "max_licensed_vehicle", 0) or 0)
+        max_unlicensed = int(getattr(plan, "max_unlicensed_vehicle", 0) or 0)
+
+        licensed_count = sum(
+            1 for vehicle in vehicles
+            if (vehicle.license_plate or "").strip()
+        )
+
+        unlicensed_count = len(vehicles) - licensed_count
+
+        if licensed_count > max_licensed:
+            raise HTTPException(
+                status_code=400,
+                detail="Licensed vehicle limit exceeded for this plan",
+            )
+
+        if unlicensed_count > max_unlicensed:
+            raise HTTPException(
+                status_code=400,
+                detail="Unlicensed vehicle limit exceeded for this plan",
+            )
+
+    @staticmethod
+    async def _sync_subscription_vehicles(
+        subscription_id: str,
+        vehicles: list[Vehicle],
+        db: AsyncSession,
+    ) -> None:
+        next_vehicle_ids = {str(vehicle.id) for vehicle in vehicles}
+
+        current_mappings = (
+            await db.execute(
+                select(UserSubscriptionVehicle).where(
+                    UserSubscriptionVehicle.user_subscription_id == subscription_id,
+                    UserSubscriptionVehicle.deleted_at.is_(None),
+                    UserSubscriptionVehicle.status == SubscriptionStatus.ACTIVE,
+                )
+            )
+        ).scalars().all()
+
+        current_vehicle_ids = {
+            str(mapping.vehicle_id)
+            for mapping in current_mappings
+        }
+
+        vehicle_ids_to_deactivate = current_vehicle_ids - next_vehicle_ids
+        vehicle_ids_to_create = next_vehicle_ids - current_vehicle_ids
+
+        if vehicle_ids_to_deactivate:
             await db.execute(
                 update(UserSubscriptionVehicle)
                 .where(
-                    UserSubscriptionVehicle.user_subscription_id == subscription.id,
+                    UserSubscriptionVehicle.user_subscription_id == subscription_id,
+                    UserSubscriptionVehicle.vehicle_id.in_(vehicle_ids_to_deactivate),
                     UserSubscriptionVehicle.deleted_at.is_(None),
                     UserSubscriptionVehicle.status == SubscriptionStatus.ACTIVE,
                 )
                 .values(status=SubscriptionStatus.INACTIVE)
             )
 
+        if vehicle_ids_to_create:
             db.add_all(
                 [
                     UserSubscriptionVehicle(
-                        user_subscription_id=subscription.id,
-                        vehicle_id=vehicle.id,
+                        user_subscription_id=subscription_id,
+                        vehicle_id=vehicle_id,
                         status=SubscriptionStatus.ACTIVE,
                     )
-                    for vehicle in vehicles
+                    for vehicle_id in vehicle_ids_to_create
                 ]
             )
-            await db.flush()
-            return subscription
-
-        vehicle_id = update_data.get("vehicle_id")
-        if not vehicle_id:
-            return subscription
-
-        if subscription.status != SubscriptionStatus.ACTIVE:
-            raise HTTPException(status_code=400, detail="Can only change vehicle for active subscriptions")
-
-        # New vehicle must exist, belong to user, and have a license plate.
-        next_vehicle = await db.get(Vehicle, vehicle_id)
-        if not next_vehicle or getattr(next_vehicle, "deleted_at", None) is not None:
-            raise HTTPException(status_code=404, detail="Vehicle not found")
-        if next_vehicle.user_code != current_user.user_code:
-            raise HTTPException(status_code=403, detail="Vehicle does not belong to current user")
-        if not (next_vehicle.license_plate or "").strip():
-            raise HTTPException(status_code=400, detail="Vehicle must have a license plate")
-
-        # Find current ACTIVE covered vehicles for this subscription.
-        covered = (
-            await db.execute(
-                select(Vehicle)
-                .join(UserSubscriptionVehicle, UserSubscriptionVehicle.vehicle_id == Vehicle.id)
-                .where(
-                    UserSubscriptionVehicle.user_subscription_id == subscription.id,
-                    UserSubscriptionVehicle.deleted_at.is_(None),
-                    UserSubscriptionVehicle.status == SubscriptionStatus.ACTIVE,
-                    Vehicle.deleted_at.is_(None),
-                )
-            )
-        ).scalars().all()
-
-        # Only allow switching the licensed vehicle among the covered vehicles. Unlicensed slot stays unchanged.
-        current_licensed = next((v for v in covered if (v.license_plate or "").strip()), None)
-        if current_licensed is None:
-            raise HTTPException(status_code=400, detail="This subscription has no licensed vehicle to change")
-        if str(current_licensed.id) == str(vehicle_id):
-            return subscription
-
-        # Prevent switching to a vehicle already covered by this subscription.
-        if any(str(v.id) == str(vehicle_id) for v in covered):
-            raise HTTPException(status_code=400, detail="Vehicle is already covered by this subscription")
-
-        # Enforce single-vehicle-at-a-time rule: cannot switch if another vehicle is currently using the subscription.
-        conflict = await subscriptionService.get_active_session_using_subscription(
-            str(subscription.id), db, exclude_vehicle_id=str(current_licensed.id)
-        )
-        if conflict is not None:
-            raise HTTPException(status_code=400, detail="Subscription is currently being used by another vehicle")
-
-        # Mark old mapping INACTIVE and attach new mapping ACTIVE.
-        await db.execute(
-            update(UserSubscriptionVehicle)
-            .where(
-                UserSubscriptionVehicle.user_subscription_id == subscription.id,
-                UserSubscriptionVehicle.vehicle_id == current_licensed.id,
-                UserSubscriptionVehicle.deleted_at.is_(None),
-                UserSubscriptionVehicle.status == SubscriptionStatus.ACTIVE,
-            )
-            .values(status=SubscriptionStatus.INACTIVE)
-        )
-        db.add(
-            UserSubscriptionVehicle(
-                user_subscription_id=subscription.id,
-                vehicle_id=vehicle_id,
-                status=SubscriptionStatus.ACTIVE,
-            )
-        )
-        await db.flush()
-        return subscription
 
     @staticmethod
-    async def delete_subscription(subscription_id: str, db: AsyncSession) -> UserSubscription:
-        return await subscriptionService.crud.delete(db, subscription_id)
+    async def get_subscription_covering_vehicle_for_fee(
+        vehicle_id: str,
+        db: AsyncSession,
+    ) -> tuple[UserSubscription | None, SubscriptionPlan | None, PaymentPlan | None]:
+        statement = (
+            select(UserSubscription, SubscriptionPlan, PaymentPlan)
+            .join(
+                UserSubscriptionVehicle,
+                UserSubscriptionVehicle.user_subscription_id == UserSubscription.id,
+            )
+            .outerjoin(SubscriptionPlan, SubscriptionPlan.id == UserSubscription.sub_plan_id)
+            .outerjoin(PaymentPlan, PaymentPlan.id == UserSubscription.payment_plan_id)
+            .where(
+                UserSubscriptionVehicle.deleted_at.is_(None),
+                UserSubscriptionVehicle.vehicle_id == vehicle_id,
+            )
+            .order_by(UserSubscription.created_at.desc())
+        )
+
+        row = (await db.execute(statement)).first()
+
+        if row:
+            return row[0], row[1], row[2]
+
+        return None, None, None

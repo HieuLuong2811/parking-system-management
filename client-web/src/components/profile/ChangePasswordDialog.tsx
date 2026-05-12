@@ -312,7 +312,6 @@ export default function ChangePasswordDialog({
           <Button
             onClick={() => onClose()}
             disabled={isPending}
-            variant="outlined"
             sx={{
               borderRadius: 2,
               textTransform: "none",

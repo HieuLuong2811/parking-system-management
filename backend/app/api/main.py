@@ -22,6 +22,7 @@ from app.api.router import (
     momo_payment,
     email,
     checkout,
+    parking_access_cards
 )
 router = APIRouter()
 
@@ -46,3 +47,4 @@ router.include_router(plan_pricing.router)
 router.include_router(momo_payment.router)
 router.include_router(email.router)
 router.include_router(checkout.router)
+router.include_router(parking_access_cards.router)

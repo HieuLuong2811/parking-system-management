@@ -64,6 +64,12 @@ export default function ProfilePage() {
       });
     }
 
+    if (!formValues.phone_number) {
+      errors.phone_number = t("validation.requiredField", {
+        field: t("profile.fields.phone"),
+      });
+    }
+
     setFormErrors(errors);
     return Object.keys(errors).length === 0;
   };
@@ -202,7 +208,7 @@ export default function ProfilePage() {
                 onChange={(value) => handleFieldChange("phone_number", value)}
                 inputClassName="plain-input"
                 labelClassName="profile-field-label"
-                placeholder= "0912 345 678"
+                placeholder="Just number"
               />
             </Stack>
           </Box>

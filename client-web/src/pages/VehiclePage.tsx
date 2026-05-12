@@ -73,7 +73,26 @@ export default function VehiclePage() {
   };
 
   const handleDelete = (vehicle: VehicleInfo) => {
-    deleteVehicle.mutate({ vehicleId: vehicle.id });
+    deleteVehicle.mutate(
+      { vehicleId: vehicle.id },
+      {
+        onSuccess: () => {
+          setSnackbar({
+            severity: "success",
+            message: t("vehicle.toast.deleteSuccess"),
+          });
+        },
+        onError: (error) => {
+          setSnackbar({
+            severity: "error",
+            message:
+              error instanceof Error
+                ? error.message
+                : t("vehicle.toast.deleteError"),
+          });
+        },
+      },
+    );
   };
 
   const handleOpenCreate = () => {
@@ -88,6 +107,16 @@ export default function VehiclePage() {
 
   const handleRegisterPlan = () => {
     navigate(`/plan`);
+  };
+
+  const handleVehicleSaved = (mode: "create" | "update") => {
+    setSnackbar({
+      severity: "success",
+      message:
+        mode === "create"
+          ? t("vehicle.toast.createSuccess")
+          : t("vehicle.toast.updateSuccess"),
+    });
   };
 
   const handleDownload = (barcode_token: string, vehicle_type: string) => {
@@ -222,7 +251,7 @@ export default function VehiclePage() {
               variant="contained"
               onClick={handleOpenCreate}
               disabled={isError}
-              sx={{ textTransform: 'none', fontWeight: 700, borderRadius: 2 }}
+              sx={{ textTransform: 'none', fontWeight: 700, borderRadius: 2}}
             >
               {t('vehicle.registerVehicleButton')}
             </Button>
@@ -349,6 +378,7 @@ export default function VehiclePage() {
         open={registerModal.open}
         onClose={handleCloseModal}
         vehicle={editingVehicle}
+        onSuccess={handleVehicleSaved}
       />
 
       <Snackbar

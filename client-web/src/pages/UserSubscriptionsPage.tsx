@@ -27,7 +27,7 @@ import InfoOutlinedIcon from "@mui/icons-material/InfoOutlined";
 import VisibilityIcon from "@mui/icons-material/Visibility";
 
 import {
-  useUpdateSubscription,
+  useUpdateSubscriptionVehicles,
   useUserSubscriptionsPaginated,
 } from "../api/user_subscriptions";
 import { useVehicles } from "../api/vehicles";
@@ -56,7 +56,7 @@ export default function UserSubscriptionsPage() {
 
   const { data: myVehicles = [] } = useVehicles();
   const { mutateAsync: updateSubscription, isPending: isUpdatingSubscription } =
-    useUpdateSubscription();
+    useUpdateSubscriptionVehicles();
 
   const subscriptions = useMemo(
     () => subscriptionsPaginated?.data ?? [],
@@ -68,21 +68,9 @@ export default function UserSubscriptionsPage() {
   const getPaymentTypeLabel = (paymentType?: string | null) => {
     switch (paymentType) {
       case "MONTHLY":
-        return t("profile.subscriptions.paymentTypes.monthly", {
-          defaultValue: "Theo tháng",
-        });
-      case "TERM":
-        return t("profile.subscriptions.paymentTypes.term", {
-          defaultValue: "Theo kỳ",
-        });
-      case "SEMESTER":
-        return t("profile.subscriptions.paymentTypes.semester", {
-          defaultValue: "Theo học kỳ",
-        });
-      case "YEARLY":
-        return t("profile.subscriptions.paymentTypes.yearly", {
-          defaultValue: "Theo năm",
-        });
+        return t("profile.subscriptions.paymentTypes.monthly");
+      case "FULL":
+        return t("profile.subscriptions.paymentTypes.full");
       default:
         return paymentType || "—";
     }
@@ -105,10 +93,7 @@ export default function UserSubscriptionsPage() {
         </Typography>
 
         <Typography variant="body2" fontSize="medium" color="text.secondary">
-          {t("profile.subscriptions.description", {
-            defaultValue:
-              "Theo dõi gói gửi xe, học kỳ áp dụng, phương tiện liên kết và trạng thái sử dụng của bạn.",
-          })}
+          {t("profile.subscriptions.subtitle")}
         </Typography>
       </Box>
 
@@ -138,35 +123,25 @@ export default function UserSubscriptionsPage() {
               }}
             >
               <TableCell>
-                {t("profile.subscriptions.plan", {
-                  defaultValue: "Gói gửi xe",
-                })}
+                {t("profile.subscriptions.plan")}
               </TableCell>
               <TableCell>
-                {t("profile.subscriptions.vehicle", {
-                  defaultValue: "Phương tiện",
-                })}
+                {t("profile.subscriptions.vehicle")}
               </TableCell>
               <TableCell>
-                {t("profile.subscriptions.term", { defaultValue: "Học kỳ" })}
+                {t("profile.subscriptions.term")}
               </TableCell>
               <TableCell>
-                {t("profile.subscriptions.paymentPlan", {
-                  defaultValue: "Thanh toán",
-                })}
+                {t("profile.subscriptions.paymentPlan")}
               </TableCell>
               <TableCell align="right">
-                {t("profile.subscriptions.amount", {
-                  defaultValue: "Tổng tiền",
-                })}
+                {t("profile.subscriptions.amount")}
               </TableCell>
               <TableCell align="center">
-                {t("profile.subscriptions.status.label", {
-                  defaultValue: "Trạng thái",
-                })}
+                {t("profile.subscriptions.status.label")}
               </TableCell>
               <TableCell align="center" sx={{ width: 72 }}>
-                {t("common.actions", { defaultValue: "Thao tác" })}
+                {t("common.actions")}
               </TableCell>
             </TableRow>
           </TableHead>
@@ -178,9 +153,7 @@ export default function UserSubscriptionsPage() {
                   <CircularProgress size={26} />
 
                   <Typography color="text.secondary" mt={1}>
-                    {t("profile.subscriptions.loading", {
-                      defaultValue: "Đang tải danh sách gói gửi xe...",
-                    })}
+                    {t("common.loading")}
                   </Typography>
                 </TableCell>
               </TableRow>
@@ -192,15 +165,11 @@ export default function UserSubscriptionsPage() {
                   />
 
                   <Typography color="error" fontWeight={700}>
-                    {t("profile.subscriptions.error", {
-                      defaultValue: "Không thể tải danh sách gói gửi xe",
-                    })}
+                    {t("common.error")}
                   </Typography>
 
                   <Typography variant="body2" color="text.secondary" mt={0.5}>
-                    {t("common.tryAgainLater", {
-                      defaultValue: "Vui lòng thử lại sau.",
-                    })}
+                    {t("common.tryAgainLater")}
                   </Typography>
                 </TableCell>
               </TableRow>
@@ -299,16 +268,6 @@ export default function UserSubscriptionsPage() {
                           <Box>
                             <Typography fontWeight={600}>
                               {vehicleCountLabel}
-                            </Typography>
-
-                            <Typography
-                              variant="caption"
-                              color="text.secondary"
-                            >
-                              {t("profile.subscriptions.vehicleHint", {
-                                defaultValue:
-                                  "Bấm để xem danh sách phương tiện",
-                              })}
                             </Typography>
                           </Box>
                         </Stack>

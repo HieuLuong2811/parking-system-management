@@ -5,6 +5,7 @@ import type { AuthUser, StoredAuthSession } from './authStorage';
 import { clearStoredSession, getStoredSession, isExpired, setStoredSession, updateStoredUser } from './authStorage';
 import { setUnauthorizedHandler } from './authEvents';
 import { exchangeCodeApi, loginApi, meApi } from '../api/auth';
+import { UserInfo } from '../api/clientApi';
 
 type AuthStatus = 'loading' | 'authenticated' | 'unauthenticated';
 
@@ -15,6 +16,7 @@ type AuthContextValue = {
   signIn: (payload: { user_code: string; password: string }) => Promise<void>;
   signOut: () => Promise<void>;
   refreshUser: () => Promise<void>;
+  patchUser: (patch: Partial<AuthUser>) => void;
 };
 
 const AuthContext = createContext<AuthContextValue | null>(null);
@@ -25,7 +27,9 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
   const [accessToken, setAccessToken] = useState<string | null>(null);
   const [user, setUser] = useState<AuthUser | null>(null);
   const expiryTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
-
+  const patchUser = useCallback((patch: Partial<UserInfo>) => {
+    setUser((prev) => (prev ? { ...prev, ...patch } : prev));
+  }, []);
   const clearExpiryTimer = useCallback(() => {
     if (expiryTimerRef.current) {
       clearTimeout(expiryTimerRef.current);
@@ -142,8 +146,8 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
   }, [signOut]);
 
   const value = useMemo<AuthContextValue>(
-    () => ({ status, accessToken, user, signIn, signOut, refreshUser }),
-    [status, accessToken, user, signIn, signOut, refreshUser]
+    () => ({ status, accessToken, user, signIn, signOut, refreshUser, patchUser }),
+    [status, accessToken, user, signIn, signOut, refreshUser, patchUser]
   );
 
   return <AuthContext.Provider value={value}>{children}</AuthContext.Provider>;

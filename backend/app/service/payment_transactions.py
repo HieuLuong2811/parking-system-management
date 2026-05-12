@@ -1,3 +1,5 @@
+import uuid
+
 from app.models.payment_transactions import (
     PaymentTransaction,
     PaymentTransactionCreate,
@@ -9,7 +11,9 @@ from app.models.users import Users
 from app.service.base import CRUDService
 from app.utils.pagination import PaginatedResponse
 from app.utils.pagination_db import paginate_rows, paginate_scalars
-from sqlalchemy import String, func, or_, select
+from datetime import datetime
+
+from sqlalchemy import String, func, or_, select, cast
 from sqlalchemy.ext.asyncio import AsyncSession
 
 
@@ -63,6 +67,8 @@ class paymentTransactionService:
         db: AsyncSession,
         *,
         search: str | None = None,
+        from_time: datetime | None = None,
+        to_time: datetime | None = None,
         page: int = 1,
         limit: int = 20,
     ) -> PaginatedResponse[PaymentTransactionDetailRead]:
@@ -72,6 +78,11 @@ class paymentTransactionService:
             .join(Users, Users.user_code == Invoice.user_code)
             .order_by(PaymentTransaction.created_at.desc())
         )
+
+        if from_time:
+            statement = statement.where(PaymentTransaction.created_at >= from_time)
+        if to_time:
+            statement = statement.where(PaymentTransaction.created_at <= to_time)
 
         if search:
             trimmed = search.strip()
@@ -101,6 +112,90 @@ class paymentTransactionService:
                     user_full_name=user.full_name,
                     invoice_amount=invoice.amount,
                     invoice_payment_method=invoice.payment_method,
+                    invoice_status=invoice.status,
+                    invoice_created_at=invoice.created_at,
+                )
+            )
+
+        return {
+            "data": items,
+            "total": total,
+            "page": page,
+            "limit": limit,
+            "total_pages": total_pages,
+        }
+
+    @staticmethod
+    async def get_transactions_details_for_user(
+        user_code: str,
+        db: AsyncSession,
+        *,
+        invoice_id: str | None = None,
+        transaction_code: str | None = None,
+        from_time: datetime | None = None,
+        to_time: datetime | None = None,
+        page: int = 1,
+        limit: int = 20,
+    ) -> PaginatedResponse[PaymentTransactionDetailRead]:
+        statement = (
+            select(PaymentTransaction, Invoice, Users)
+            .join(Invoice, Invoice.id == PaymentTransaction.invoice_id)
+            .join(Users, Users.user_code == Invoice.user_code)
+            .where(Invoice.user_code == user_code)
+            .order_by(PaymentTransaction.created_at.desc())
+        )
+
+        if from_time:
+            statement = statement.where(PaymentTransaction.created_at >= from_time)
+        if to_time:
+            statement = statement.where(PaymentTransaction.created_at <= to_time)
+            
+        if invoice_id and invoice_id.strip():
+            keyword = invoice_id.strip()
+
+            try:
+                invoice_uuid = uuid.UUID(keyword)
+            except ValueError:
+                return PaginatedResponse(
+                    data=[],
+                    total=0,
+                    page=page,
+                    limit=limit,
+                    total_pages=0,
+                )
+
+            statement = statement.where(PaymentTransaction.invoice_id == invoice_uuid)
+
+        if transaction_code and transaction_code.strip():
+            keyword = transaction_code.strip()
+            try:
+                transaction_uuid = uuid.UUID(keyword)
+            except ValueError:
+                return PaginatedResponse(
+                    data=[],
+                    total=0,
+                    page=page,
+                    limit=limit,
+                    total_pages=0,
+                )
+
+            statement = statement.where(PaymentTransaction.transaction_code == transaction_uuid)
+        rows, total, total_pages = await paginate_rows(db, statement, page=page, limit=limit)
+        items: list[PaymentTransactionDetailRead] = []
+        for transaction, invoice, user in rows:
+            items.append(
+                PaymentTransactionDetailRead(
+                    id=transaction.id,
+                    invoice_id=transaction.invoice_id,
+                    attempt_number=transaction.attempt_number,
+                    transaction_code=transaction.transaction_code,
+                    response_message=transaction.response_message,
+                    created_at=transaction.created_at,
+                    user_code=invoice.user_code,
+                    user_full_name=user.full_name,
+                    invoice_amount=invoice.amount,
+                    invoice_payment_method=invoice.payment_method,
+                    invoice_status=invoice.status,
                     invoice_created_at=invoice.created_at,
                 )
             )

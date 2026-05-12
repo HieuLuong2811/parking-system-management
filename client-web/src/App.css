@@ -1292,72 +1292,250 @@ textarea.plain-input {
   resize: vertical;
 }
 
-.vehicle-modal-tabs {
-  display: flex;
-  gap: 0.5rem;
-  margin-bottom: 1rem;
+.vehicle-modal-paper {
+  border-radius: 26px;
+  overflow: hidden;
+  background: #f8fafc;
+  box-shadow: 0 24px 70px rgba(15, 23, 42, 0.22);
 }
 
-.vehicle-modal-tabs .tab {
-  flex: 1;
-  padding: 0.5rem 0;
-  border: none;
-  background: transparent;
-  border-bottom: 2px solid transparent;
-  cursor: pointer;
+.vehicle-modal-header {
   display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 16px;
+  padding: 22px 24px 18px;
+  border-bottom: 1px solid #e2e8f0;
+}
+
+.vehicle-modal-title {
+  color: #0f172a;
+  letter-spacing: -0.02em;
+}
+
+.vehicle-modal-subtitle {
+  margin-top: 4px;
+  color: #64748b;
+  font-size: 0.86rem;
+  font-weight: 600;
+  line-height: 1.45;
+}
+
+.vehicle-modal-content {
+  padding: 18px 24px 20px;
+}
+
+.vehicle-modal-tabs {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 10px;
+  margin-bottom: 16px;
+}
+
+.vehicle-modal-tab {
+  display: flex;
+  align-items: center;
+  gap: 11px;
+  padding: 12px;
+  border-radius: 6px;
+  border: 1px solid #e2e8f0;
+  background: #ffffff;
+  text-align: left;
+  cursor: pointer;
+  transition:
+    background 0.18s ease,
+    border-color 0.18s ease,
+    box-shadow 0.18s ease;
+}
+
+.vehicle-modal-tab:hover:not(:disabled) {
+  border-color: #86efac;
+  background: #f0fdf4;
+}
+
+.vehicle-modal-tab.active {
+  border-color: #86efac;
+  background: #dcfce7;
+  box-shadow: 0 10px 24px rgba(22, 163, 74, 0.12);
+}
+
+.vehicle-modal-tab:disabled {
+  cursor: not-allowed;
+  opacity: 0.7;
+}
+
+.vehicle-modal-tab-icon-box {
+  width: 30px;
+  height: 30px;
+  flex: 0 0 42px;
+  border-radius: 5px;
+  display: inline-flex;
   align-items: center;
   justify-content: center;
-  gap: 0.75rem;
-  color: #1b2444;
-  transition: background 0.2s ease, border-color 0.2s ease;
+  color: #2563eb;
+  background: #eff6ff;
 }
 
-.vehicle-modal-tabs .tab:hover {
-  background: rgba(15, 98, 255, 0.08);
-}
-
-.vehicle-modal-tabs .tab.active {
-  border-bottom-color: #0f62ff;
-  color: #0f62ff;
-}
-
-.vehicle-modal-tab-text {
-  display: flex;
-  flex-direction: column;
-  align-items: center;
+.vehicle-modal-tab.active .vehicle-modal-tab-icon-box {
+  color: #15803d;
+  background: #f0fdf4;
 }
 
 .vehicle-modal-tab-title {
+  display: block;
+  color: #0f172a;
+  font-size: 0.9rem;
   font-weight: 600;
 }
 
-.vehicle-modal-tab-icon {
-  font-size: 1.25rem;
-}
-
 .vehicle-modal-panel {
-  display: flex;
-  flex-direction: column;
-  gap: 0.75rem;
+  padding: 15px;
+  border-radius: 22px;
+  background: #ffffff;
+  border: 1px solid #e2e8f0;
 }
 
 .vehicle-modal-field {
   display: flex;
   flex-direction: column;
-  gap: 0.35rem;
+  gap: 5px;
 }
 
+.vehicle-modal-field + .vehicle-modal-field {
+  margin-top: 16px;
+}
+
+.vehicle-modal-label,
 .vehicle-modal-field label {
   display: flex;
   align-items: center;
-  gap: 0.25rem;
-  font-weight: 600;
-  color: #1b2444;
+  gap: 4px;
+  color: #334155;
+  font-size: 0.86rem;
+  font-weight: 700;
 }
 
 .vehicle-modal-field .required {
-  color: #d32f2f;
+  color: #dc2626;
+}
+
+.vehicle-modal-select.MuiInputBase-root {
+  height: 46px;
+  border-radius: 6px;
+  background: #f8fafc;
+  font-weight: 600;
+  color: #0f172a;
+}
+
+.vehicle-modal-select .MuiOutlinedInput-notchedOutline {
+  border-color: #e2e8f0;
+}
+
+.vehicle-modal-select:hover .MuiOutlinedInput-notchedOutline {
+  border-color: #bfdbfe;
+}
+
+.vehicle-modal-select.Mui-focused .MuiOutlinedInput-notchedOutline {
+  border-color: #43b14b;
+  border-width: 1px;
+}
+
+.vehicle-modal-placeholder {
+  color: #94a3b8;
+  font-weight: 700;
+}
+
+.vehicle-modal-select-icon,
+.vehicle-modal-menu-icon {
+  width: 28px;
+  height: 28px;
+  border-radius: 11px;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  background: #eff6ff;
+}
+
+.vehicle-modal-input,
+.vehicle-modal-field .plain-input {
+  height: 46px;
+  border-radius: 6px;
+  background: #f8fafc;
+  border: 1px solid #e2e8f0;
+  padding: 0 14px;
+  font-weight: 700;
+  color: #0f172a;
+  outline: none;
+}
+
+.vehicle-modal-input:focus,
+.vehicle-modal-field .plain-input:focus {
+  border-color: #43b14b;
+  background: #ffffff;
+}
+
+.vehicle-modal-note.MuiAlert-root {
+  border-radius: 6px;
+  background: #eff6ff;
+  color: #1d4ed8;
+  border: 1px solid #bfdbfe;
+  font-weight: 700;
+  margin-top: 10px;
+}
+
+.vehicle-modal-actions {
+  padding: 16px 24px 22px;
+  background: #ffffff;
+  border-top: 1px solid #e2e8f0;
+}
+
+.vehicle-modal-cancel-btn.MuiButton-root {
+  height: 44px;
+  padding: 0 18px;
+  text-transform: none;
+  font-weight: 600;
+}
+
+.vehicle-modal-cancel-btn.MuiButton-root:hover {
+  background: #f8fafc;
+}
+
+.vehicle-modal-submit-btn.MuiButton-root {
+  height: 44px;
+  padding: 0 20px;
+  border-radius: 10px;
+  text-transform: none;
+  font-weight: 700;
+  color: #ffffff;
+  box-shadow: 0 12px 22px rgba(67, 177, 75, 0.22);
+}
+
+.vehicle-modal-submit-btn.MuiButton-root:hover {
+  box-shadow: 0 14px 26px rgba(67, 177, 75, 0.26);
+}
+
+.vehicle-modal-submit-btn.MuiButton-root.Mui-disabled {
+  background: #94a3b8;
+  color: #ffffff;
+  box-shadow: none;
+}
+
+@media (max-width: 600px) {
+  .vehicle-modal-header {
+    padding: 18px 18px 14px;
+  }
+
+  .vehicle-modal-content {
+    padding: 14px 18px 18px;
+  }
+
+  .vehicle-modal-tabs {
+    grid-template-columns: 1fr;
+  }
+
+  .vehicle-modal-actions {
+    padding: 14px 18px 18px;
+  }
 }
 
 .vehicle-grid,
@@ -1409,10 +1587,6 @@ textarea.plain-input {
   color: #64748b;
 }
 
-.plan-pricing-panel {
-  
-}
-
 .plan-option-grid {
   display: grid;
   grid-template-columns: repeat(3, minmax(0, 1fr));
@@ -1446,12 +1620,6 @@ textarea.plain-input {
   margin-left: -1px;
 }
 
-.plan-option-card:hover {
-  transform: translateY(-3px);
-  box-shadow: 0 12px 28px rgba(15, 23, 42, 0.08);
-  z-index: 2;
-}
-
 .plan-option-card--active {
   background:
     radial-gradient(circle at top, rgba(252, 211, 77, 0.14), transparent 34%),
@@ -1462,10 +1630,6 @@ textarea.plain-input {
     0 14px 32px rgba(15, 23, 42, 0.14),
     0 0 0 1px rgba(250, 204, 21, 0.28) inset;
   transform: translateY(-8px) scale(1.015);
-}
-
-.plan-option-card--active:hover {
-  transform: translateY(-20px) scale(1.04);
 }
 
 .plan-card-icon {
@@ -1501,7 +1665,6 @@ textarea.plain-input {
 
 .plan-card-price {
   color: #071f49;
-  font-size: 2rem !important;
   letter-spacing: -0.04em;
 }
 
@@ -1561,26 +1724,72 @@ textarea.plain-input {
   color: #f7f6f6;
 }
 
-.plan-card-button {
+.plan-option-card--in-use {
+  border-color: rgba(22, 163, 74, 0.45);
+}
+
+.plan-in-use-badge {
+  position: absolute;
+  top: 0.5rem;
+  right: 0.5rem;
+  z-index: 5;
+  display: inline-flex;
+  align-items: center;
+  gap: 0.35rem;
+  padding: 0.35rem 0.7rem;
+  border-radius: 999px;
+  background: #dcfce7;
+  color: #15803d;
+  border: 1px solid #bbf7d0;
+  box-shadow: 0 8px 18px rgba(22, 163, 74, 0.12);
+}
+
+.plan-option-card--active .plan-in-use-badge {
+  background: var(--ps-color-bg-nav);
+  color: #ffffff;
+  border-color: rgba(187, 247, 208, 0.35);
+}
+
+.plan-option-card .plan-card-button.MuiButton-root {
   height: 44px;
+  color: #ffffff;
+  border: 1px solid rgba(67, 177, 75, 0.35);
+  box-shadow: 0 8px 18px rgba(67, 177, 75, 0.18);
+  transition:
+    background 0.18s ease,
+    box-shadow 0.18s ease,
+    border-color 0.18s ease;
 }
 
-.plan-card-button:hover {
+.plan-option-card .plan-card-button.MuiButton-root:hover {
+  color: #ffffff;
+  border-color: rgba(67, 177, 75, 0.5);
+  box-shadow: 0 10px 20px rgba(67, 177, 75, 0.22);
+}
+
+.plan-option-card .plan-card-button--view-current.MuiButton-root {
+  background: #ffffff;
+  color: #0f172a;
+  border: 1px solid #cbd5e1;
+  box-shadow: 0 6px 14px rgba(15, 23, 42, 0.06);
+}
+
+.plan-option-card .plan-card-button--view-current.MuiButton-root:hover {
   background: #f8fafc;
+  color: #0f172a;
+  border-color: #94a3b8;
+  box-shadow: 0 8px 16px rgba(15, 23, 42, 0.08);
 }
 
-.plan-card-cta-disabled {
-  color: var(--ps-color-text-base) !important;
+.plan-option-card--active .plan-card-button--view-current.MuiButton-root {
+  background: rgba(255, 255, 255, 0.94);
+  color: #111827;
+  border-color: rgba(250, 204, 21, 0.55);
 }
 
-.plan-option-card:not(.plan-option-card--active) .plan-card-button {
-  background: #315df4 !important;
-  color: var(--ps-color-text-base) !important;
-  box-shadow: 0 12px 22px rgba(49, 93, 244, 0.22) !important;
-}
-
-.plan-option-card:not(.plan-option-card--active) .plan-card-button:hover {
-  background: #244ce0 !important;
+.plan-option-card--active .plan-card-button--view-current.MuiButton-root:hover {
+  background: #ffffff;
+  color: #111827;
 }
 
 .vehicle-packages-section {
@@ -1794,7 +2003,7 @@ textarea.plain-input {
 }
 
 .checkout-term-card {
-  border-radius: 5px;
+  border-radius: 10px;
   border: 1px solid rgba(15, 23, 52, 0.12);
   background: #fff;
   padding: 1.25rem;
@@ -2062,8 +2271,11 @@ textarea.plain-input {
   }
 
   .footer-item-row {
-    justify-content: flex-start;
-    margin: 10px 0px 0px 80px;
+    text-align: center;
+    width: 100%;
+    align-items: center;
+    display: flex;
+    justify-content: center;
   }
   
   .footer-body {

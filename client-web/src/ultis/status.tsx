@@ -49,3 +49,16 @@ export const getStatusColor = (
       return "default";
   }
 };
+
+export const getStatusChipColor = (status?: string | null) => {
+  switch (String(status || "").toUpperCase()) {
+    case "PAID":
+      return "success" as const;
+    case "FAILED":
+      return "error" as const;
+    case "PENDING":
+      return "warning" as const;
+    default:
+      return "default" as const;
+  }
+};

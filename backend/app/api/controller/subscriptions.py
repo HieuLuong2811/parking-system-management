@@ -1,3 +1,4 @@
+from app.models.user_subscription_vehicles import UserSubscriptionVehiclesUpdate
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.enums.parking import PaymentType, SubscriptionPlanType, SubscriptionStatus
@@ -44,11 +45,13 @@ class SubscriptionController:
         db: AsyncSession,
         *,
         status: SubscriptionStatus | None = None,
+        statuses: list[SubscriptionStatus] | None = None,
     ) -> list[UserSubscriptionAdminView]:
         return await subscriptionService.get_user_subscriptions_with_details(
             db,
             user_code=user_code,
             status=status,
+            statuses=statuses,
         )
 
     @staticmethod
@@ -77,10 +80,18 @@ class SubscriptionController:
         )
 
     @staticmethod
-    async def update_subscription_ctrl(
-        subscription_id: str, payload: UserSubscriptionUpdate, db: AsyncSession, current_user: AuthUser
-    ) -> UserSubscriptionRead:
-        return await subscriptionService.update_subscription_for_user(subscription_id, payload, db, current_user)
+    async def update_subscription_vehicles_ctrl(
+        subscription_id: str,
+        payload: UserSubscriptionVehiclesUpdate,
+        db: AsyncSession,
+        current_user: AuthUser,
+    ):
+        return await subscriptionService.update_subscription_vehicles_for_user(
+            subscription_id=subscription_id,
+            vehicle_ids=payload.vehicle_ids,
+            db=db,
+            current_user=current_user,
+        )
 
     @staticmethod
     async def delete_subscription_ctrl(subscription_id: str, db: AsyncSession) -> DeleteResponse:

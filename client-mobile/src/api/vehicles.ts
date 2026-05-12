@@ -9,8 +9,7 @@ import {
 export type VehiclePayload = {
   user_code: string;
   vehicle_type: string;
-  license_plate: string;
-  qr_code?: string | null;
+  license_plate?: string | null;
 };
 
 export type UpdateVehicleArgs = {

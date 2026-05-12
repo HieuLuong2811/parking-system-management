@@ -19,27 +19,44 @@ export default function PlanPage() {
   const navigate = useNavigate();
   const { confirm, ConfirmDialog } = useConfirmDialog();
 
-  const confirmOverrideActivePlan = async () => {
+  const confirmExistingBillingSubscription = async () => {
     try {
-      const res = await clientHttp.get<any[]>('/subscriptions/me', {
-        params: { status: 'ACTIVE' },
-      });
+      const res = await clientHttp.get<any[]>('/subscriptions/me');
+      const subscriptions = Array.isArray(res.data) ? res.data : [];
+      const current = subscriptions[0];
+      
+      if (!current) return true;
 
-      const active = Array.isArray(res.data) ? res.data[0] : null;
-      if (!active) return true;
+      const statusLabel = t(
+        `profile.subscriptions.status.${String(current.status || '').toLowerCase()}`,
+        {
+          defaultValue: current.status || '—',
+        },
+      );
 
-      const activeLabel =
-        active?.subscription_plan?.plans_type ??
-        active?.plan ??
-        t('plan.currentPlanFallback', { defaultValue: 'gói hiện tại' });
+      const planLabel = t(
+        `plan.cards.${String(current.subscription_plan?.plans_type || '').toLowerCase()}`,
+        {
+          defaultValue: current.subscription_plan?.plans_type || 'gói hiện tại',
+        },
+      );
+
+      const totalAmount = Number(current?.total_amount || 0);
+      const paidAmount = Number(current?.paid_amount || 0);
+      const debtAmount = Math.max(totalAmount - paidAmount, 0);
 
       return await confirm({
         title: t('plan.overrideActivePlanDialog.title', {
-          defaultValue: 'Bạn đã có gói đang hoạt động',
+          defaultValue: 'Bạn đang có gói gửi xe cần xử lý',
         }),
         message: t('plan.overrideActivePlanDialog.message', {
-          plan: activeLabel,
-          defaultValue: `Hiện tại bạn đang sử dụng gói ${activeLabel}. Nếu đăng ký gói mới thì gói cũ sẽ bị huỷ. Bạn có muốn tiếp tục?`,
+          plan: planLabel,
+          status: statusLabel,
+          debt: formatCurrency(debtAmount),
+          defaultValue:
+            `Bạn đang có gói ${planLabel} với trạng thái ${statusLabel}. ` +
+            `Nếu đăng ký gói mới, gói cũ sẽ được chuyển sang trạng thái đã hủy nhưng vẫn tiếp tục được theo dõi công nợ nếu còn thiếu. ` +
+            `Số tiền còn thiếu: ${formatCurrency(debtAmount)}. Bạn có muốn tiếp tục?`,
         }),
         cancelText: t('common.cancel', { defaultValue: 'Huỷ' }),
         confirmText: t('common.continue', { defaultValue: 'Tiếp tục' }),
@@ -91,6 +108,23 @@ export default function PlanPage() {
 
   const dayLabel = t('plan.perDay');
 
+  const handlePlanClick = async (
+    event: React.MouseEvent<HTMLDivElement>,
+    plan: any
+  ) => {
+    event.stopPropagation();
+
+    if (plan?.is_in_use) {
+      navigate("/profile/subscriptions");
+      return;
+    }
+
+    const confirmed = await confirmExistingBillingSubscription();
+    if (!confirmed) return;
+
+    navigate(`/plan/checkout?planId=${plan.id}&type=${plan.plans_type}`);
+  };
+
   return (
     <Box className="plan-page-shell">
       <Box className="plan-page-shell-body">
@@ -118,6 +152,7 @@ export default function PlanPage() {
 
               {plans.map((plan) => {
                 const isActive = selectedPlanId === plan.id;
+                const isInUse = Boolean(plan.is_in_use);
 
                 const planKey = getPlanDisplayKey(plan.plans_type);
 
@@ -173,9 +208,17 @@ export default function PlanPage() {
                     key={plan.id}
                     className={`plan-option-card ${
                       isActive ? 'plan-option-card--active' : ''
-                    }`}
+                    } ${isInUse ? 'plan-option-card--in-use' : ''}`}
                     onClick={() => setSelectedPlanId(plan.id)}
                   >
+                    {isInUse && (
+                      <Box className="plan-in-use-badge">
+                        <CheckCircleIcon fontSize="small" />
+                        <Typography component="span" fontSize={12} fontWeight={600}>
+                          {t('plan.inUseBadge')}
+                        </Typography>
+                      </Box>
+                    )}
                     <Box className="plan-card-icon">
                      {getPlanIcon(plan.plans_type)}
 
@@ -219,21 +262,22 @@ export default function PlanPage() {
                         </Box>
                       ))}
                     </Box>
-
                     <Button
                       fullWidth
                       variant="contained"
-                      className={`${plan.is_in_use ? 'plan-card-cta-disabled' : 'plan-card-button'}`}
-                      disabled={plan.is_in_use}
-                      sx={{ mt: 2, borderRadius: 2, textTransform: 'none', fontWeight: 700, bgcolor: '#FFFFFF', color: '#111827', boxShadow: 'none' }}
-                      onClick={async (event) => {
-                        event.stopPropagation();
-                        const confirmed = await confirmOverrideActivePlan();
-                        if (!confirmed) return;
-                        navigate(`/plan/checkout?planId=${plan.id}&type=${plan.plans_type}`);
+                      className={`plan-card-button ${
+                        isInUse ? 'plan-card-button--view-current' : ''
+                      }`}
+                      sx={{
+                        mt: 2,
+                        borderRadius: 2,
+                        textTransform: 'none',
+                        fontWeight: 700,
+                        boxShadow: 'none',
                       }}
+                      onClick={(event) => handlePlanClick(event as any, plan)}
                     >
-                      {plan.is_in_use ? t('plan.ctaDisabled') : t('plan.cta')}
+                      {isInUse ? t('plan.viewCurrentPlan') : t('plan.cta')}
                     </Button>
                   </Box>
                 );

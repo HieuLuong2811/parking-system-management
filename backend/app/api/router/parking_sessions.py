@@ -16,6 +16,7 @@ from app.models.parking_sessions import (
     ParkingSessionUpdate,
     ParkingSessionBarcodeCheckIn,
     ParkingSessionPlateCheckIn,
+    ParkingSessionPlateConfirm
 )
 from app.utils.pagination import PaginatedResponse
 
@@ -36,6 +37,12 @@ async def barcode_checkin(payload: ParkingSessionBarcodeCheckIn, db: AsyncSessio
 async def plate_checkin(payload: ParkingSessionPlateCheckIn, db: AsyncSession = Depends(get_db)):
     return await ParkingSessionController.create_session_via_plate_ctrl(payload, db)
 
+@router.post("/plate/confirm", response_model=ParkingSessionRead)
+async def plate_confirm(
+    payload: ParkingSessionPlateConfirm,
+    db: AsyncSession = Depends(get_db),
+):
+    return await ParkingSessionController.confirm_session_via_plate_ctrl(payload, db)
 
 @router.get("/", response_model=PaginatedResponse[ParkingSessionAdminRead])
 async def list_sessions(

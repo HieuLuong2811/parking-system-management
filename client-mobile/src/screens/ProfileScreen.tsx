@@ -1,127 +1,583 @@
-import React from 'react';
-import { StyleSheet, Text, TouchableOpacity, View } from 'react-native';
-import { useNavigation } from '@react-navigation/native';
-import type { NativeStackNavigationProp } from '@react-navigation/native-stack';
-
-import ScreenShell from '../component/ScreenShell';
-import { useAuth } from '../auth/AuthContext';
-import type { AppStackParamList } from '../navigation/AppStack';
+import React, { useEffect, useState } from "react";
+import {
+  ActivityIndicator,
+  Alert,
+  StyleSheet,
+  Text,
+  ScrollView,
+  TouchableOpacity,
+  View,
+} from "react-native";
+import { useNavigation } from "@react-navigation/native";
+import type { NativeStackNavigationProp } from "@react-navigation/native-stack";
+import { useTranslation } from "react-i18next";
+import Ionicons from "@expo/vector-icons/Ionicons";
+import { showAppToast } from "../ultis/toast";
+import ScreenShell from "../component/ScreenShell";
+import { useAuth } from "../auth/AuthContext";
+import type { AppStackParamList } from "../navigation/AppStack";
+import { useUpdateUser } from "../api/users";
+import FormInput from "../component/FormInput";
 
 type Nav = NativeStackNavigationProp<AppStackParamList>;
 
+type ProfileForm = {
+  full_name: string;
+  email: string;
+  phone_number: string;
+};
+
+type ProfileFormErrors = Partial<Record<keyof ProfileForm, string>>;
+
 export default function ProfileScreen() {
-  const { user, signOut } = useAuth();
+  const { user, signOut, patchUser } = useAuth();
   const navigation = useNavigation<Nav>();
+  const { t } = useTranslation();
+  const [errors, setErrors] = useState<ProfileFormErrors>({});
+  const { mutateAsync: updateUser, isPending } = useUpdateUser();
+
+  const [form, setForm] = useState<ProfileForm>({
+    full_name: "",
+    email: "",
+    phone_number: "",
+  });
+
+  useEffect(() => {
+    if (!user) return;
+
+    setForm({
+      full_name: user.full_name || "",
+      email: user.email || "",
+      phone_number: user.phone_number || "",
+    });
+  }, [user]);
+
+  const hasChanged =
+    form.full_name.trim() !== String(user?.full_name || "").trim() ||
+    form.email.trim() !== String(user?.email || "").trim() ||
+    form.phone_number.trim() !==
+      String((user as any)?.phone_number || "").trim();
+
+  const validateForm = () => {
+    const nextErrors: ProfileFormErrors = {};
+
+    if (!form.full_name.trim()) {
+      nextErrors.full_name = t("profile.fullNameRequired");
+    }
+
+    const email = form.email.trim().toLowerCase();
+
+    if (!email) {
+      nextErrors.email = t("profile.emailRequired");
+    } else {
+      const emailRegex =
+        /^[A-Za-z0-9._%+-]+@(?:[A-Za-z0-9](?:[A-Za-z0-9-]{0,61}[A-Za-z0-9])?\.)+[A-Za-z]{2,}$/;
+
+      const domain = email.split("@")[1] || "";
+      const isPunycodeDomain = domain
+        .split(".")
+        .some((part) => part.startsWith("xn--"));
+
+      if (!emailRegex.test(email) || isPunycodeDomain) {
+        nextErrors.email = t("profile.invalidEmail");
+      }
+    }
+
+    if (form.phone_number.trim()) {
+      const phoneRegex = /^[0-9]{10}$/;
+
+      if (!phoneRegex.test(form.phone_number.trim())) {
+        nextErrors.phone_number = t("profile.invalidPhone");
+      }
+    }
+
+    setErrors(nextErrors);
+
+    return Object.keys(nextErrors).length === 0;
+  };
+
+  const updateForm = (key: keyof ProfileForm, value: string) => {
+    setForm((prev) => ({
+      ...prev,
+      [key]: value,
+    }));
+
+    setErrors((prev) => ({
+      ...prev,
+      [key]: undefined,
+    }));
+  };
+
+  const handleSave = async () => {
+    if (!user) return;
+    if (!validateForm()) return;
+
+    try {
+      await updateUser({
+        userCode: user.user_code,
+        payload: {
+          full_name: form.full_name.trim(),
+          email: form.email.trim(),
+          phone_number: form.phone_number.trim() || undefined,
+        },
+      });
+
+      setErrors({});
+      showAppToast(t("profile.updateSuccess"), "success");
+
+      patchUser({
+        full_name: form.full_name.trim(),
+        email: form.email.trim(),
+        phone_number: form.phone_number.trim(),
+      });
+    } catch (error) {
+      const message =
+        error instanceof Error ? error.message : t("profile.updateFailed");
+
+      showAppToast(message, "error");
+    }
+  };
+
+  const resetForm = () => {
+    if (!user) return;
+
+    setForm({
+      full_name: user.full_name || "",
+      email: user.email || "",
+      phone_number: user.phone_number || "",
+    });
+
+    setErrors({});
+  };
+
+  const handleLogout = () => {
+    Alert.alert(
+      t("profile.logoutConfirmTitle"),
+      t("profile.logoutConfirmMessage"),
+      [
+        {
+          text: t("common.cancel"),
+          style: "cancel",
+        },
+        {
+          text: t("profile.logout"),
+          style: "destructive",
+          onPress: () => void signOut(),
+        },
+      ],
+    );
+  };
 
   return (
-    <ScreenShell>
-      <View style={styles.card}>
-        <Text style={styles.title}>Thông tin cá nhân</Text>
-        <Text style={styles.subtitle}>Quản lý thông tin tài khoản, phương tiện và gói gửi xe.</Text>
-
-        {user ? (
-          <View style={styles.section}>
-            <Text style={styles.label}>User code</Text>
-            <Text style={styles.value}>{user.user_code}</Text>
-
-            <Text style={styles.label}>Full name</Text>
-            <Text style={styles.value}>{user.full_name}</Text>
-
-            <Text style={styles.label}>Email</Text>
-            <Text style={styles.value}>{user.email}</Text>
+    <ScrollView
+      showsVerticalScrollIndicator={false}
+      contentContainerStyle={styles.container}
+    >
+      
+      <ScreenShell>
+        <View style={styles.headerCard}>
+          <View style={styles.avatarBox}>
+            <Ionicons name="person" size={30} color="#2563eb" />
           </View>
-        ) : (
-          <Text style={styles.subtitle}>Chưa tải thông tin người dùng.</Text>
-        )}
 
-        <View style={styles.quickActions}>
-          <TouchableOpacity
-            style={[styles.actionButton, styles.actionPrimary]}
-            onPress={() => navigation.navigate('Vehicles')}
-            activeOpacity={0.85}
-          >
-            <Text style={styles.actionButtonText}>Phương tiện</Text>
-          </TouchableOpacity>
-          <TouchableOpacity
-            style={[styles.actionButton, styles.actionPrimary]}
-            onPress={() => navigation.navigate('UserSubscriptions')}
-            activeOpacity={0.85}
-          >
-            <Text style={styles.actionButtonText}>Gói đã đăng ký</Text>
-          </TouchableOpacity>
+          <View style={styles.headerContent}>
+            <Text style={styles.title}>{t("profile.title")}</Text>
+            <Text style={styles.subtitle}>{t("profile.subtitle")}</Text>
+          </View>
         </View>
 
-        <TouchableOpacity style={styles.logoutButton} onPress={() => void signOut()} activeOpacity={0.85}>
-          <Text style={styles.logoutButtonText}>Logout</Text>
-        </TouchableOpacity>
+        <View style={styles.infoCard}>
+          <View style={styles.sectionHeader}>
+            <Ionicons name="id-card-outline" size={18} color="#2563eb" />
+            <Text style={styles.sectionTitle}>{t("profile.accountInfo")}</Text>
+          </View>
+
+          {user ? (
+            <>
+              <FormInput
+                label={t("profile.userCode")}
+                required
+                value={user.user_code}
+                onChangeText={() => {}}
+                disabled
+              />
+
+              <FormInput
+                label={t("profile.fullName")}
+                required
+                value={form.full_name}
+                onChangeText={(value) => updateForm("full_name", value)}
+                placeholder={t("profile.fullNamePlaceholder")}
+                error={errors.full_name}
+              />
+
+              <FormInput
+                label={t("profile.email")}
+                required
+                value={form.email}
+                onChangeText={(value) => updateForm("email", value)}
+                placeholder={t("profile.emailPlaceholder")}
+                error={errors.email}
+                keyboardType="email-address"
+                autoCapitalize="none"
+              />
+
+              <FormInput
+                label={t("profile.phoneNumber")}
+                value={form.phone_number}
+                onChangeText={(value) =>
+                  updateForm("phone_number", value.replace(/\D/g, ""))
+                }
+                placeholder={t("profile.phoneNumberPlaceholder")}
+                error={errors.phone_number}
+                keyboardType="phone-pad"
+                maxLength={10}
+              />
+
+              <View style={styles.actionRow}>
+                <TouchableOpacity
+                  style={[
+                    styles.resetButton,
+                    (!hasChanged || isPending) && styles.resetButtonDisabled,
+                  ]}
+                  disabled={!hasChanged || isPending}
+                  onPress={resetForm}
+                  activeOpacity={0.85}
+                >
+                  <Ionicons
+                    name="refresh-outline"
+                    size={18}
+                    color={!hasChanged || isPending ? "#94a3b8" : "#0f172a"}
+                  />
+                  <Text
+                    style={[
+                      styles.resetButtonText,
+                      (!hasChanged || isPending) &&
+                        styles.resetButtonTextDisabled,
+                    ]}
+                  >
+                    {t("common.resetChanges")}
+                  </Text>
+                </TouchableOpacity>
+
+                <TouchableOpacity
+                  style={[
+                    styles.saveButton,
+                    (!hasChanged || isPending) && styles.saveButtonDisabled,
+                  ]}
+                  disabled={!hasChanged || isPending}
+                  onPress={() => void handleSave()}
+                  activeOpacity={0.85}
+                >
+                  {isPending ? (
+                    <ActivityIndicator color="#ffffff" size="small" />
+                  ) : (
+                    <>
+                      <Ionicons name="save-outline" size={18} color="#ffffff" />
+                      <Text style={styles.saveButtonText}>
+                        {t("profile.saveChanges")}
+                      </Text>
+                    </>
+                  )}
+                </TouchableOpacity>
+              </View>
+            </>
+          ) : (
+            <Text style={styles.emptyText}>{t("profile.noUserInfo")}</Text>
+          )}
+        </View>
+
+        <View style={styles.menuCard}>
+          <View style={styles.sectionHeader}>
+            <Ionicons name="grid-outline" size={18} color="#2563eb" />
+            <Text style={styles.sectionTitle}>
+              {t("profile.personalManagement")}
+            </Text>
+          </View>
+
+          <View style={styles.menuList}>
+            <MenuItem
+              icon="car-outline"
+              title={t("profile.vehicles")}
+              subtitle={t("profile.vehiclesDesc")}
+              onPress={() => navigation.navigate("Vehicles")}
+            />
+
+            <MenuItem
+              icon="reader-outline"
+              title={t("profile.subscriptions")}
+              subtitle={t("profile.subscriptionsDesc")}
+              onPress={() => navigation.navigate("UserSubscriptions")}
+            />
+          </View>
+        </View>
+
+        <View style={styles.menuCard}>
+          <View style={styles.sectionHeader}>
+            <Ionicons name="settings-outline" size={18} color="#2563eb" />
+            <Text style={styles.sectionTitle}>{t("profile.account")}</Text>
+          </View>
+
+          <TouchableOpacity
+            style={styles.logoutItem}
+            activeOpacity={0.85}
+            onPress={handleLogout}
+          >
+            <View style={styles.logoutIconBox}>
+              <Ionicons name="log-out-outline" size={20} color="#dc2626" />
+            </View>
+
+            <View style={styles.menuTextBox}>
+              <Text style={styles.logoutTitle}>{t("profile.logout")}</Text>
+              <Text style={styles.logoutSubtitle}>{t("profile.logoutDesc")}</Text>
+            </View>
+
+            <Ionicons name="chevron-forward" size={18} color="#ef4444" />
+          </TouchableOpacity>
+        </View>
+      </ScreenShell>
+    </ScrollView>
+  );
+}
+
+function MenuItem({
+  icon,
+  title,
+  subtitle,
+  onPress,
+}: {
+  icon: keyof typeof Ionicons.glyphMap;
+  title: string;
+  subtitle: string;
+  onPress: () => void;
+}) {
+  return (
+    <TouchableOpacity
+      style={styles.menuItem}
+      activeOpacity={0.85}
+      onPress={onPress}
+    >
+      <View style={styles.menuIconBox}>
+        <Ionicons name={icon} size={21} color="#2563eb" />
       </View>
-    </ScreenShell>
+
+      <View style={styles.menuTextBox}>
+        <Text style={styles.menuTitle}>{title}</Text>
+        <Text numberOfLines={2} style={styles.menuSubtitle}>
+          {subtitle}
+        </Text>
+      </View>
+
+      <Ionicons name="chevron-forward" size={18} color="#94a3b8" />
+    </TouchableOpacity>
   );
 }
 
 const styles = StyleSheet.create({
-  card: {
-    backgroundColor: '#fff',
-    borderRadius: 20,
-    padding: 20,
+  container: {
+    paddingBottom: 24,
+    gap: 16,
+  },
+  headerCard: {
+    flexDirection: "row",
+    gap: 13,
+    padding: 16,
+    borderRadius: 6,
+    backgroundColor: "#ffffff",
+    borderWidth: 1,
+    borderColor: "#e2e8f0",
+    marginBottom: 12,
+  },
+  avatarBox: {
+    width: 58,
+    height: 58,
+    borderRadius: 6,
+    backgroundColor: "#eff6ff",
+    alignItems: "center",
+    justifyContent: "center",
+  },
+  headerContent: {
+    flex: 1,
   },
   title: {
-    fontSize: 22,
-    fontWeight: '900',
-    color: '#111827',
+    fontSize: 21,
+    fontWeight: "900",
+    color: "#0f172a",
   },
   subtitle: {
-    marginTop: 6,
-    fontSize: 14,
-    fontWeight: '600',
-    color: '#6b7280',
-    lineHeight: 20,
-  },
-  section: {
-    marginTop: 16,
-  },
-  label: {
-    marginTop: 10,
+    marginTop: 5,
     fontSize: 13,
-    fontWeight: '800',
-    color: '#334155',
+    fontWeight: "600",
+    color: "#64748b",
+    lineHeight: 19,
   },
-  value: {
-    marginTop: 4,
+
+  infoCard: {
+    padding: 15,
+    borderRadius: 6,
+    backgroundColor: "#ffffff",
+    borderWidth: 1,
+    borderColor: "#e2e8f0",
+    marginBottom: 12,
+  },
+  menuCard: {
+    padding: 15,
+    borderRadius: 6,
+    backgroundColor: "#ffffff",
+    borderWidth: 1,
+    borderColor: "#e2e8f0",
+    marginBottom: 12,
+  },
+
+  sectionHeader: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 8,
+    marginBottom: 13,
+  },
+  sectionTitle: {
     fontSize: 15,
-    fontWeight: '700',
-    color: '#111827',
+    fontWeight: "900",
+    color: "#0f172a",
   },
-  quickActions: {
-    marginTop: 16,
+
+  actionRow: {
+    marginTop: 2,
+    flexDirection: "row",
     gap: 10,
   },
-  actionButton: {
-    height: 44,
-    borderRadius: 12,
-    alignItems: 'center',
-    justifyContent: 'center',
+
+  resetButton: {
+    flex: 1,
+    height: 48,
+    borderRadius: 6,
+    borderWidth: 1,
+    borderColor: "#e2e8f0",
+    backgroundColor: "#ffffff",
+    alignItems: "center",
+    justifyContent: "center",
+    flexDirection: "row",
+    gap: 7,
   },
-  actionPrimary: {
-    backgroundColor: '#111827',
+
+  resetButtonDisabled: {
+    backgroundColor: "#f8fafc",
+    borderColor: "#e2e8f0",
   },
-  actionButtonText: {
+
+  resetButtonText: {
+    fontSize: 13.5,
+    fontWeight: "900",
+    color: "#0f172a",
+  },
+
+  resetButtonTextDisabled: {
+    color: "#94a3b8",
+  },
+
+  saveButton: {
+    flex: 1.4,
+    height: 48,
+    borderRadius: 6,
+    backgroundColor: "#2563eb",
+    alignItems: "center",
+    justifyContent: "center",
+    flexDirection: "row",
+    gap: 8,
+    shadowColor: "#2563eb",
+    shadowOffset: {
+      width: 0,
+      height: 8,
+    },
+    shadowOpacity: 0.2,
+    shadowRadius: 12,
+    elevation: 3,
+  },
+
+  saveButtonDisabled: {
+    backgroundColor: "#cbd5e1",
+    shadowOpacity: 0,
+  },
+  saveButtonText: {
     fontSize: 14,
-    fontWeight: '900',
-    color: '#ffffff',
+    fontWeight: "900",
+    color: "#ffffff",
   },
-  logoutButton: {
-    marginTop: 18,
+
+  emptyText: {
+    fontSize: 13,
+    fontWeight: "700",
+    color: "#64748b",
+    lineHeight: 20,
+  },
+
+  menuList: {
+    gap: 10,
+  },
+  menuItem: {
+    minHeight: 72,
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 12,
+    padding: 12,
+    borderRadius: 6,
+    backgroundColor: "#f8fafc",
+    borderWidth: 1,
+    borderColor: "#e2e8f0",
+  },
+  menuIconBox: {
+    width: 44,
     height: 44,
-    borderRadius: 10,
-    backgroundColor: '#ef4444',
-    alignItems: 'center',
-    justifyContent: 'center',
+    borderRadius: 6,
+    backgroundColor: "#eff6ff",
+    alignItems: "center",
+    justifyContent: "center",
   },
-  logoutButtonText: {
-    fontSize: 15,
-    fontWeight: '900',
-    color: '#ffffff',
+  menuTextBox: {
+    flex: 1,
+  },
+  menuTitle: {
+    fontSize: 14,
+    fontWeight: "900",
+    color: "#0f172a",
+  },
+  menuSubtitle: {
+    marginTop: 3,
+    fontSize: 12,
+    fontWeight: "600",
+    color: "#64748b",
+    lineHeight: 17,
+  },
+
+  logoutItem: {
+    minHeight: 72,
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 12,
+    padding: 12,
+    borderRadius: 6,
+    backgroundColor: "#fff1f2",
+    borderWidth: 1,
+    borderColor: "#fecdd3",
+  },
+  logoutIconBox: {
+    width: 44,
+    height: 44,
+    borderRadius: 6,
+    backgroundColor: "#fee2e2",
+    alignItems: "center",
+    justifyContent: "center",
+  },
+  logoutTitle: {
+    fontSize: 14,
+    fontWeight: "900",
+    color: "#dc2626",
+  },
+  logoutSubtitle: {
+    marginTop: 3,
+    fontSize: 12,
+    fontWeight: "600",
+    color: "#ef4444",
+    lineHeight: 17,
   },
 });
-

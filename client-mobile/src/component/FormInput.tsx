@@ -1,4 +1,6 @@
-import React, { useState } from 'react';
+import React, { useState } from "react";
+import MaterialCommunityIcons from 'react-native-vector-icons/MaterialCommunityIcons';
+import Ionicons from 'react-native-vector-icons/Ionicons';
 import {
   StyleSheet,
   Text,
@@ -6,23 +8,23 @@ import {
   TouchableOpacity,
   View,
   TextInputProps,
-} from 'react-native';
+} from "react-native";
 
 type FormInputProps = {
   label: string;
   required?: boolean;
-  type?: 'text' | 'password';
+  type?: "text" | "password";
   value: string;
   onChangeText: (value: string) => void;
   error?: string;
   disabled?: boolean;
   placeholder?: string;
-} & Omit<TextInputProps, 'value' | 'onChangeText' | 'placeholder'>;
+} & Omit<TextInputProps, "value" | "onChangeText" | "placeholder">;
 
 export default function FormInput({
   label,
   required = false,
-  type = 'text',
+  type = "text",
   value,
   onChangeText,
   error,
@@ -32,7 +34,7 @@ export default function FormInput({
 }: FormInputProps) {
   const [showPassword, setShowPassword] = useState(false);
 
-  const isPassword = type === 'password';
+  const isPassword = type === "password";
 
   return (
     <View style={styles.formGroup}>
@@ -40,7 +42,13 @@ export default function FormInput({
         {label} {required && <Text style={styles.requiredIcon}>*</Text>}
       </Text>
 
-      <View style={[styles.inputWrapper, error ? styles.inputWrapperError : null]}>
+      <View
+        style={[
+          styles.inputWrapper,
+          disabled && styles.inputWrapperDisabled,
+          error ? styles.inputWrapperError : null,
+        ]}
+      >
         <TextInput
           value={value}
           onChangeText={onChangeText}
@@ -59,7 +67,7 @@ export default function FormInput({
             style={styles.passwordToggle}
           >
             <Text style={styles.passwordToggleText}>
-              {showPassword ? '🙈' : '👁'}
+              {showPassword ? <MaterialCommunityIcons name="eye" color="#000" size={24} /> : <Ionicons name="eye-off" color="#000" size={24} />}
             </Text>
           </TouchableOpacity>
         )}
@@ -76,38 +84,48 @@ const styles = StyleSheet.create({
   },
   label: {
     fontSize: 14,
-    fontWeight: '700',
-    color: '#334155',
+    fontWeight: "700",
+    color: "#334155",
     marginBottom: 8,
   },
   requiredIcon: {
-    color: '#dc2626',
+    color: "#dc2626",
   },
   inputWrapper: {
-    position: 'relative',
+    position: "relative",
     borderWidth: 1,
-    borderColor: '#dbe2ea',
+    borderColor: "#dbe2ea",
     borderRadius: 5,
-    backgroundColor: '#ffffff',
+    backgroundColor: "#ffffff",
     minHeight: 48,
-    justifyContent: 'center',
+    justifyContent: "center",
   },
   inputWrapperError: {
-    borderColor: '#dc2626',
+    borderColor: "#dc2626",
+  },
+  inputWrapperDisabled: {
+    backgroundColor: '#f1f5f9',
+  },
+
+  inputDisabled: {
+    color: '#64748b',
+  },
+
+  inputPassword: {
+    paddingRight: 44,
   },
   input: {
     height: 48,
     paddingHorizontal: 14,
-    paddingRight: 44,
     fontSize: 15,
-    color: '#0f172a',
+    color: "#0f172a",
   },
   passwordToggle: {
-    position: 'absolute',
+    position: "absolute",
     right: 12,
     top: 0,
     bottom: 0,
-    justifyContent: 'center',
+    justifyContent: "center",
   },
   passwordToggleText: {
     fontSize: 16,
@@ -115,7 +133,7 @@ const styles = StyleSheet.create({
   error: {
     marginTop: 6,
     fontSize: 12,
-    color: '#dc2626',
-    fontWeight: '500',
+    color: "#dc2626",
+    fontWeight: "500",
   },
 });

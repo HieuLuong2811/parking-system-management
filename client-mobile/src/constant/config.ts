@@ -18,4 +18,5 @@ export const RENDER_QR_CODE = joinUrl(EXPO_RENDER_QR_CODE_URL, '?size=320x320&da
 export const Role = {
   ADMIN: 'admin',
   USER: 'user',
+  SECURITY: 'security',
 } as const;

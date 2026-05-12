@@ -15,6 +15,8 @@ const en = {
     vehicles: "Vehicles",
     sessions: "Parking history",
     invoices: "Invoices",
+    payments: "Invoices & Payments",
+    transactions: "Transaction history",
     profile: "Profile",
     subscriptions: "Subscribed packages",
     management: "Personal management",
@@ -63,6 +65,8 @@ const en = {
   common: {
     loading: "Loading...",
     error: "An error occurred. Please try again.",
+    tryAgainLater: "Try again later.",
+    actions: "Action",
     button: {
       next: "Next",
       back: "Back",
@@ -90,7 +94,8 @@ const en = {
   },
   vehicle: {
     title: "Personal vehicle management",
-    subtitle: "Manage your personal vehicles and reserve parking spaces quickly.",
+    subtitle:
+      "Manage your personal vehicles and reserve parking spaces quickly.",
     registerPlanButton: "Register parking",
     registerVehicleButton: "Register vehicle",
     alerts: {
@@ -123,36 +128,38 @@ const en = {
       withoutPlate: "Without license plate",
     },
     modal: {
-      title: "New vehicle",
-      submit: "Register vehicle",
+      title: "Add vehicle",
+      editTitle: "Update vehicle",
+      subtitle: "Select the vehicle type and enter the required information.",
+
       cancel: "Cancel",
+      submit: "Save vehicle",
+      save: "Save changes",
+
       tabs: {
-        withPlate: "With license plate",
-        withoutPlate: "Without license plate",
+        withPlate: "With plate",
+        withoutPlate: "Without plate",
       },
+
+      fields: {
+        userCode: "User code",
+        vehicleType: "Vehicle type",
+        vehicleTypePlaceholder: "Select a vehicle type",
+        licensePlate: "License plate",
+        licensePlatePlaceholder: "E.g. 30K12345",
+      },
+
       types: {
         motorbike: "Motorbike",
         bicycle: "Bicycle",
         electricBicycle: "Electric bicycle",
       },
-      actions: {
-        generateQr: "Generate barcode",
-      },
-      generatingQr: "Generating barcode…",
-      fields: {
-        userCode: "User code",
-        vehicleType: "Vehicle type",
-        licensePlate: "License plate",
-        licensePlatePlaceholder: "e.g. 30K12345",
-        qrCode: "Barcode",
-        description: "Notes",
-        vehicleTypePlaceholder: "Select a vehicle type",
-      },
+
+      barcodeNote:
+        "For vehicles without a license plate, the system will automatically generate a barcode after saving.",
+
       errors: {
-        generic: "Unable to register vehicle. Please try again.",
-        qrGenerate: "Fill required fields first to generate barcode.",
-        qrFailed: "Unable to generate barcode.",
-        qrMissing: "Generate the barcode before registering.",
+        generic: "Unable to save the vehicle. Please try again.",
       },
     },
     form: {
@@ -170,12 +177,18 @@ const en = {
       },
       saveButton: "Save vehicle",
     },
+    toast: {
+      createSuccess: "Vehicle added successfully",
+      updateSuccess: "Vehicle updated successfully",
+      deleteSuccess: "Vehicle deleted successfully",
+      deleteError: "Unable to delete vehicle",
+    },
   },
   invoices: {
     sectionTitle: "List of invoices",
-    subtitle: "Track your parking receipts, payment status, and make quick payments when needed.",
+    subtitle:
+      "Track your parking receipts, payment status, and make quick payments when needed.",
     loading: "Loading invoices...",
-    error: "Unable to load invoices.",
     filters: {
       from: "From",
       to: "To",
@@ -207,7 +220,8 @@ const en = {
   },
   sessions: {
     sectionTitle: "Parking history",
-    subtitle: "Track your parking history, entry/exit times, and parking session status.",
+    subtitle:
+      "Track your parking history, entry/exit times, and parking session status.",
     loading: "Loading check in/out history...",
     sessionId: "Session {{id}}",
     actions: {
@@ -282,8 +296,11 @@ const en = {
     },
     subscriptions: {
       heading: "Registered subscriptions",
+      subtitle:
+        "Track your parking package, applicable semester, linked vehicle, and usage status.",
       empty: "No registered subscriptions yet.",
       vehicleUpdated: "Vehicle updated successfully.",
+      plan: "Plan",
       vehicle: "Vehicle",
       term: "Academic term",
       paymentPlan: "Payment plan",
@@ -293,12 +310,63 @@ const en = {
       unnamedPlan: "Unnamed plan",
       noPaymentPlan: "No payment plan set",
       status: {
+        label: "Status",
         active: "Active",
         pending: "Pending",
         expired: "Expired",
         suspended: "Suspended",
         unknown: "Unknown",
+        payment_due: "Payment due",
+        inactive: "Inactive",
       },
+      vehicleCount: "{{count}} vehicles",
+      noVehicle: "No car chosen yet.",
+      paymentTypes: {
+        monthly: "Monthly",
+        full: "Full",
+      },
+      drawer: {
+        title: "Subscription details",
+        subtitle: "Subscription ID: {{id}}",
+        planInfo: "Registration information",
+        periodLabel: "Period",
+        createdAtLabel: "Registered at",
+        paymentSummary: "Payment summary",
+        paidAmountLabel: "Paid amount",
+        remainingAmount: "Remaining amount",
+        licensed: "Licensed vehicles",
+        unlicensed: "Unlicensed vehicles",
+        noLicensedVehicle: "No licensed vehicles yet.",
+        noUnlicensedVehicle: "No unlicensed vehicles yet.",
+        chooseVehicles: "Register vehicles for this plan",
+        selectLicensed: "Select licensed vehicle",
+        selectUnlicensed: "Select unlicensed vehicle",
+        addVehicle: "Add vehicle",
+        registerVehicles: "Register vehicles",
+      },
+    },
+  },
+  transactions: {
+    sectionTitle: "Transaction history",
+    subtitle: "Track your payment attempts and related invoice statuses.",
+    loadError: "Unable to load transaction history. Please try again.",
+    empty: "No transactions found.",
+    filters: {
+      invoiceId: "Invoice ID",
+      invoiceIdPlaceholder: "Enter the full invoice code.",
+      transactionCode: "Transaction code",
+      transactionCodePlaceholder: "Enter the full transaction code.",
+      from: "From",
+      to: "To",
+      invalidRange: "`To` date cannot be earlier than `From` date.",
+    },
+    table: {
+      invoiceId: "Invoice ID",
+      transactionCode: "Transaction code",
+      amount: "Amount",
+      status: "Status",
+      createdAt: "Time",
+      note: "Note",
     },
   },
   plan: {
@@ -306,7 +374,8 @@ const en = {
     sectionDescription:
       "Choose a parking package that suits your needs. Register for a semester-based parking package, select your preferred vehicle type, and complete the payment to secure your spot. Prices are in VND and may vary each semester.",
     cta: "Register",
-    ctaDisabled: "Currently in use",
+    viewCurrentPlan: "View current plan registration",
+    inUseBadge: "In use",
     features: {
       monthlyPayment: "Monthly payment supported",
       noMonthlyPayment: "Monthly payment not supported",
@@ -329,7 +398,7 @@ const en = {
       "{{days}} payable days (excluded {{sundayDays}} Sundays and {{holidayDays}} holidays).",
     form: {
       timeLabel: "Preferred entry window",
-      timePlaceholder: "e.g. 6:30 â€“ 18:00",
+      timePlaceholder: "e.g. 6:30 – 18:00",
       notesLabel: "Additional notes",
       notesPlaceholder: "Location or timing preferences",
     },
@@ -419,6 +488,12 @@ const en = {
         perkSupport: "Bank transfer & wallet support",
       },
     },
+    overrideActivePlanDialog: {
+      title: "You have an existing parking plan",
+      message:
+        "You currently have the {{plan}} plan with status {{status}}. If you register a new plan, the old plan will be canceled but any remaining debt will still be tracked. Remaining amount: {{debt}}. Do you want to continue?",
+    },
+    currentPlanFallback: "current plan",
   },
 };
 

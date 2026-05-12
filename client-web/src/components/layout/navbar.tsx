@@ -9,9 +9,10 @@ import LogoutIcon from "@mui/icons-material/Logout";
 import HomeRoundedIcon from "@mui/icons-material/HomeRounded";
 import DirectionsCarRoundedIcon from "@mui/icons-material/DirectionsCarRounded";
 import SubscriptionsRoundedIcon from "@mui/icons-material/SubscriptionsRounded";
-import HelpOutlineRoundedIcon from "@mui/icons-material/HelpOutlineRounded";
-import ArticleRoundedIcon from "@mui/icons-material/ArticleRounded";
 import ManageAccountsRoundedIcon from "@mui/icons-material/ManageAccountsRounded";
+import ReceiptLongIcon from '@mui/icons-material/ReceiptLong';
+import PaymentsRoundedIcon from "@mui/icons-material/PaymentsRounded";
+import RequestQuoteIcon from '@mui/icons-material/RequestQuote';
 import {
   Backdrop,
   Badge,
@@ -43,7 +44,21 @@ const navLinks = [
   { key: "nav.home", to: "/", iconOnly: true },
   { key: "nav.plan", to: "/plan" },
   { key: "nav.sessions", to: "/sessions" },
-  { key: "nav.invoices", to: "/invoices" },
+];
+
+const paymentMenuLinks = [
+  {
+    key: "nav.invoices",
+    defaultValue: "Hóa đơn",
+    to: "/invoices",
+    icon: <ReceiptLongIcon fontSize="small" />,
+  },
+  {
+    key: "nav.transactions",
+    defaultValue: "Lịch sử giao dịch",
+    to: "/transactions",
+    icon: <RequestQuoteIcon fontSize="small" />,
+  },
 ];
 
 const accountMenuLinks = [
@@ -64,21 +79,6 @@ const accountMenuLinks = [
     defaultValue: "Hồ sơ cá nhân",
     to: "/profile",
     icon: <PersonIcon fontSize="small" />,
-  },
-];
-
-const supportMenuLinks = [
-  {
-    key: "nav.userGuide",
-    defaultValue: "Hướng dẫn sử dụng",
-    to: "/support/user-guide",
-    icon: <ArticleRoundedIcon fontSize="small" />,
-  },
-  {
-    key: "nav.support",
-    defaultValue: "Hỗ trợ",
-    to: "/support",
-    icon: <HelpOutlineRoundedIcon fontSize="small" />,
   },
 ];
 
@@ -573,23 +573,6 @@ export default function Navbar() {
                           />
                         </ListItemButton>
                       ))}
-
-                      {supportMenuLinks.map((link) => (
-                        <ListItemButton
-                          key={link.key}
-                          component={RouterLink}
-                          to={link.to}
-                          onClick={() => setDrawerOpen(false)}
-                          selected={location.pathname === link.to}
-                          disabled={isLanguageChanging}
-                        >
-                          <ListItemText
-                            primary={t(link.key, {
-                              defaultValue: link.defaultValue,
-                            })}
-                          />
-                        </ListItemButton>
-                      ))}
                     </List>
 
                     <Divider />
@@ -699,6 +682,44 @@ export default function Navbar() {
               <Box className="service-dropdown">
                 <Button
                   className={`service-menu-button ${
+                    paymentMenuLinks.some(
+                      (link) => location.pathname === link.to,
+                    )
+                      ? "service-menu-button--active"
+                      : ""
+                  }`}
+                  endIcon={<KeyboardArrowDownIcon fontSize="small" />}
+                  disabled={isLanguageChanging}
+                >
+                  <PaymentsRoundedIcon fontSize="small" />
+                  {t("nav.payments", {
+                    defaultValue: "Hoá đơn & Lịch sử giao dịch",
+                  })}
+                </Button>
+
+                <Box className="service-dropdown-panel">
+                  {paymentMenuLinks.map((link) => (
+                    <MuiLink
+                      key={link.key}
+                      component={RouterLink}
+                      to={link.to}
+                      underline="none"
+                      className="service-dropdown-item"
+                    >
+                      {link.icon}
+                      <Typography variant="body2">
+                        {t(link.key, {
+                          defaultValue: link.defaultValue,
+                        })}
+                      </Typography>
+                    </MuiLink>
+                  ))}
+                </Box>
+              </Box>
+
+              <Box className="service-dropdown">
+                <Button
+                  className={`service-menu-button ${
                     accountMenuLinks.some(
                       (link) => location.pathname === link.to,
                     )
@@ -714,40 +735,6 @@ export default function Navbar() {
 
                 <Box className="service-dropdown-panel">
                   {accountMenuLinks.map((link) => (
-                    <MuiLink
-                      key={link.key}
-                      component={RouterLink}
-                      to={link.to}
-                      underline="none"
-                      className="service-dropdown-item"
-                    >
-                      {link.icon}
-                      <Typography variant="body2">
-                        {t(link.key, { defaultValue: link.defaultValue })}
-                      </Typography>
-                    </MuiLink>
-                  ))}
-                </Box>
-              </Box>
-
-              <Box className="service-dropdown">
-                <Button
-                  className={`service-menu-button ${
-                    supportMenuLinks.some(
-                      (link) => location.pathname === link.to,
-                    )
-                      ? "service-menu-button--active"
-                      : ""
-                  }`}
-                  endIcon={<KeyboardArrowDownIcon fontSize="small" />}
-                  disabled={isLanguageChanging}
-                >
-                  <HelpOutlineRoundedIcon fontSize="small" />
-                  {t("nav.support", { defaultValue: "Hỗ trợ" })}
-                </Button>
-
-                <Box className="service-dropdown-panel">
-                  {supportMenuLinks.map((link) => (
                     <MuiLink
                       key={link.key}
                       component={RouterLink}

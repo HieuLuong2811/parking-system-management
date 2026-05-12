@@ -197,15 +197,6 @@ export interface UserInfo {
   deleted_at?: string | null;
 }
 
-export interface UserCreatePayload {
-  user_code: string;
-  password: string;
-  full_name: string;
-  email: string;
-  phone_number?: string;
-  language_use?: string;
-}
-
 export interface UserUpdatePayload {
   full_name?: string;
   email?: string;

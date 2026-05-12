@@ -1,4 +1,4 @@
-import { vehicleTypeOptions } from "../constant/config";
+import { invoices_status, vehicleTypeOptions } from "../constant/config";
 
 const DEFAULT_LOCALE = "vi-VN";
 const DEFAULT_EMPTY_TEXT = "—";
@@ -122,4 +122,14 @@ export const getPlanDisplayKey = (planType?: string | null) => {
   }
 
   return "basic";
+};
+
+export const formatMoney = (amount: number, status?: string | null) => {
+  const numeric = Number(amount || 0);
+  const upper = String(status || "").toUpperCase();
+  const sign = upper === invoices_status.PAID ? "-" : "+";
+  return `${sign}${' '}${new Intl.NumberFormat("vi-VN", {
+    style: "currency",
+    currency: "VND",
+  }).format(numeric)}`;
 };

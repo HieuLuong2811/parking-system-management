@@ -59,7 +59,6 @@ class CRUDService(Generic[ModelType, CreateSchemaType, UpdateSchemaType]):
             .with_for_update(nowait=nowait, skip_locked=skip_locked)
         )
         result = await db.execute(statement)
-        print('result', result)
         instance = result.scalar_one_or_none()
         if not instance:
             raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail=f"{self.model.__name__} not found")

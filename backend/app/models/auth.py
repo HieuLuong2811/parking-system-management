@@ -48,6 +48,7 @@ class AuthUser(BaseModel):
     user_code: str
     full_name: str
     email: EmailStr
+    phone_number: str | None
     roles: List[str] = []
 
 

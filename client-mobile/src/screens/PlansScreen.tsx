@@ -16,9 +16,10 @@ import MaterialCommunityIcons from "@expo/vector-icons/MaterialCommunityIcons";
 import ListScreen from "../component/ListScreen";
 import { useSubscriptionPlans } from "../api/subscription_plans";
 import type { AppStackParamList } from "../navigation/AppStack";
-import { useAuth } from "../auth/AuthContext";
 import { getPlanMeta } from "../ultis/status";
-import { normalizeText } from "../ultis/format";
+import { normalizeText, formatCurrency } from "../ultis/format";
+import { useRegistrationWarningFetcher } from '../api/user_subscriptions';
+import { useConfirmDialog } from '../component/ConfirmDialogProvider';
 
 type Nav = NativeStackNavigationProp<AppStackParamList>;
 
@@ -60,6 +61,9 @@ export default function PlansScreen() {
   const navigation = useNavigation<Nav>();
   const { t } = useTranslation();
 
+  const confirm = useConfirmDialog();
+  const fetchRegistrationWarningSubscriptions = useRegistrationWarningFetcher();
+
   const {
     data: plans = [],
     isLoading,
@@ -67,13 +71,69 @@ export default function PlansScreen() {
     refetch,
   } = useSubscriptionPlans();
 
-  const { user } = useAuth();
-  const currentPlanId = (user as any)?.subscription_plan_id;
-
   const activePlans = useMemo(
     () => plans.filter((plan) => !plan.deleted_at),
     [plans],
   );
+
+  const handlePlanPress = async (plan: any) => {
+    if (plan?.is_in_use) {
+      navigation.navigate('UserSubscriptions');
+      return;
+    }
+
+    const confirmed = await confirmExistingBillingSubscription();
+
+    if (!confirmed) return;
+
+    navigation.navigate('PlanCheckout', { plan });
+  };
+
+  const confirmExistingBillingSubscription = async () => {
+    try {
+      const subscriptions = await fetchRegistrationWarningSubscriptions();
+
+      const current = Array.isArray(subscriptions) ? subscriptions[0] : null;
+
+      if (!current) return true;
+
+      const statusLabel = t(
+        `userSubscriptions.status.${String(current.status || '').toLowerCase()}`,
+        {
+          defaultValue: current.status || '—',
+        },
+      );
+
+      const planLabel = t(
+        `plans.cards.${String(
+          current.subscription_plan?.plans_type || '',
+        ).toLowerCase()}`,
+        {
+          defaultValue:
+            current.subscription_plan?.plans_type ||
+            t('plans.currentPlanFallback'),
+        },
+      );
+
+      const totalAmount = Number(current.total_amount || 0);
+      const paidAmount = Number(current.paid_amount || 0);
+      const debtAmount = Math.max(totalAmount - paidAmount, 0);
+
+      return await confirm({
+        title: t('plans.overrideActivePlanDialog.title'),
+        message: t('plans.overrideActivePlanDialog.message', {
+          plan: planLabel,
+          status: statusLabel,
+          debt: formatCurrency(debtAmount),
+        }),
+        cancelText: t('common.cancel'),
+        confirmText: t('common.continue'),
+        danger: true,
+      });
+    } catch {
+      return true;
+    }
+  };
 
   return (
     <ListScreen
@@ -114,8 +174,8 @@ export default function PlansScreen() {
           <View style={styles.planList}>
             {activePlans.map((plan) => {
               const meta = getPlanMeta(plan.plans_type);
-              const isCurrentPlan = currentPlanId === plan.id;
-              const isDark = meta.dark || isCurrentPlan;
+              const isInUse = Boolean((plan as any).is_in_use);
+              const isDark = meta.dark;
               const priceText = formatVnd(plan.price_per_day);
               const priceValue = Number(plan.price_per_day || 0);
               const planName = meta.labelKey
@@ -128,20 +188,21 @@ export default function PlansScreen() {
                   style={[
                     styles.planCard,
                     isDark && styles.planCardDark,
+                    isInUse && styles.planCardInUse,
                     {
-                      borderColor: meta.borderColor,
+                      borderColor: isInUse ? "#86efac" : meta.borderColor,
                     },
                   ]}
                 >
-                  {isCurrentPlan && (
+                  {isInUse && (
                     <View style={styles.currentBadge}>
                       <Ionicons
                         name="checkmark-circle"
                         size={14}
-                        color="#ffffff"
+                        color="#15803d"
                       />
                       <Text style={styles.currentBadgeText}>
-                        {t("plans.current")}
+                        {t("plans.inUseBadge")}
                       </Text>
                     </View>
                   )}
@@ -245,23 +306,20 @@ export default function PlansScreen() {
                   </View>
 
                   <TouchableOpacity
-                    disabled={isCurrentPlan}
                     activeOpacity={0.88}
                     style={[
                       styles.actionBtn,
-                      isCurrentPlan && styles.actionBtnDisabled,
+                      isInUse && styles.actionBtnViewCurrent,
                     ]}
-                    onPress={() =>
-                      navigation.navigate("PlanCheckout", { plan })
-                    }
+                    onPress={() => void handlePlanPress(plan)}
                   >
                     <Text
                       style={[
                         styles.actionBtnText,
-                        isCurrentPlan && styles.actionBtnTextDisabled,
+                        isInUse && styles.actionBtnTextViewCurrent,
                       ]}
                     >
-                      {isCurrentPlan ? t("plans.current") : t("plans.register")}
+                      {isInUse ? t("plans.viewCurrentPlan") : t("plans.register")}
                     </Text>
                   </TouchableOpacity>
                 </View>
@@ -279,7 +337,9 @@ const styles = StyleSheet.create({
     paddingBottom: 24,
     gap: 16,
   },
-
+  planCardInUse: {
+    backgroundColor: "#fafffb",
+  },
   planList: {
     gap: 16,
   },
@@ -313,13 +373,15 @@ const styles = StyleSheet.create({
     gap: 5,
     paddingHorizontal: 10,
     paddingVertical: 5,
-    borderRadius: 999,
-    backgroundColor: "#16a34a",
+    borderRadius: 6,
+    backgroundColor: "#dcfce7",
+    borderWidth: 1,
+    borderColor: "#bbf7d0",
   },
   currentBadgeText: {
     fontSize: 11,
     fontWeight: "900",
-    color: "#ffffff",
+    color: "#15803d",
   },
 
   planHeader: {
@@ -330,7 +392,7 @@ const styles = StyleSheet.create({
   planIconBox: {
     width: 52,
     height: 52,
-    borderRadius: 18,
+    borderRadius: 12,
     backgroundColor: "#f1f5f9",
     alignItems: "center",
     justifyContent: "center",
@@ -408,14 +470,28 @@ const styles = StyleSheet.create({
     color: "#94a3b8",
   },
 
+  actionBtnViewCurrent: {
+    backgroundColor: "#ffffff",
+    borderWidth: 1,
+    borderColor: "#cbd5e1",
+    shadowColor: "#0f172a",
+    shadowOpacity: 0.08,
+    shadowRadius: 10,
+    elevation: 1,
+  },
+
+  actionBtnTextViewCurrent: {
+    color: "#0f172a",
+  },
+
   actionBtn: {
     marginTop: 18,
     height: 48,
-    borderRadius: 15,
-    backgroundColor: "#315cf6",
+    borderRadius: 10,
+    backgroundColor: "#43B14B",
     alignItems: "center",
     justifyContent: "center",
-    shadowColor: "#315cf6",
+    shadowColor: "#43B14B",
     shadowOffset: {
       width: 0,
       height: 8,
@@ -424,16 +500,10 @@ const styles = StyleSheet.create({
     shadowRadius: 12,
     elevation: 3,
   },
-  actionBtnDisabled: {
-    backgroundColor: "rgba(15, 23, 42, 0.55)",
-    shadowOpacity: 0,
-  },
+
   actionBtnText: {
     fontSize: 14,
     fontWeight: "900",
-    color: "#ffffff",
-  },
-  actionBtnTextDisabled: {
     color: "#ffffff",
   },
 
