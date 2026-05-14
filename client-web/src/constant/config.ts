@@ -35,18 +35,6 @@ export const userSubscriptionTypes = {
   INACTIVE: "INACTIVE",
 } as const;
 
-export const editableVehicleSubscriptionStatuses = [
-  userSubscriptionTypes.ACTIVE,
-  userSubscriptionTypes.PAYMENT_DUE,
-  userSubscriptionTypes.OVERDUE,
-] as const;
-
-export const canUpdateSubscriptionVehicles = (status?: string | null) => {
-  return editableVehicleSubscriptionStatuses.includes(
-    String(status || "").toUpperCase() as any
-  );
-};
-
 export const subscriptionPlanTypes = {
   BASIC: "BASIC",
   STARTUP: "STARTUP",

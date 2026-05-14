@@ -17,22 +17,19 @@ import {
 } from "@mui/material";
 import { Fragment, useMemo, useState } from "react";
 import { useTranslation } from "react-i18next";
-import VehicleRegistrationModal from "../components/vehicle/VehicleRegistrationModal";
 import useModal from "../hooks/useModal";
 import SubscriptionVehicleDrawer from "../components/subscription/SubscriptionVehicleDrawer";
 import SubscriptionsIcon from "@mui/icons-material/Subscriptions";
-import DirectionsBikeIcon from "@mui/icons-material/DirectionsBike";
 import CalendarMonthIcon from "@mui/icons-material/CalendarMonth";
 import InfoOutlinedIcon from "@mui/icons-material/InfoOutlined";
 import VisibilityIcon from "@mui/icons-material/Visibility";
-
+import VisibilityOffIcon from '@mui/icons-material/VisibilityOff';
 import {
-  useUpdateSubscriptionVehicles,
   useUserSubscriptionsPaginated,
 } from "../api/user_subscriptions";
-import { useVehicles } from "../api/vehicles";
 import { formatCurrency } from "../ultis/formatters";
 import { getStatusColor, getStatusLabel } from "../ultis/status";
+import { userSubscriptionTypes } from "../constant/config";
 
 export default function UserSubscriptionsPage() {
   const { t } = useTranslation();
@@ -53,11 +50,7 @@ export default function UserSubscriptionsPage() {
     page: subscriptionPage + 1,
     limit: subscriptionRowsPerPage,
   });
-
-  const { data: myVehicles = [] } = useVehicles();
-  const { mutateAsync: updateSubscription, isPending: isUpdatingSubscription } =
-    useUpdateSubscriptionVehicles();
-
+  
   const subscriptions = useMemo(
     () => subscriptionsPaginated?.data ?? [],
     [subscriptionsPaginated],
@@ -126,9 +119,6 @@ export default function UserSubscriptionsPage() {
                 {t("profile.subscriptions.plan")}
               </TableCell>
               <TableCell>
-                {t("profile.subscriptions.vehicle")}
-              </TableCell>
-              <TableCell>
                 {t("profile.subscriptions.term")}
               </TableCell>
               <TableCell>
@@ -195,18 +185,6 @@ export default function UserSubscriptionsPage() {
               </TableRow>
             ) : (
               subscriptions.map((subscription) => {
-                const coveredVehicles = subscription.covered_vehicles ?? [];
-                const vehicleCount = coveredVehicles.length;
-
-                const vehicleCountLabel =
-                  vehicleCount > 0
-                    ? t("profile.subscriptions.vehicleCount", {
-                        count: vehicleCount,
-                        defaultValue: `${vehicleCount} phương tiện`,
-                      })
-                    : t("profile.subscriptions.noVehicle", {
-                        defaultValue: "Chưa gắn xe",
-                      });
                 const paymentLabel = getPaymentTypeLabel(
                   subscription.payment?.payment_type,
                 );
@@ -263,17 +241,6 @@ export default function UserSubscriptionsPage() {
 
                       <TableCell>
                         <Stack direction="row" spacing={1} alignItems="center">
-                          <DirectionsBikeIcon fontSize="small" color="action" />
-
-                          <Box>
-                            <Typography fontWeight={600}>
-                              {vehicleCountLabel}
-                            </Typography>
-                          </Box>
-                        </Stack>
-                      </TableCell>
-                      <TableCell>
-                        <Stack direction="row" spacing={1} alignItems="center">
                           <CalendarMonthIcon fontSize="small" color="action" />
 
                           <Typography fontWeight={500}>
@@ -315,12 +282,13 @@ export default function UserSubscriptionsPage() {
                           <IconButton
                             size="small"
                             aria-label="view subscription"
+                            disabled={subscription.status !== userSubscriptionTypes.ACTIVE}
                             onClick={(e) => {
                               e.stopPropagation();
                               openVehicleDrawer();
                             }}
-                          >
-                            <VisibilityIcon fontSize="small" />
+                          > 
+                          {subscription.status !== userSubscriptionTypes.ACTIVE ? <VisibilityOffIcon fontSize="small" /> : <VisibilityIcon fontSize="small" />}
                           </IconButton>
                         </Tooltip>
                       </TableCell>
@@ -356,27 +324,11 @@ export default function UserSubscriptionsPage() {
             },
         }}
       />
-
+      
       <SubscriptionVehicleDrawer
         open={vehicleDrawerOpen}
         subscription={drawerSubscription}
-        vehicles={myVehicles}
-        isUpdating={isUpdatingSubscription}
         onClose={() => setVehicleDrawerOpen(false)}
-        onAddVehicle={() => registerVehicleModal.openModal()}
-        onUpdateVehicles={async (subscriptionId, vehicleIds) => {
-          await updateSubscription({
-            subscriptionId,
-            payload: { vehicle_ids: vehicleIds },
-          });
-
-          setVehicleDrawerOpen(false);
-        }}
-      />
-
-      <VehicleRegistrationModal
-        open={registerVehicleModal.open}
-        onClose={registerVehicleModal.closeModal}
       />
     </Box>
   );

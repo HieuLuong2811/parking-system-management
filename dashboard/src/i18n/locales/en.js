@@ -1,34 +1,32 @@
 const en = {
   translation: {
-    sideBar: {
-      title: "Parking System",
-      subMenu: {
-        General: "Overview",
-        subscriptions: "Subscriptions & Billing",
-        system: "System",
+    "sideBar": {
+      "title": "Parking System",
+      "subMenu": {
+        "General": "General",
+        "Operations": "Operations",
+        "Billing": "Billing",
+        "Management": "Management",
+        "settings": "Settings"
       },
-      expand: "Expand sidebar",
-      collapse: "Collapse sidebar",
-      parents: {
-        userManagement: "User management",
-        billing: "Billing & transactions",
+      "parents": {
+        "billing": "Billing",
+        "userManagement": "User Management"
       },
-      children: {
-        dashboard: "Dashboard",
-        parkingSessions: "Parking Sessions",
-        subscriptions: "Subscriptions",
-        plans: "Plans",
-        paymentTransactions: "Payment Transactions",
-        paymentPlans: "Payment plans",
-        paymentPlans: "Payment plans",
-        users: "Users",
-        roles: "Roles",
-        vehicles: "Vehicles",
-        terms: "Terms",
-        notifications: "Notifications",
-        profile: "Profile",
-        logout: "Logout",
-      },
+      "children": {
+        "dashboard": "Dashboard",
+        "parkingSessions": "Parking Sessions",
+        "subscriptions": "Subscriptions",
+        "paymentTransactions": "Payment Transactions",
+        "users": "Users",
+        "roles": "Roles",
+        "paymentPlans": "Payment Plans",
+        "plans": "Plans",
+        "terms": "Terms",
+        "notifications": "Notifications",
+        "profile": "Profile",
+        "logout": "Logout"
+      }
     },
     common: {
       filters: {
@@ -273,7 +271,7 @@ const en = {
         error: "Unable to save changes.",
         deleteConfirm: "Delete user {{user}}? This cannot be undone.",
         deleteConfirmActiveWarning:
-          "If you delete this user while still ACTIVE, the account and any related subscriptions/vehicles will be disabled.\nAre you sure you want to delete {{user}}?",
+          "If you delete this user while still ACTIVE, the account and any related subscriptions/access cards will be disabled.\nAre you sure you want to delete {{user}}?",
       },
       roleSelector: {
         label: "Assign roles",
@@ -450,8 +448,6 @@ const en = {
         pricePerDay: "Parking fee per day",
         allowMonthly: "Monthly",
         allowFull: "Full",
-        maxLicensed: "Max plate",
-        maxUnlicensed: "Max no-plate",
         after18Fee: "After 18 fee",
         waiveAfter18: "Waive 18+",
         status: "Status",
@@ -460,13 +456,15 @@ const en = {
         updatedAt: "Updated at",
         actions: "Actions",
       },
+      toast: {
+        updated: "Update subscription plan successfully.",
+        created: "Create subscription plan successfully.",
+      },
       dialog: {
         fields: {
           allowMonthly: "Allow monthly payment",
           allowFull: "Allow full payment",
           waiveAfter18: "Waive after 18 fee",
-          maxLicensed: "Max licensed vehicles",
-          maxUnlicensed: "Max unlicensed vehicles",
           after18Fee: "After 18 fee (VND)",
           status: "Status",
         },

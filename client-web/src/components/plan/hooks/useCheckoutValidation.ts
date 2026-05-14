@@ -7,8 +7,9 @@ import { useTranslation } from "react-i18next";
 type Props = {
   state: CheckoutState;
   plan: any;
-  selectedVehicle: any;
   momoReady: boolean;
+  walletReady: boolean;
+  walletReadyRecurring: boolean;
   isProcessing: boolean;
   checkoutSteps: string[];
 };
@@ -16,8 +17,9 @@ type Props = {
 export const useCheckoutValidation = ({
   state,
   plan,
-  selectedVehicle,
   momoReady,
+  walletReady,
+  walletReadyRecurring,
   isProcessing,
   checkoutSteps,
 }: Props) => {
@@ -27,23 +29,22 @@ export const useCheckoutValidation = ({
 
     switch (state.activeStep) {
       case 0:
-        return !selectedVehicle;
-      case 1:
         return !state.selectedTermId;
-      case 2:
+      case 1:
         return !state.selectedPaymentMode;
-      case 3:
-        return state.selectedPaymentMode === payment_plan.RECURRING
-          ? false
-          : !momoReady;
+      case 2:
+        if (state.selectedPaymentMode === payment_plan.RECURRING) return !walletReadyRecurring;
+        if (state.selectedFullPaymentMethod === "WALLET") return !walletReady;
+        return !momoReady;
       default:
         return true;
     }
   }, [
     state,
     plan,
-    selectedVehicle,
     momoReady,
+    walletReady,
+    walletReadyRecurring,
     isProcessing,
   ]);
 
@@ -52,7 +53,7 @@ export const useCheckoutValidation = ({
       return t("common.button.next");
     if (state.selectedPaymentMode === payment_plan.RECURRING)
       return t("plan.checkoutConfirm");
-    return t("plan.checkoutStepper.payMomo");
+    return t("plan.checkoutStepper.pay");
   };
 
   return { primaryDisabled, getPrimaryLabel };

@@ -2,7 +2,6 @@ import type { ReactNode } from 'react';
 
 export type ResourceId =
   | 'users'
-  | 'vehicles'
   | 'roles'
   | 'user_roles'
   | 'terms'

@@ -1,6 +1,7 @@
+from __future__ import annotations
+
 from io import BytesIO
 from datetime import datetime, time, timedelta
-from math import ceil
 
 from fastapi import HTTPException, status
 from fastapi.responses import StreamingResponse
@@ -8,35 +9,48 @@ from openpyxl import Workbook
 from openpyxl.styles import Alignment, Font
 from sqlalchemy.ext.asyncio import AsyncSession
 
-from app.enums.parking import ParkingSessionStatus, SubscriptionStatus, UserType, VehicleType
-from app.utils.pagination import PaginatedResponse
+from app.utils.common import _resolve_user_type_from_card
+from app.enums.parking import (
+    ParkingAccessCardHolderType,
+    ParkingAccessCardStatus,
+    ParkingSessionStatus,
+    ParkingVehicleMode,
+    VehicleType,
+)
+from app.models.parking_access_cards import ParkingAccessCard
 from app.models.parking_sessions import (
     ParkingSessionCreate,
     ParkingSessionAdminRead,
     ParkingSessionRead,
     ParkingSessionUpdate,
-    ParkingSessionBarcodeCheckIn,
-    ParkingSessionPlateCheckIn,
-    ParkingSessionPlateConfirm,
+    ParkingSessionAccessConfirm,
 )
-from app.models.responses import DeleteResponse
+from app.models.responses import DeleteResponse, FeeBreakdown
+from app.models.plans import SubscriptionPlan
+from app.models.subscriptions import UserSubscription
+from app.service.parking_access_cards import parkingAccessCardService
 from app.service.parking_sessions import parkingSessionService, parkingSessionUserService
 from app.service.subscriptions import subscriptionService
-from app.service.vehicles import vehicleService
-from app.models.responses import FeeBreakdown
-from app.models.vehicles import Vehicle
-from app.models.users import Users
+from app.utils.pagination import PaginatedResponse
+
 
 GUEST_NORMAL_FEE = 2000
 GUEST_AFTER_18_FEE = 5000
 
+
 class ParkingSessionController:
     @staticmethod
-    async def create_session_ctrl(payload: ParkingSessionCreate, db: AsyncSession) -> ParkingSessionRead:
+    async def create_session_ctrl(
+        payload: ParkingSessionCreate,
+        db: AsyncSession,
+    ) -> ParkingSessionRead:
         return await parkingSessionService.create_session(payload, db)
 
     @staticmethod
-    async def get_session_ctrl(session_id: str, db: AsyncSession) -> ParkingSessionRead:
+    async def get_session_ctrl(
+        session_id: str,
+        db: AsyncSession,
+    ) -> ParkingSessionRead:
         return await parkingSessionService.get_session(session_id, db)
 
     @staticmethod
@@ -75,158 +89,20 @@ class ParkingSessionController:
         )
 
     @staticmethod
-    async def update_session_ctrl(session_id: str, payload: ParkingSessionUpdate, db: AsyncSession) -> ParkingSessionRead:
+    async def update_session_ctrl(
+        session_id: str,
+        payload: ParkingSessionUpdate,
+        db: AsyncSession,
+    ) -> ParkingSessionRead:
         return await parkingSessionService.update_session(session_id, payload, db)
 
     @staticmethod
-    async def delete_session_ctrl(session_id: str, db: AsyncSession) -> DeleteResponse:
+    async def delete_session_ctrl(
+        session_id: str,
+        db: AsyncSession,
+    ) -> DeleteResponse:
         await parkingSessionService.delete_session(session_id, db)
         return DeleteResponse(message="Deleted parking session")
-
-    @staticmethod
-    async def create_session_via_barcode_ctrl(payload: ParkingSessionBarcodeCheckIn, db: AsyncSession) -> ParkingSessionRead:
-        try:
-            vehicle, user = await vehicleService.get_by_barcode_token(payload.barcode_token, db)
-        except ValueError:
-            raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Vehicle not found")
-        now = datetime.utcnow()
-        active_session = await parkingSessionService.get_active_session_by_vehicle(str(vehicle.id), db)
-
-        user_type = UserType.STUDENT
-        if user and user.deleted_at is None:
-            resolved_user_type = getattr(user, "user_type", None)
-            if resolved_user_type is not None:
-                user_type = resolved_user_type
-
-        if not active_session:
-            sub, plan, _payment_plan = await subscriptionService.get_active_subscription_covering_vehicle(str(vehicle.id), db)
-            if subscriptionService.subscription_grants_parking_benefit(sub) and sub is not None:
-                conflict = await subscriptionService.get_active_session_using_subscription(
-                    str(sub.id), db, exclude_vehicle_id=str(vehicle.id)
-                )
-                if conflict is not None:
-                    return ParkingSessionRead(
-                        id=conflict.id,
-                        vehicle_id=vehicle.id,
-                        license_plate=vehicle.license_plate,
-                        check_in_time=now,
-                        check_out_time=None,
-                        status=ParkingSessionStatus.ACTIVE,
-                        user_type=user_type,
-                        total_amount=None,
-                        created_at=now,
-                        updated_at=now,
-                        allow_gate=False,
-                        message="Subscription is currently being used by another vehicle.",
-                        fee_breakdown=FeeBreakdown(
-                            has_active_subscription=True,
-                            subscription_benefit_applied=False,
-                            subscription_plan_code=None,
-                            fee_policy_message="Subscription is currently being used by another vehicle.",
-                        ),
-                    )
-            session_payload = ParkingSessionCreate(
-                vehicle_id=vehicle.id,
-                license_plate=vehicle.license_plate,
-                check_in_time=now,
-                user_type=user_type,
-            )
-            created = await parkingSessionService.create_session(session_payload, db)
-            return ParkingSessionRead.model_validate(created, update={"allow_gate": True, "message": "OK"}) if hasattr(ParkingSessionRead, "model_validate") else created
-        breakdown = await ParkingSessionController._calculate_fee_breakdown_v2(
-            vehicle=vehicle,
-            user=user,
-            check_in=active_session.check_in_time,
-            check_out=now,
-            db=db,
-        )
-        update_payload = ParkingSessionUpdate(
-            check_out_time=now,
-            status=ParkingSessionStatus.DONE,
-            total_amount=breakdown.total_amount if breakdown else None,
-        )
-        updated = await parkingSessionService.update_session(str(active_session.id), update_payload, db)
-        response = ParkingSessionRead.model_validate(updated) if hasattr(ParkingSessionRead, "model_validate") else updated
-        response.allow_gate = True
-        response.message = "OK"
-        response.fee_breakdown = breakdown
-        return response
-
-    @staticmethod
-    async def create_session_via_plate_ctrl(
-        payload: ParkingSessionPlateCheckIn,
-        db: AsyncSession,
-    ) -> ParkingSessionRead:
-        plate = (payload.license_plate or "").strip().upper()
-
-        if not plate:
-            raise HTTPException(
-                status_code=status.HTTP_400_BAD_REQUEST,
-                detail="license_plate is required",
-            )
-
-        vehicle_user = await vehicleService.get_by_license_plate_or_none(plate, db)
-
-        if vehicle_user is None:
-            raise HTTPException(
-                status_code=status.HTTP_404_NOT_FOUND,
-                detail="Vehicle not found",
-            )
-
-        vehicle, user = vehicle_user
-
-        active_session = await parkingSessionService.get_active_session_by_vehicle(
-            str(vehicle.id),
-            db,
-        )
-
-        if active_session:
-            return await ParkingSessionController._confirm_plate_check_out(
-                vehicle,
-                user,
-                db,
-            )
-
-        return await ParkingSessionController._confirm_plate_check_in(
-            vehicle,
-            user,
-            db,
-        )
-    
-    @staticmethod
-    async def _calculate_fee_breakdown(
-        user_code: str,
-        vehicle_id: str,
-        check_in: datetime,
-        check_out: datetime,
-        db: AsyncSession,
-    ) -> FeeBreakdown:
-        duration_seconds = max(0, (check_out - check_in).total_seconds())
-        days = ceil(duration_seconds / 86_400) if duration_seconds else 1
-        normal_base_amount = days * 1000
-
-        subscription, plan, _payment_plan = await subscriptionService.get_active_subscription_covering_vehicle(vehicle_id, db)
-        has_active_subscription = subscriptionService.subscription_grants_parking_benefit(subscription)
-        if not has_active_subscription or plan is None:
-            return FeeBreakdown(
-                base_amount=normal_base_amount,
-                after_18_amount=0,
-                total_amount=normal_base_amount,
-                has_active_subscription=False,
-                subscription_benefit_applied=False,
-                subscription_plan_code=None,
-                fee_policy_message="Normal parking fee applied.",
-            )
-
-        return FeeBreakdown(
-            base_amount=0,
-            after_18_amount=0,
-            total_amount=0,
-            has_active_subscription=True,
-            subscription_benefit_applied=True,
-            subscription_plan_code=None,
-            fee_policy_message="Subscription active (or payment due): parking fee waived.",
-        )
 
     @staticmethod
     async def export_my_sessions_xlsx_ctrl(
@@ -270,16 +146,20 @@ class ParkingSessionController:
             cell.font = header_font
             cell.alignment = Alignment(horizontal="center", vertical="center")
 
-        for session, vehicle, user in rows:
+        for session, access_card, user in rows:
             sheet.append(
                 [
-                    vehicle.user_code,
+                    access_card.user_code if access_card else None,
                     getattr(user, "full_name", None) if user else None,
                     getattr(user, "phone_number", None) if user else None,
-                    str(getattr(vehicle, "vehicle_type", "") or ""),
-                    session.license_plate or vehicle.license_plate or "",
-                    session.check_in_time.isoformat(sep=" ", timespec="seconds") if session.check_in_time else "",
-                    session.check_out_time.isoformat(sep=" ", timespec="seconds") if session.check_out_time else "",
+                    str(getattr(session, "vehicle_type", "") or ""),
+                    session.license_plate or "",
+                    session.check_in_time.isoformat(sep=" ", timespec="seconds")
+                    if session.check_in_time
+                    else "",
+                    session.check_out_time.isoformat(sep=" ", timespec="seconds")
+                    if session.check_out_time
+                    else "",
                     str(getattr(session, "status", "") or ""),
                     str(getattr(session, "user_type", "") or ""),
                     int(session.total_amount or 0),
@@ -287,83 +167,62 @@ class ParkingSessionController:
                 ]
             )
 
-        # Auto-size columns (simple heuristic)
-        for column_cells in sheet.columns:
-            max_len = 0
-            col_letter = column_cells[0].column_letter
-            for cell in column_cells:
-                value = cell.value
-                if value is None:
-                    continue
-                max_len = max(max_len, len(str(value)))
-            sheet.column_dimensions[col_letter].width = min(max(10, max_len + 2), 40)
+        for col in sheet.columns:
+            max_length = 0
+            column_letter = col[0].column_letter
+            for cell in col:
+                try:
+                    max_length = max(max_length, len(str(cell.value)))
+                except Exception:
+                    pass
+            sheet.column_dimensions[column_letter].width = min(50, max_length + 2)
 
-        buffer = BytesIO()
-        workbook.save(buffer)
-        buffer.seek(0)
+        output = BytesIO()
+        workbook.save(output)
+        output.seek(0)
 
-        timestamp = datetime.utcnow().strftime("%Y%m%d_%H%M%S")
-        filename = f"parking_sessions_{user_code}_{timestamp}.xlsx"
-        headers = {"Content-Disposition": f'attachment; filename="{filename}"'}
         return StreamingResponse(
-            buffer,
+            output,
             media_type="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
-            headers=headers,
+            headers={"Content-Disposition": 'attachment; filename="sessions.xlsx"'},
         )
 
     @staticmethod
-    async def confirm_session_via_plate_ctrl(
-        payload: ParkingSessionPlateConfirm,
+    async def confirm_session_via_access_ctrl(
+        payload: ParkingSessionAccessConfirm,
         db: AsyncSession,
     ) -> ParkingSessionRead:
-        plate = (payload.license_plate or "").strip().upper()
+        barcode_token = (payload.barcode_token or "").strip().upper()
 
-        if not plate:
+        if not barcode_token:
             raise HTTPException(
                 status_code=status.HTTP_400_BAD_REQUEST,
-                detail="license_plate is required",
+                detail="barcode_token is required",
             )
 
-        vehicle_user = await vehicleService.get_by_license_plate_or_none(plate, db)
+        card = await parkingAccessCardService.get_by_barcode_token(barcode_token, db)
 
-        if vehicle_user is None:
+        if card.status in {ParkingAccessCardStatus.DISABLED, ParkingAccessCardStatus.LOST}:
             raise HTTPException(
-                status_code=status.HTTP_404_NOT_FOUND,
-                detail="Vehicle not found",
+                status_code=status.HTTP_400_BAD_REQUEST,
+                detail="Thẻ gửi xe đang bị khóa hoặc đã báo mất.",
             )
 
-        vehicle, user = vehicle_user
-
-        if payload.action.value == "CHECK_IN":
-            return await ParkingSessionController._confirm_plate_check_in(
-                vehicle,
-                user,
+        if card.status == ParkingAccessCardStatus.ACTIVE and card.current_session_id:
+            response = await ParkingSessionController._confirm_access_check_out(
+                card,
+                payload,
+                db,
+            )
+        else:
+            response = await ParkingSessionController._confirm_access_check_in(
+                card,
+                payload,
                 db,
             )
 
-        if payload.action.value == "CHECK_OUT":
-            return await ParkingSessionController._confirm_plate_check_out(
-                vehicle,
-                user,
-                db,
-            )
-
-        raise HTTPException(
-            status_code=status.HTTP_400_BAD_REQUEST,
-            detail="Invalid action",
-        )
-
-    @staticmethod
-    def _resolve_user_type(vehicle: Vehicle, user: Users | None) -> UserType:
-        if user is None or vehicle.user_code is None:
-            return UserType.GUEST
-
-        resolved_user_type = getattr(user, "user_type", None)
-
-        if resolved_user_type is not None:
-            return resolved_user_type
-
-        return UserType.STUDENT
+        await db.commit()
+        return response
 
     @staticmethod
     def _to_read_response(
@@ -378,82 +237,75 @@ class ParkingSessionController:
             if hasattr(ParkingSessionRead, "model_validate")
             else session
         )
-
         response.allow_gate = allow_gate
         response.message = message
         response.fee_breakdown = fee_breakdown
-
         return response
 
     @staticmethod
-    async def _confirm_plate_check_in(
-        vehicle: Vehicle,
-        user: Users | None,
+    async def _confirm_access_check_in(
+        card: ParkingAccessCard,
+        payload: ParkingSessionAccessConfirm,
         db: AsyncSession,
     ) -> ParkingSessionRead:
         now = datetime.utcnow()
 
-        active_session = await parkingSessionService.get_active_session_by_vehicle(
-            str(vehicle.id),
-            db,
-        )
-
-        if active_session:
-            return ParkingSessionController._to_read_response(
-                active_session,
-                allow_gate=False,
-                message="Vehicle already has an active parking session.",
+        if card.status == ParkingAccessCardStatus.ACTIVE:
+            raise HTTPException(
+                status_code=status.HTTP_400_BAD_REQUEST,
+                detail="Thẻ này đang có phiên gửi xe hoạt động.",
             )
 
-        user_type = ParkingSessionController._resolve_user_type(vehicle, user)
-
-        if user_type != UserType.GUEST:
-            sub, _plan, _payment_plan = (
-                await subscriptionService.get_active_subscription_covering_vehicle(
-                    str(vehicle.id),
-                    db,
-                )
+        if payload.vehicle_mode is None:
+            raise HTTPException(
+                status_code=status.HTTP_400_BAD_REQUEST,
+                detail="vehicle_mode is required for check-in",
             )
 
-            if subscriptionService.subscription_grants_parking_benefit(sub) and sub is not None:
-                conflict = await subscriptionService.get_active_session_using_subscription(
-                    str(sub.id),
-                    db,
-                    exclude_vehicle_id=str(vehicle.id),
+        if payload.vehicle_type is None:
+            raise HTTPException(
+                status_code=status.HTTP_400_BAD_REQUEST,
+                detail="vehicle_type is required for check-in",
+            )
+
+        license_plate = (payload.license_plate or "").strip().upper() or None
+
+        if payload.vehicle_mode == ParkingVehicleMode.LICENSED and not license_plate:
+            raise HTTPException(
+                status_code=status.HTTP_400_BAD_REQUEST,
+                detail="Chưa nhận diện được biển số xe.",
+            )
+
+        if payload.vehicle_mode == ParkingVehicleMode.UNLICENSED:
+            license_plate = None
+
+        if card.holder_type == ParkingAccessCardHolderType.GUEST:
+            if card.status != ParkingAccessCardStatus.AVAILABLE:
+                raise HTTPException(
+                    status_code=status.HTTP_400_BAD_REQUEST,
+                    detail="Thẻ khách không khả dụng.",
                 )
 
-                if conflict is not None:
-                    response = ParkingSessionRead(
-                        id=conflict.id,
-                        vehicle_id=vehicle.id,
-                        license_plate=vehicle.license_plate,
-                        check_in_time=now,
-                        check_out_time=None,
-                        status=ParkingSessionStatus.ACTIVE,
-                        user_type=user_type,
-                        total_amount=None,
-                        created_at=now,
-                        updated_at=now,
-                        allow_gate=False,
-                        message="Subscription is currently being used by another vehicle.",
-                        fee_breakdown=FeeBreakdown(
-                            has_active_subscription=True,
-                            subscription_benefit_applied=False,
-                            subscription_plan_code=None,
-                            fee_policy_message="Subscription is currently being used by another vehicle.",
-                        ),
-                    )
-
-                    return response
+        user_type = _resolve_user_type_from_card(card)
 
         session_payload = ParkingSessionCreate(
-            vehicle_id=vehicle.id,
-            license_plate=vehicle.license_plate,
             check_in_time=now,
             user_type=user_type,
+            access_card_id=card.id,
+            vehicle_mode=payload.vehicle_mode,
+            vehicle_type=payload.vehicle_type,
+            license_plate=license_plate,
         )
 
         created = await parkingSessionService.create_session(session_payload, db)
+        await db.flush()
+
+        card.status = ParkingAccessCardStatus.ACTIVE
+        card.current_session_id = created.id
+        card.issued_at = now
+        card.returned_at = None
+        card.updated_at = now
+        await db.flush()
 
         return ParkingSessionController._to_read_response(
             created,
@@ -462,28 +314,55 @@ class ParkingSessionController:
         )
 
     @staticmethod
-    async def _confirm_plate_check_out(
-        vehicle: Vehicle,
-        user: Users | None,
+    async def _confirm_access_check_out(
+        card: ParkingAccessCard,
+        payload: ParkingSessionAccessConfirm,
         db: AsyncSession,
     ) -> ParkingSessionRead:
         now = datetime.utcnow()
 
-        active_session = await parkingSessionService.get_active_session_by_vehicle(
-            str(vehicle.id),
-            db,
-        )
-
-        if not active_session:
+        if not card.current_session_id:
             raise HTTPException(
                 status_code=status.HTTP_400_BAD_REQUEST,
-                detail="No active parking session found for this vehicle",
+                detail="Không tìm thấy phiên gửi xe đang hoạt động cho thẻ này.",
             )
 
-        breakdown = await ParkingSessionController._calculate_fee_breakdown_v2(
-            vehicle=vehicle,
-            user=user,
-            check_in=active_session.check_in_time,
+        session = await parkingSessionService.get_session(str(card.current_session_id), db)
+
+        if not session or session.status != ParkingSessionStatus.ACTIVE:
+            raise HTTPException(
+                status_code=status.HTTP_400_BAD_REQUEST,
+                detail="Không tìm thấy phiên gửi xe đang hoạt động cho thẻ này.",
+            )
+
+        if session.check_out_time is not None:
+            raise HTTPException(
+                status_code=status.HTTP_400_BAD_REQUEST,
+                detail="Phiên gửi xe này đã hoàn tất.",
+            )
+
+        if session.vehicle_mode == ParkingVehicleMode.LICENSED:
+            detected_plate = (payload.license_plate or "").strip().upper()
+            session_plate = (session.license_plate or "").strip().upper()
+
+            if not detected_plate:
+                raise HTTPException(
+                    status_code=status.HTTP_400_BAD_REQUEST,
+                    detail="Chưa nhận diện được biển số xe khi check-out.",
+                )
+
+            if detected_plate != session_plate:
+                raise HTTPException(
+                    status_code=status.HTTP_400_BAD_REQUEST,
+                    detail=(
+                        f"Biển số check-out không khớp. "
+                        f"Check-in: {session_plate}, hiện tại: {detected_plate}."
+                    ),
+                )
+
+        breakdown = await ParkingSessionController._calculate_access_fee_breakdown(
+            card=card,
+            session=session,
             check_out=now,
             db=db,
         )
@@ -493,12 +372,17 @@ class ParkingSessionController:
             status=ParkingSessionStatus.DONE,
             total_amount=breakdown.total_amount if breakdown else None,
         )
+        updated = await parkingSessionService.update_session(str(session.id), update_payload, db)
 
-        updated = await parkingSessionService.update_session(
-            str(active_session.id),
-            update_payload,
-            db,
-        )
+        if card.holder_type == ParkingAccessCardHolderType.GUEST:
+            card.status = ParkingAccessCardStatus.AVAILABLE
+        else:
+            card.status = ParkingAccessCardStatus.ASSIGNED
+
+        card.current_session_id = None
+        card.returned_at = now
+        card.updated_at = now
+        await db.flush()
 
         return ParkingSessionController._to_read_response(
             updated,
@@ -514,14 +398,13 @@ class ParkingSessionController:
 
         count = 0
         current_date = check_in.date()
+        end_date = check_out.date()
 
-        while current_date <= check_out.date():
-            marker = datetime.combine(current_date, time(hour=18, minute=0))
-
-            if check_in < marker <= check_out:
+        while current_date <= end_date:
+            cutoff = datetime.combine(current_date, time(18, 0))
+            if check_in < cutoff <= check_out:
                 count += 1
-
-            current_date += timedelta(days=1)
+            current_date = current_date + timedelta(days=1)
 
         return count
 
@@ -531,14 +414,9 @@ class ParkingSessionController:
         overnight_count: int,
         message: str,
     ) -> FeeBreakdown:
-        if overnight_count > 0:
-            base_amount = 0
-            after_18_amount = GUEST_AFTER_18_FEE * overnight_count
-            total_amount = after_18_amount
-        else:
-            base_amount = GUEST_NORMAL_FEE
-            after_18_amount = 0
-            total_amount = GUEST_NORMAL_FEE
+        base_amount = GUEST_NORMAL_FEE
+        after_18_amount = GUEST_AFTER_18_FEE * overnight_count if overnight_count else 0
+        total_amount = base_amount + after_18_amount
 
         return FeeBreakdown(
             base_amount=base_amount,
@@ -551,33 +429,50 @@ class ParkingSessionController:
         )
 
     @staticmethod
-    async def _calculate_fee_breakdown_v2(
+    async def _get_card_subscription(
+        card: ParkingAccessCard,
+        db: AsyncSession,
+    ) -> UserSubscription:
+        if not card.user_subscription_id:
+            raise HTTPException(
+                status_code=status.HTTP_400_BAD_REQUEST,
+                detail="Thẻ chưa liên kết gói gửi xe.",
+            )
+
+        subscription = await subscriptionService.crud.get(db, str(card.user_subscription_id))
+
+        if not subscription:
+            raise HTTPException(
+                status_code=status.HTTP_400_BAD_REQUEST,
+                detail="Không tìm thấy gói gửi xe của thẻ.",
+            )
+
+        return subscription
+
+    @staticmethod
+    async def _calculate_access_fee_breakdown(
         *,
-        vehicle: Vehicle,
-        user: Users | None,
-        check_in: datetime,
+        card: ParkingAccessCard,
+        session,
         check_out: datetime,
         db: AsyncSession,
     ) -> FeeBreakdown:
         overnight_count = ParkingSessionController._count_after_18_crossings(
-            check_in,
+            session.check_in_time,
             check_out,
         )
 
-        is_guest = user is None or vehicle.user_code is None
-
-        if is_guest:
+        if card.holder_type == ParkingAccessCardHolderType.GUEST:
             return ParkingSessionController._default_guest_fee_breakdown(
                 overnight_count=overnight_count,
                 message="Guest parking fee applied.",
             )
 
-        subscription, plan, _payment_plan = (
-            await subscriptionService.get_subscription_covering_vehicle_for_fee(
-                str(vehicle.id),
-                db,
-            )
-        )
+        subscription = await ParkingSessionController._get_card_subscription(card, db)
+
+        plan: SubscriptionPlan | None = None
+        if subscription and subscription.sub_plan_id:
+            plan = await db.get(SubscriptionPlan, subscription.sub_plan_id)
 
         if plan is None:
             return ParkingSessionController._default_guest_fee_breakdown(
@@ -603,7 +498,7 @@ class ParkingSessionController:
             )
 
         base_amount = price_per_day
-        after_18_amount = after_18_fee * overnight_count if overnight_count > 0 else 0
+        after_18_amount = 0 if waive_after_18_fee else after_18_fee * overnight_count
         total_amount = base_amount + after_18_amount
 
         return FeeBreakdown(

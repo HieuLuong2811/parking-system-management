@@ -186,70 +186,6 @@ class CameraWorker(QtCore.QThread):
         self._running = False
         self.wait()
 
-class LookupWorker(QtCore.QThread):
-    lookup_finished = QtCore.pyqtSignal(str, object)
-    lookup_status = QtCore.pyqtSignal(str)
-
-    def __init__(self, backend_host: str, action: str, parent=None):
-        super().__init__(parent)
-        self.backend_host = backend_host.rstrip("/")
-        self.action = action
-        self._running = False
-        self._queue = queue.Queue()
-
-    def enqueue_plate(self, plate: str):
-        self._queue.put(plate)
-
-    def run(self):
-        self._running = True
-        self.lookup_status.emit("Lookup worker started")
-
-        while self._running:
-            try:
-                plate = self._queue.get(timeout=0.2)
-            except queue.Empty:
-                continue
-
-            if plate is None:
-                break
-
-            info = self.lookup_plate_info(plate)
-            self.lookup_finished.emit(plate, info)
-
-        self.lookup_status.emit("Lookup worker stopped")
-
-    def lookup_plate_info(self, plate: str):
-        normalized = plate.strip().upper()
-
-        for attempt in range(MAX_LOOKUP_ATTEMPTS):
-            try:
-                response = requests.get(
-                    f"{self.backend_host}/api/v1/vehicles/lookup",
-                    params={
-                        "license_plate": normalized,
-                        "action": self.action,
-                    },
-                    timeout=5,
-                )
-
-                if response.status_code == 200:
-                    return response.json()
-
-                if response.status_code == 404:
-                    self.lookup_status.emit(f"Không tìm thấy phương tiện: {normalized}")
-                    return None
-
-            except requests.RequestException:
-                time.sleep(0.15)
-
-        return None
-
-    def stop(self):
-        self._running = False
-        self._queue.put(None)
-        self.wait(3000)
-
-
 class SecurityConsoleUI(QtWidgets.QMainWindow):
     def __init__(self):
         super().__init__()
@@ -268,9 +204,35 @@ class SecurityConsoleUI(QtWidgets.QMainWindow):
 
         uic.loadUi(ui_path, self)
 
+        if not hasattr(self, "txt_barcode"):
+            self.txt_barcode = QtWidgets.QLineEdit(self)
+            self.txt_barcode.setObjectName("txt_barcode")
+            self.txt_barcode.setPlaceholderText("Quét barcode thẻ gửi xe...")
+            self.txt_barcode.setMinimumHeight(42)
+
+            # UI của bạn có verticalLayout_2 ở panel bên phải.
+            # Chèn ô barcode vào ngay dưới danh sách lịch sử quét.
+            if hasattr(self, "verticalLayout_2"):
+                self.verticalLayout_2.insertWidget(1, self.txt_barcode)
+                self.txt_barcode.show()
+            elif hasattr(self, "frm_log_panel"):
+                self.txt_barcode.setParent(self.frm_log_panel)
+                self.txt_barcode.setGeometry(20, 315, 500, 44)
+                self.txt_barcode.show()
+            else:
+                self.txt_barcode.setParent(self.centralWidget())
+                self.txt_barcode.setGeometry(760, 600, 320, 44)
+                self.txt_barcode.show()
+
         self.current_plate: str | None = None
         self.current_info: dict | None = None
         self.current_action = SECURITY_GATE_ACTION
+
+        self.current_barcode: str | None = None
+        self.last_barcode: str | None = None
+        self.last_barcode_time = 0.0
+        self._submitting = False
+        self.pending_barcode: str | None = None
 
         self._setup_initial_ui()
         self._connect_events()
@@ -295,13 +257,9 @@ class SecurityConsoleUI(QtWidgets.QMainWindow):
         self.lbl_vehicle_type_value.setText("Loại phương tiện: -")
         self.lbl_session_status_value.setText("Trạng thái: -")
 
+        self.btn_checkin.setVisible(False)
         self.btn_checkin.setEnabled(False)
-        if self.current_action == "CHECK_OUT":
-            self.btn_checkin.setText("Xác nhận xe ra")
-            self.lbl_status.setText("Chế độ: Xe ra - đang chờ camera...")
-        else:
-            self.btn_checkin.setText("Xác nhận xe vào")
-            self.lbl_status.setText("Chế độ: Xe vào - đang chờ camera...")
+        self.lbl_status.setText("Đang chờ camera nhận diện biển số...")
         self.setStyleSheet("""
             QMainWindow {
                 background: #f8fafc;
@@ -326,6 +284,20 @@ class SecurityConsoleUI(QtWidgets.QMainWindow):
                 background: #ffffff;
                 color: #0f172a;
                 font-size: 13px;
+            }
+
+            QLineEdit {
+                background: #ffffff;
+                border: 1px solid #cbd5e1;
+                border-radius: 10px;
+                padding: 8px 12px;
+                color: #0f172a;
+                font-size: 14px;
+                font-weight: 800;
+            }
+
+            QLineEdit:focus {
+                border: 2px solid #43B14B;
             }
 
             QPushButton {
@@ -370,7 +342,8 @@ class SecurityConsoleUI(QtWidgets.QMainWindow):
         """)
 
     def _connect_events(self) -> None:
-        self.btn_checkin.clicked.connect(self._confirm_action)
+        self.txt_barcode.returnPressed.connect(self._on_barcode_scanned)
+        self.btn_checkin.setVisible(False)
 
     def _format_time(self, value: object) -> str:
         if not value:
@@ -441,215 +414,32 @@ class SecurityConsoleUI(QtWidgets.QMainWindow):
             return f"{hours:02d}:{minutes:02d}:{seconds:02d}"
         except Exception:
             return "-"
-
-    def update_detection_info(
-        self,
-        plate: str,
-        info: dict | None = None,
-        *,
-        lookup_completed: bool = False,
-    ) -> None:
-        normalized = plate.strip().upper()
+        
+    def update_detection_info(self, plate: str, info=None) -> None:
+        normalized = normalize_plate_text(plate)
 
         if not normalized:
             return
-        
-        if info is None:
-            self.current_plate = normalized
-            self.current_info = None
-
-            self.lbl_status.setText(
-                "Không tìm thấy phương tiện trong hệ thống."
-                if lookup_completed
-                else "Đã nhận biển số, đang chờ lookup..."
-            )
-
-            self.lbl_last_payload.setText(f"Lần quét gần nhất: {normalized}")
-            self.lbl_last_time.setText(
-                f"Thời gian quét gần nhất: {datetime.now().strftime('%Y-%m-%d %H:%M:%S')}"
-            )
-
-            self.lbl_user_name_value.setText("Tên người dùng: -")
-            self.lbl_user_code_value.setText("Mã người dùng: -")
-            self.lbl_subscription_value.setText("Gói gửi xe: -")
-            self.lbl_payment_value.setText("Tổng tiền: -")
-            self.lbl_vehicle_type_value.setText("Loại phương tiện: -")
-            self.lbl_session_status_value.setText("Trạng thái: -")
-
-            self.btn_checkin.setEnabled(False)
-
-            if lookup_completed:
-                self.lst_detection_history.insertItem(
-                    0,
-                    f"{datetime.now().strftime('%H:%M:%S')} - {normalized} - NOT FOUND",
-                )
-
-            return
-
-        now = datetime.now()
 
         self.current_plate = normalized
-        self.current_info = info
 
-        user_code = info.get("user_code") if info else None
-        user_name = info.get("user_full_name") if info else None
-        vehicle_type = info.get("vehicle_type") if info else None
-        subscription = info.get("active_subscription") if info else None
-
-        if isinstance(subscription, dict):
-            subscription_label = subscription.get("plans_type") or "-"
-        else:
-            subscription_label = "-"
-
-        active_session = info.get("active_session") if info else None
-
-        check_in_time = None
-        check_out_time = None
-        session_status = "-"
-
-        if active_session and isinstance(active_session, dict):
-            check_in_time = active_session.get("check_in_time")
-            check_out_time = active_session.get("check_out_time")
-            session_status = active_session.get("status") or "-"
-
-        if not check_in_time:
-            check_in_time = now
-
-        fee_breakdown = info.get("fee_breakdown") if info else None
-        amount_due = None
-
-        if fee_breakdown and isinstance(fee_breakdown, dict):
-            amount_due = fee_breakdown.get("total_amount")
-
-        if amount_due is None and active_session and isinstance(active_session, dict):
-            amount_due = active_session.get("total_amount")
-
-        self.lbl_checkin_time_value.setText(
-            f"Thời điểm vào: {self._format_time(check_in_time)}"
-        )
-        self.lbl_checkout_time_value.setText(
-            f"Thời điểm ra: {self._format_time(check_out_time)}"
-        )
-        self.lbl_total_time_value.setText(
-            f"Tổng thời gian: {self._format_duration(check_in_time, check_out_time)}"
-        )
-
-        self.lbl_user_name_value.setText(
-            f"Tên người dùng: {user_name if user_name else '-'}"
-        )
-        self.lbl_user_code_value.setText(
-            f"Mã người dùng: {user_code if user_code else '-'}"
-        )
-        self.lbl_subscription_value.setText(
-            f"Gói gửi xe: {subscription_label}"
-        )
-
-        self.lbl_payment_value.setText(
-            f"Tổng tiền: {self._format_money(amount_due)}"
-        )
-        self.lbl_vehicle_type_value.setText(
-            f"Loại phương tiện: {vehicle_type if vehicle_type else '-'}"
-        )
-        self.lbl_session_status_value.setText(
-            f"Trạng thái: {session_status}"
-        )
-
-        self.lbl_status.setText("Đã nhận biển số, chờ xác nhận.")
-        self.lbl_last_payload.setText(f"Lần quét gần nhất: {normalized}")
+        self.lbl_last_payload.setText(f"Biển số gần nhất: {normalized}")
         self.lbl_last_time.setText(
             f"Thời gian quét gần nhất: {datetime.now().strftime('%Y-%m-%d %H:%M:%S')}"
         )
 
+        self.lbl_vehicle_type_value.setText("Loại phương tiện: MOTORBIKE")
+        self.lbl_status.setText("Đã nhận biển số. Vui lòng quét barcode.")
+
         self.lst_detection_history.insertItem(
             0,
-            f"{datetime.now().strftime('%H:%M:%S')} - {normalized}",
+            f"{datetime.now().strftime('%H:%M:%S')} - PLATE - {normalized}",
         )
+        self.txt_barcode.setFocus()
 
-        self.btn_checkin.setEnabled(True)
-
-    def _confirm_action(self) -> None:
-        if not self.current_plate:
-            return
-
-        plate = self.current_plate
-
-        self.btn_checkin.setEnabled(False)
-        self.lbl_status.setText("Đang xử lý...")
-
-        try:
-            res = requests.post(
-                f"{settings.BACKEND_HOST}/api/v1/parking_sessions/plate/confirm",
-                json={
-                    "license_plate": plate,
-                    "action": self.current_action,
-                },
-                timeout=6,
-            )
-
-            if res.ok:
-                data = res.json()
-
-                action_label = (
-                    "CHECK-OUT"
-                    if self.current_action == "CHECK_OUT"
-                    else "CHECK-IN"
-                )
-
-                check_in_time = data.get("check_in_time")
-                check_out_time = data.get("check_out_time")
-                when = check_out_time or check_in_time or ""
-
-                fee_breakdown = data.get("fee_breakdown") or {}
-                total_amount = (
-                    fee_breakdown.get("total_amount")
-                    if isinstance(fee_breakdown, dict)
-                    else data.get("total_amount")
-                )
-
-                if total_amount is None:
-                    total_amount = data.get("total_amount")
-
-                self.lbl_status.setText(
-                    f"OK: {action_label} @ {self._format_time(when)}"
-                )
-                self.lbl_session_status_value.setText(f"Trạng thái: {action_label}")
-
-                self.lbl_checkin_time_value.setText(
-                    f"Thời điểm vào: {self._format_time(check_in_time)}"
-                )
-                self.lbl_checkout_time_value.setText(
-                    f"Thời điểm ra: {self._format_time(check_out_time)}"
-                )
-                self.lbl_total_time_value.setText(
-                    f"Tổng thời gian: {self._format_duration(check_in_time, check_out_time)}"
-                )
-
-                self.lbl_payment_value.setText(
-                    f"Tổng tiền: {self._format_money(total_amount)}"
-                )
-
-                self.lst_detection_history.insertItem(
-                    0,
-                    f"{datetime.now().strftime('%H:%M:%S')} - {plate} - {action_label}",
-                )
-
-                return
-
-            error_message = f"Thất bại ({res.status_code})"
-
-            try:
-                error_data = res.json()
-                error_message = error_data.get("detail") or error_message
-            except Exception:
-                pass
-
-            self.lbl_status.setText(error_message)
-            self.btn_checkin.setEnabled(True)
-
-        except Exception as e:
-            self.lbl_status.setText(str(e))
-            self.btn_checkin.setEnabled(True)
-            
+        if self.pending_barcode and not self._submitting:
+            self._submit_current_barcode_and_plate()
+        
     def set_frame(self, frame: QtGui.QImage) -> None:
         if frame is None:
             self.lbl_camera_view.clear()
@@ -668,6 +458,142 @@ class SecurityConsoleUI(QtWidgets.QMainWindow):
 
         self.lbl_camera_view.setPixmap(pixmap)
 
+    def _on_barcode_scanned(self) -> None:
+        token = self.txt_barcode.text().strip().upper()
+        self.txt_barcode.clear()
+
+        if not token:
+            return
+
+        now = time.time()
+
+        if token == self.last_barcode and now - self.last_barcode_time < 2:
+            return
+
+        if self._submitting:
+            return
+
+        self.last_barcode = token
+        self.last_barcode_time = now
+        self.current_barcode = token
+        self.pending_barcode = token
+
+        self.lst_detection_history.insertItem(
+            0,
+            f"{datetime.now().strftime('%H:%M:%S')} - BARCODE - {token}",
+        )
+
+        if self.current_plate:
+            self._submit_current_barcode_and_plate()
+            return
+
+        self.lbl_status.setText(
+            "Đã quét barcode. Đang chờ camera nhận diện biển số..."
+        )
+        self.txt_barcode.setFocus()
+
+    def _submit_current_barcode_and_plate(self) -> None:
+        if not self.pending_barcode:
+            return
+
+        if not self.current_plate:
+            return
+
+        if self._submitting:
+            return
+
+        payload = {
+            "barcode_token": self.pending_barcode,
+            "vehicle_mode": "LICENSED",
+            "vehicle_type": "MOTORBIKE",
+            "license_plate": self.current_plate,
+        }
+
+        self._auto_submit_access_confirm(payload)
+        
+    def _auto_submit_access_confirm(self, payload: dict) -> None:
+        self._submitting = True
+        self.lbl_status.setText("Đang xử lý barcode...")
+
+        try:
+            res = requests.post(
+                f"{settings.BACKEND_HOST}/api/v1/parking_sessions/access/confirm",
+                json=payload,
+                timeout=6,
+            )
+
+            if res.ok:
+                data = res.json()
+                self._render_session_result(data)
+
+                message = data.get("message") or "OK"
+                self.lbl_status.setText(message)
+
+                self.lst_detection_history.insertItem(
+                    0,
+                    f"{datetime.now().strftime('%H:%M:%S')} - BARCODE - {payload.get('barcode_token')} - {message}",
+                )
+
+                # Sau khi check-in/check-out xong, reset barcode.
+                self.current_barcode = None
+                self.pending_barcode = None
+                self.current_plate = None
+                self.lbl_last_payload.setText("Biển số gần nhất: -")
+                return
+
+            try:
+                detail = res.json().get("detail")
+            except Exception:
+                detail = res.text
+
+            self.lbl_status.setText(detail or "Xử lý thất bại")
+
+            self.lst_detection_history.insertItem(
+                0,
+                f"{datetime.now().strftime('%H:%M:%S')} - ERROR - {detail or res.status_code}",
+            )
+
+        except Exception as e:
+            self.lbl_status.setText(str(e))
+
+        finally:
+            self._submitting = False
+            self.txt_barcode.setFocus()
+
+    def _render_session_result(self, data: dict) -> None:
+        check_in_time = data.get("check_in_time")
+        check_out_time = data.get("check_out_time")
+        session_status = data.get("status") or "-"
+
+        fee_breakdown = data.get("fee_breakdown") or {}
+        total_amount = (
+            fee_breakdown.get("total_amount")
+            if isinstance(fee_breakdown, dict)
+            else None
+        )
+
+        if total_amount is None:
+            total_amount = data.get("total_amount")
+
+        self.lbl_checkin_time_value.setText(
+            f"Thời điểm vào: {self._format_time(check_in_time)}"
+        )
+        self.lbl_checkout_time_value.setText(
+            f"Thời điểm ra: {self._format_time(check_out_time)}"
+        )
+        self.lbl_total_time_value.setText(
+            f"Tổng thời gian: {self._format_duration(check_in_time, check_out_time)}"
+        )
+        self.lbl_payment_value.setText(
+            f"Tổng tiền: {self._format_money(total_amount)}"
+        )
+        self.lbl_vehicle_type_value.setText(
+            f"Loại phương tiện: {data.get('vehicle_type') or '-'}"
+        )
+        self.lbl_session_status_value.setText(
+            f"Trạng thái: {session_status}"
+        )
+
     def set_status(self, text: str) -> None:
         self.lbl_status.setText(text or "Đang chờ camera...")
 
@@ -676,33 +602,10 @@ class SecurityConsole(SecurityConsoleUI):
         super().__init__()
 
         self.worker = None
-        self.lookup_worker = None
-
-        self.last_lookup_plate = None
-        self.last_lookup_time = 0.0
-        self.pending_lookup_plates = set()
-
-        self.start_lookup_worker()
         self.start_worker()
 
     def _camera_source(self):
         return 0
-
-    def start_lookup_worker(self) -> None:
-        self.stop_lookup_worker()
-
-        self.lookup_worker = LookupWorker(
-            settings.BACKEND_HOST,
-            action=self.current_action,
-        )
-        self.lookup_worker.lookup_finished.connect(self.on_lookup_finished)
-        self.lookup_worker.lookup_status.connect(self.set_status)
-        self.lookup_worker.start()
-
-    def stop_lookup_worker(self) -> None:
-        if self.lookup_worker:
-            self.lookup_worker.stop()
-            self.lookup_worker = None
 
     def start_worker(self) -> None:
         self.stop_worker()
@@ -723,48 +626,16 @@ class SecurityConsole(SecurityConsoleUI):
         self.set_status(message)
         print(message)
 
-    def should_lookup(self, plate: str) -> bool:
-        normalized = plate.strip().upper()
-        now = time.time()
-
-        if not normalized:
-            return False
-
-        if normalized in self.pending_lookup_plates:
-            return False
-
-        if (
-            normalized == self.last_lookup_plate
-            and (now - self.last_lookup_time) < LOOKUP_DEBOUNCE_SECONDS
-        ):
-            return False
-
-        self.last_lookup_plate = normalized
-        self.last_lookup_time = now
-
-        return True
-
     def record_detection(self, plate: str) -> None:
         normalized = plate.strip().upper()
 
         if not normalized:
             return
 
-        self.update_detection_info(normalized, None, lookup_completed=False)
-
-        if self.lookup_worker and self.should_lookup(normalized):
-            self.pending_lookup_plates.add(normalized)
-            self.lookup_worker.enqueue_plate(normalized)
-
-    def on_lookup_finished(self, plate: str, info: dict | None) -> None:
-        normalized = plate.strip().upper()
-
-        self.pending_lookup_plates.discard(normalized)
-        self.update_detection_info(normalized, info, lookup_completed=True)
+        self.update_detection_info(normalized)
 
     def closeEvent(self, event: QtGui.QCloseEvent) -> None:
         self.stop_worker()
-        self.stop_lookup_worker()
         super().closeEvent(event)
 
 def main() -> None:

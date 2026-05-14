@@ -18,18 +18,10 @@ class invoiceService:
         return await invoiceService.crud.create(db, payload)
 
     @staticmethod
-    def _parse_subscription_metadata(metadata: dict[str, Any]) -> Optional[tuple[UUID, UUID, UUID, UUID, date, date, int]]:
+    def _parse_subscription_metadata(metadata: dict[str, Any]) -> Optional[tuple[UUID, UUID, UUID, date, date, int]]:
         try:
             sub_plan_id = UUID(str(metadata.get("sub_plan_id")))
             term_id = UUID(str(metadata.get("term_id")))
-            vehicle_id_value = metadata.get("vehicle_id")
-            vehicle_ids_value = metadata.get("vehicle_ids")
-            if vehicle_id_value:
-                vehicle_id = UUID(str(vehicle_id_value))
-            elif isinstance(vehicle_ids_value, list) and vehicle_ids_value:
-                vehicle_id = UUID(str(vehicle_ids_value[0]))
-            else:
-                return None
             payment_plan_id = UUID(str(metadata.get("payment_plan_id")))
         except (TypeError, ValueError):
             return None
@@ -55,7 +47,7 @@ class invoiceService:
             except (TypeError, ValueError):
                 return None
 
-        return sub_plan_id, term_id, vehicle_id, payment_plan_id, start_date, end_date, total_amount_value
+        return sub_plan_id, term_id, payment_plan_id, start_date, end_date, total_amount_value
 
     @staticmethod
     async def get_invoice_by_user_code(user_code: str, db: AsyncSession) -> Invoice:

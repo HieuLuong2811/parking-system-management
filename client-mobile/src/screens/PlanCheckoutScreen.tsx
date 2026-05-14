@@ -20,10 +20,10 @@ import MaterialCommunityIcons from '@expo/vector-icons/MaterialCommunityIcons';
 import ScreenShell from '../component/ScreenShell';
 import type { AppStackParamList } from '../navigation/AppStack';
 import { useAcademicTerms } from '../api/academic_terms';
-import { useVehicles } from '../api/vehicles';
 import { usePaymentPlanPricing } from '../api/payment_plan_pricing';
 import { useAuth } from '../auth/AuthContext';
-import { useCheckoutMomo, useCheckoutRecurring } from '../api/checkout';
+import { useCheckoutMomo, useCheckoutRecurring, useCheckoutWalletFull } from '../api/checkout';
+import { useMyWallet } from '../api/wallets';
 import { getPlanMeta, getPlanNameKey } from '../ultis/status';
 import { formatCurrency, formatNumber } from '../ultis/format';
 
@@ -31,11 +31,7 @@ type Nav = NativeStackNavigationProp<AppStackParamList>;
 type ScreenRoute = RouteProp<AppStackParamList, 'PlanCheckout'>;
 
 type PaymentMode = 'FULL' | 'MONTHLY';
-
-const getVehicleName = (vehicle: any) => {
-  if (vehicle?.license_plate) return vehicle.license_plate;
-  return 'Không biển số';
-};
+type PayMethod = 'WALLET' | 'MOMO';
 
 export default function PlanCheckoutScreen() {
   const navigation = useNavigation<Nav>();
@@ -46,40 +42,22 @@ export default function PlanCheckoutScreen() {
   const { user } = useAuth();
 
   const { data: academicTerms = [], isLoading: termsLoading } = useAcademicTerms();
-  const { data: vehicles = [], isLoading: vehiclesLoading } = useVehicles();
   const { mutateAsync: checkoutMomo } = useCheckoutMomo();
   const { mutateAsync: checkoutRecurring } = useCheckoutRecurring();
+  const { mutateAsync: checkoutWalletFull } = useCheckoutWalletFull();
+  const { data: wallet } = useMyWallet();
 
   const [activeStep, setActiveStep] = useState(0);
   
   const [selectedTermId, setSelectedTermId] = useState<string | null>(null);
-  const [selectedLicensedVehicleId, setSelectedLicensedVehicleId] = useState<string | null>(null);
-  const [selectedUnlicensedVehicleId, setSelectedUnlicensedVehicleId] = useState<string | null>(null);
   const [selectedPaymentMode, setSelectedPaymentMode] = useState<PaymentMode | null>(null);
+  const [selectedPayMethod, setSelectedPayMethod] = useState<PayMethod>('MOMO');
   const [processing, setProcessing] = useState(false);
-
-  const licensedVehicles = useMemo(
-    () => vehicles.filter((vehicle) => Boolean(vehicle.license_plate)),
-    [vehicles]
-  );
-
-  const unlicensedVehicles = useMemo(
-    () => vehicles.filter((vehicle) => !vehicle.license_plate),
-    [vehicles]
-  );
 
   const selectedTerm = useMemo(
     () => academicTerms.find((term) => term.id === selectedTermId) ?? null,
     [academicTerms, selectedTermId]
   );
-
-  const selectedVehicles = useMemo(() => {
-    return vehicles.filter(
-      (vehicle) =>
-        vehicle.id === selectedLicensedVehicleId ||
-        vehicle.id === selectedUnlicensedVehicleId
-    );
-  }, [vehicles, selectedLicensedVehicleId, selectedUnlicensedVehicleId]);
 
   const { data: planPricing, isLoading: pricingLoading } = usePaymentPlanPricing(
     selectedPlan?.id,
@@ -133,7 +111,6 @@ export default function PlanCheckoutScreen() {
   const planName = planNameKey ? t(planNameKey) : selectedPlan?.plans_type ?? '';
 
   const steps = [
-    t('checkout.stepVehicle'),
     t('checkout.stepTerm'),
     t('checkout.stepPaymentMethod'),
     t('checkout.stepConfirm'),
@@ -143,38 +120,36 @@ export default function PlanCheckoutScreen() {
     if (!selectedPlan) return false;
 
     if (activeStep === 0) {
-      return Boolean(selectedLicensedVehicleId || selectedUnlicensedVehicleId);
-    }
-
-    if (activeStep === 1) {
       return Boolean(selectedTermId);
     }
 
-    if (activeStep === 2) {
+    if (activeStep === 1) {
       return Boolean(selectedPaymentMode && availablePaymentModes.includes(selectedPaymentMode));
     }
 
-    if (activeStep === 3) {
-      return Boolean(selectedPricing?.amount && selectedPricing?.payment_plan_id);
+    if (activeStep === 2) {
+      if (!selectedPricing?.amount || !selectedPricing?.payment_plan_id) return false;
+      if (selectedPaymentMode === 'MONTHLY') {
+        return true;
+      }
+      return Boolean(selectedPayMethod);
     }
 
     return false;
   }, [
     selectedPlan,
     activeStep,
-    selectedLicensedVehicleId,
-    selectedUnlicensedVehicleId,
     selectedTermId,
     selectedPaymentMode,
     selectedPricing,
   ]);
 
   const primaryLabel =
-    activeStep < 3
+    activeStep < 2
       ? t('common.next')
       : selectedPaymentMode === 'MONTHLY'
         ? t('checkout.setupRecurring')
-        : t('checkout.payWithMomo');
+        : t('checkout.pay');
 
   const handleBack = () => {
     if (processing) return;
@@ -190,7 +165,7 @@ export default function PlanCheckoutScreen() {
   const handleNext = async () => {
     if (!canGoNext) return;
 
-    if (activeStep < 3) {
+    if (activeStep < 2) {
       setActiveStep((current) => Math.min(3, current + 1));
       return;
     }
@@ -200,19 +175,62 @@ export default function PlanCheckoutScreen() {
       return;
     }
 
+    if (selectedPayMethod === 'WALLET') {
+      await handleWalletFullCheckout();
+      return;
+    }
+
     await handleMomoCheckout();
   };
 
-  const handleMomoCheckout = async () => {
-    const vehicleIds = [selectedLicensedVehicleId, selectedUnlicensedVehicleId].filter(
-      Boolean
-    ) as string[];
-
+  const handleWalletFullCheckout = async () => {
     if (
       !user ||
       !selectedPlan ||
       !selectedTerm ||
-      vehicleIds.length === 0 ||
+      !selectedPaymentMode ||
+      !selectedPricing?.amount ||
+      !selectedPricing.payment_plan_id
+    ) {
+      Alert.alert(t('common.error'), t('checkout.missingData'));
+      return;
+    }
+
+    setProcessing(true);
+
+    try {
+      const amount = Number(selectedPricing.amount);
+      const walletBalance = Number((wallet as any)?.balance ?? 0);
+
+      if (walletBalance < amount) {
+        Alert.alert(t('common.error'), t('checkout.insufficientWallet'));
+        return;
+      }
+
+      await checkoutWalletFull({
+        sub_plan_id: selectedPlan.id,
+        term_id: selectedTerm.id,
+        payment_plan_id: selectedPricing.payment_plan_id,
+        start_date: selectedTerm.start_date,
+        end_date: selectedTerm.end_date,
+        amount,
+      });
+
+      Alert.alert(t('common.success'), t('checkout.walletPaymentSuccess'));
+      navigation.popToTop();
+    } catch (error) {
+      const message = error instanceof Error ? error.message : t('checkout.paymentFailed');
+      Alert.alert(t('common.error'), message);
+    } finally {
+      setProcessing(false);
+    }
+  };
+
+  const handleMomoCheckout = async () => {
+    if (
+      !user ||
+      !selectedPlan ||
+      !selectedTerm ||
       !selectedPaymentMode ||
       !selectedPricing?.amount ||
       !selectedPricing.payment_plan_id
@@ -236,7 +254,6 @@ export default function PlanCheckoutScreen() {
       const momoResponse = await checkoutMomo({
         sub_plan_id: selectedPlan.id,
         term_id: selectedTerm.id,
-        vehicle_ids: vehicleIds,
         payment_plan_id: selectedPricing.payment_plan_id,
         start_date: selectedTerm.start_date,
         end_date: selectedTerm.end_date,
@@ -286,13 +303,10 @@ export default function PlanCheckoutScreen() {
   };
 
   const handleRecurringCheckout = async () => {
-    const vehicleIds = [selectedLicensedVehicleId, selectedUnlicensedVehicleId].filter(Boolean) as string[];
-
     if (
       !user ||
       !selectedPlan ||
       !selectedTerm ||
-      vehicleIds.length === 0 ||
       !selectedPaymentMode ||
       !selectedPricing?.amount ||
       !selectedPricing.payment_plan_id
@@ -309,7 +323,6 @@ export default function PlanCheckoutScreen() {
       await checkoutRecurring({
         sub_plan_id: selectedPlan.id,
         term_id: selectedTerm.id,
-        vehicle_ids: vehicleIds,
         payment_plan_id: selectedPricing.payment_plan_id,
         start_date: selectedTerm.start_date,
         end_date: selectedTerm.end_date,
@@ -430,66 +443,6 @@ export default function PlanCheckoutScreen() {
         contentContainerStyle={styles.content}
       >
         {activeStep === 0 && (
-          <>
-            <Section title={t('checkout.selectLicensedVehicle')}>
-              {vehiclesLoading ? (
-                <ActivityIndicator color="#2563eb" />
-              ) : licensedVehicles.length === 0 ? (
-                <EmptyText text={t('checkout.noLicensedVehicle')} />
-              ) : (
-                <View style={styles.optionGrid}>
-                  {licensedVehicles.map((vehicle) => {
-                    const selected = vehicle.id === selectedLicensedVehicleId;
-
-                    return (
-                      <OptionCard
-                        key={vehicle.id}
-                        title={vehicle.license_plate ?? t('checkout.noLicensePlate')}
-                        subtitle={vehicle.vehicle_type}
-                        selected={selected}
-                        onPress={() =>
-                          setSelectedLicensedVehicleId(
-                            selected ? null : vehicle.id
-                          )
-                        }
-                      />
-                    );
-                  })}
-                </View>
-              )}
-            </Section>
-
-            <Section title={t('checkout.selectUnlicensedVehicle')}>
-              {vehiclesLoading ? (
-                <ActivityIndicator color="#2563eb" />
-              ) : unlicensedVehicles.length === 0 ? (
-                <EmptyText text={t('checkout.noUnlicensedVehicle')} />
-              ) : (
-                <View style={styles.optionGrid}>
-                  {unlicensedVehicles.map((vehicle) => {
-                    const selected = vehicle.id === selectedUnlicensedVehicleId;
-
-                    return (
-                      <OptionCard
-                        key={vehicle.id}
-                        title={t('checkout.noLicensePlate')}
-                        subtitle={vehicle.vehicle_type}
-                        selected={selected}
-                        onPress={() =>
-                          setSelectedUnlicensedVehicleId(
-                            selected ? null : vehicle.id
-                          )
-                        }
-                      />
-                    );
-                  })}
-                </View>
-              )}
-            </Section>
-          </>
-        )}
-
-        {activeStep === 1 && (
           <Section title={t('checkout.selectTerm')}>
             {termsLoading ? (
               <ActivityIndicator color="#2563eb" />
@@ -518,7 +471,7 @@ export default function PlanCheckoutScreen() {
           </Section>
         )}
 
-        {activeStep === 2 && (
+        {activeStep === 1 && (
           <Section title={t('checkout.selectPaymentMethod')}>
             {!selectedTermId ? (
               <EmptyText text={t('checkout.selectTermFirst')} />
@@ -531,15 +484,25 @@ export default function PlanCheckoutScreen() {
             ) : (
               <View style={styles.paymentList}>
                 {availablePaymentModes.includes('MONTHLY') && (
+                  (() => {
+                    const amount = Number(monthlyModePricing?.amount ?? 0);
+                    const walletBalance = Number((wallet as any)?.balance ?? 0);
+                    const insufficient = Boolean(amount > 0 && walletBalance < amount);
+                    return (
                   <PaymentMethodCard
                     title={t('checkout.monthlyPayment')}
                     subtitle={t('checkout.monthlyPaymentDesc')}
                     amount={monthlyModePricing?.amount ?? null}
                     badge={t('checkout.recommended')}
                     selected={selectedPaymentMode === 'MONTHLY'}
-                    disabled={!monthlyModePricing?.amount}
-                    onPress={() => setSelectedPaymentMode('MONTHLY')}
+                    disabled={!monthlyModePricing?.amount || insufficient}
+                    onPress={() => {
+                      setSelectedPaymentMode('MONTHLY');
+                      setSelectedPayMethod('WALLET');
+                    }}
                   />
+                    );
+                  })()
                 )}
 
                 {availablePaymentModes.includes('FULL') && (
@@ -549,14 +512,17 @@ export default function PlanCheckoutScreen() {
                     amount={fullModePricing?.amount ?? null}
                     selected={selectedPaymentMode === 'FULL'}
                     disabled={!fullModePricing?.amount}
-                    onPress={() => setSelectedPaymentMode('FULL')}
+                    onPress={() => {
+                      setSelectedPaymentMode('FULL');
+                      setSelectedPayMethod('MOMO');
+                    }}
                   />
                 )}
               </View>
             )}
           </Section>
         )}
-        {activeStep === 3 && (
+        {activeStep === 2 && (
           <>
             <Section title={t('checkout.summary')}>
               <SummaryRow label={t('checkout.plan')} value={planName} />
@@ -564,15 +530,6 @@ export default function PlanCheckoutScreen() {
               <SummaryRow
                 label={t('checkout.term')}
                 value={selectedTerm?.term_name ?? '-'}
-              />
-
-              <SummaryRow
-                label={t('checkout.vehicle')}
-                value={
-                  selectedVehicles.length > 0
-                    ? selectedVehicles.map(getVehicleName).join(', ')
-                    : '-'
-                }
               />
 
               <SummaryRow
@@ -596,11 +553,55 @@ export default function PlanCheckoutScreen() {
             </Section>
 
             <Section title={t('checkout.paymentNoteTitle')}>
-              <Text style={styles.noteText}>
-                {selectedPaymentMode === 'MONTHLY'
-                  ? t('checkout.monthlyPaymentNote')
-                  : t('checkout.fullPaymentNote')}
-              </Text>
+              {selectedPaymentMode === 'FULL' ? (
+                <View style={styles.payMethodBox}>
+                  <Text style={styles.payMethodTitle}>{t('checkout.choosePayMethod')}</Text>
+
+                  <TouchableOpacity
+                    style={[
+                      styles.payMethodCard,
+                      selectedPayMethod === 'WALLET' && styles.payMethodCardSelected,
+                      Number((wallet as any)?.balance ?? 0) < Number(selectedPricing?.amount ?? 0) &&
+                        styles.payMethodCardDisabled,
+                    ]}
+                    activeOpacity={0.85}
+                    disabled={Number((wallet as any)?.balance ?? 0) < Number(selectedPricing?.amount ?? 0)}
+                    onPress={() => setSelectedPayMethod('WALLET')}
+                  >
+                    <View style={styles.payMethodRow}>
+                      <Ionicons name="wallet-outline" size={18} color="#0f172a" />
+                      <Text style={styles.payMethodLabel}>{t('checkout.payWithWallet')}</Text>
+                    </View>
+                    <Text style={styles.payMethodHint}>
+                      {t('checkout.walletBalance', {
+                        balance: formatCurrency(Number((wallet as any)?.balance ?? 0)),
+                      })}
+                    </Text>
+                    {Number((wallet as any)?.balance ?? 0) < Number(selectedPricing?.amount ?? 0) ? (
+                      <Text style={styles.payMethodWarn}>{t('checkout.insufficientWallet')}</Text>
+                    ) : null}
+                  </TouchableOpacity>
+
+                  <TouchableOpacity
+                    style={[
+                      styles.payMethodCard,
+                      selectedPayMethod === 'MOMO' && styles.payMethodCardSelected,
+                    ]}
+                    activeOpacity={0.85}
+                    onPress={() => setSelectedPayMethod('MOMO')}
+                  >
+                    <View style={styles.payMethodRow}>
+                      <Ionicons name="card-outline" size={18} color="#0f172a" />
+                      <Text style={styles.payMethodLabel}>{t('checkout.payWithMomo')}</Text>
+                    </View>
+                    <Text style={styles.payMethodHint}>{t('checkout.momoNote')}</Text>
+                  </TouchableOpacity>
+
+                  <Text style={styles.noteText}>{t('checkout.fullPaymentNote')}</Text>
+                </View>
+              ) : (
+                <Text style={styles.noteText}>{t('checkout.monthlyWalletRequired')}</Text>
+              )}
             </Section>
           </>
         )}
@@ -1051,6 +1052,50 @@ const styles = StyleSheet.create({
     lineHeight: 20,
     fontWeight: '600',
     color: '#475569',
+  },
+  payMethodBox: {
+    gap: 10,
+  },
+  payMethodTitle: {
+    fontSize: 13,
+    fontWeight: '900',
+    color: '#0f172a',
+  },
+  payMethodCard: {
+    padding: 12,
+    borderRadius: 10,
+    backgroundColor: '#f8fafc',
+    borderWidth: 1,
+    borderColor: '#e2e8f0',
+  },
+  payMethodCardSelected: {
+    borderColor: '#2563eb',
+    backgroundColor: '#eff6ff',
+  },
+  payMethodCardDisabled: {
+    opacity: 0.55,
+  },
+  payMethodRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 8,
+  },
+  payMethodLabel: {
+    fontSize: 13.5,
+    fontWeight: '900',
+    color: '#0f172a',
+  },
+  payMethodHint: {
+    marginTop: 6,
+    fontSize: 12.5,
+    fontWeight: '700',
+    color: '#64748b',
+  },
+  payMethodWarn: {
+    marginTop: 6,
+    fontSize: 12.5,
+    fontWeight: '800',
+    color: '#dc2626',
   },
   emptyText: {
     fontSize: 13,

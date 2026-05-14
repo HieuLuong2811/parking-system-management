@@ -6,10 +6,6 @@ from pydantic import BaseModel
 class CheckoutMomoRequest(BaseModel):
     sub_plan_id: UUID
     term_id: UUID
-    # Backward compatible single-vehicle field
-    vehicle_id: Optional[UUID] = None
-    # New multi-vehicle mapping
-    vehicle_ids: Optional[list[UUID]] = None
     payment_plan_id: UUID
     start_date: datetime
     end_date: datetime
@@ -22,8 +18,6 @@ class CheckoutMomoRequest(BaseModel):
 class CheckoutRecurringRequest(BaseModel):
     sub_plan_id: str
     term_id: str
-    vehicle_id: Optional[str] = None
-    vehicle_ids: Optional[list[str]] = None
     payment_plan_id: str
     start_date: date
     end_date: date
@@ -32,3 +26,12 @@ class CheckoutRecurringRequest(BaseModel):
 class CheckoutPayDebtRequest(BaseModel):
     invoice_id: str
     redirect_url: str | None = None
+
+
+class CheckoutWalletFullRequest(BaseModel):
+    sub_plan_id: UUID
+    term_id: UUID
+    payment_plan_id: UUID
+    start_date: datetime
+    end_date: datetime
+    amount: float

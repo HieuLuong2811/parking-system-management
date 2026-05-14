@@ -56,9 +56,6 @@ class ParkingAccessCardBase(SQLModel):
 
     current_session_id: Optional[uuid.UUID] = Field(default=None, index=True)
 
-    issued_at: Optional[datetime] = None
-    returned_at: Optional[datetime] = None
-
 
 class ParkingAccessCard(
     ParkingAccessCardBase,
@@ -93,5 +90,3 @@ class ParkingAccessCardUpdate(SQLModel):
     user_subscription_id: Optional[uuid.UUID] = None
     status: Optional[ParkingAccessCardStatus] = None
     current_session_id: Optional[uuid.UUID] = None
-    issued_at: Optional[datetime] = None
-    returned_at: Optional[datetime] = None

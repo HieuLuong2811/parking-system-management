@@ -15,8 +15,6 @@ export type SubscriptionPlanRecord = {
   price_per_day: number;
   allow_monthly_payment?: boolean | null;
   allow_full_payment?: boolean | null;
-  max_licensed_vehicle?: number | null;
-  max_unlicensed_vehicle?: number | null;
   after_18_fee?: number | null;
   waive_after_18_fee?: boolean | null;
   status?: string | null;
@@ -45,23 +43,11 @@ export type PaymentPlanRecord = {
   updated_at: string;
 };
 
-export type VehicleRecord = {
-  id: string;
-  user_code?: string | null;
-  vehicle_type: string;
-  license_plate?: string | null;
-  barcode_token?: string | null;
-  created_at?: string | null;
-  updated_at?: string | null;
-  deleted_at?: string | null;
-};
-
 export type UserSubscriptionRecord = {
   id: string;
   user_code: string;
   sub_plan_id: string;
   term_id: string;
-  vehicle_id: string;
   payment_plan_id: string;
   total_amount: number;
   paid_amount: number;
@@ -74,7 +60,6 @@ export type UserSubscriptionRecord = {
 
 export type SubscriptionSearchRow = UserSubscriptionRecord & {
   user?: AdminUser;
-  vehicle?: VehicleRecord;
   payment_plan?: PaymentPlanRecord;
   plan?: SubscriptionPlanRecord;
 };
@@ -93,10 +78,7 @@ export type UserSubscriptionDetailRecord = {
   subscription_plan?: SubscriptionPlanRecord | null;
   payment_plan?: PaymentPlanRecord | null;
   term?: AcademicTermRecord | null;
-  vehicle?: VehicleRecord | null;
-  detail?: {
-    covered_vehicles?: VehicleRecord[] | null;
-  } | null;
+  detail?: Record<string, unknown> | null;
 };
 
 export type InvoiceAdminRecord = {
@@ -116,7 +98,9 @@ export type InvoiceSearchRow = InvoiceAdminRecord & {
 
 export type ParkingSessionRecord = {
   id: string;
-  vehicle_id: string;
+  access_card_id?: string | null;
+  vehicle_mode?: string | null;
+  vehicle_type?: string | null;
   license_plate?: string | null;
   check_in_time: string;
   check_out_time?: string | null;
@@ -130,7 +114,6 @@ export type ParkingSessionRecord = {
 export type ParkingSessionAdminRow = ParkingSessionRecord & {
   user_code?: string | null;
   user_full_name?: string | null;
-  vehicle_type?: string | null;
 };
 
 export type RoleRecord = {

@@ -4,6 +4,7 @@ import json
 import logging
 from typing import Any
 import uuid
+from datetime import datetime
 
 import requests
 from fastapi import BackgroundTasks, HTTPException
@@ -12,10 +13,17 @@ from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.core.config import settings
 from app.core.momo_verify_signature import verify_signature
-from app.enums.parking import InvoiceStatus, PaymentMethod, SubscriptionStatus
+from app.enums.parking import (
+    InvoiceStatus,
+    PaymentMethod,
+    PaymentTransactionStatus,
+    PaymentTransactionType,
+    SubscriptionStatus,
+)
 from app.models.invoices import InvoiceUpdate
 from app.models.momo_payment import MomoInfor
 from app.models.payment_transactions import PaymentTransaction
+from app.service.user_wallets import userWalletService
 from app.models.notifications import NotificationCreate
 from app.service.invoices import invoiceService
 from app.service.notifications import notificationService
@@ -67,6 +75,33 @@ class MomoPaymentService:
         db.add(invoice)
         await db.commit()
         await db.refresh(invoice)
+
+        # Ensure there is a pending payment transaction for this MoMo order (best-effort).
+        existing_tx = await db.execute(
+            select(PaymentTransaction)
+            .where(
+                PaymentTransaction.invoice_id == invoice.id,
+                PaymentTransaction.provider_request_id == payment_order_id,
+            )
+            .limit(1)
+        )
+        if existing_tx.scalar_one_or_none() is None:
+            tx = PaymentTransaction(
+                user_code=invoice.user_code,
+                wallet_id=None,
+                invoice_id=invoice.id,
+                subscription_id=invoice.subscription_id,
+                transaction_type=PaymentTransactionType.INVOICE_DIRECT_PAYMENT,
+                payment_method=PaymentMethod.MOMO,
+                amount=invoice.amount,
+                status=PaymentTransactionStatus.PENDING,
+                provider="MOMO",
+                provider_request_id=payment_order_id,
+                description="MoMo invoice payment (pending)",
+                attempt_number=1,
+            )
+            db.add(tx)
+            await db.commit()
 
         momo_info = MomoInfor(
             amount=invoice.amount,
@@ -258,6 +293,69 @@ class MomoPaymentService:
             )
 
     @staticmethod
+    async def _handle_wallet_topup_ipn(
+        *,
+        payload: dict[str, Any],
+        order_id: str,
+        db: AsyncSession,
+    ) -> dict[str, Any]:
+        result_code = payload.get("resultCode")
+        message = payload.get("message")
+        trans_id = str(payload.get("transId") or "")
+
+        try:
+            result_code_int = int(result_code)
+        except (TypeError, ValueError):
+            raise HTTPException(status_code=400, detail="Invalid resultCode")
+
+        async with db.begin():
+            # Lock the transaction row for idempotency.
+            tx_row = await db.execute(
+                select(PaymentTransaction)
+                .where(
+                    PaymentTransaction.provider_request_id == order_id,
+                    PaymentTransaction.transaction_type == PaymentTransactionType.TOP_UP,
+                )
+                .with_for_update()
+            )
+            tx = tx_row.scalar_one_or_none()
+            if tx is None:
+                raise HTTPException(status_code=404, detail="Top-up transaction not found")
+
+            if tx.status == PaymentTransactionStatus.SUCCESS:
+                return {"message": "already processed", "order_id": order_id}
+
+            if result_code_int != 0:
+                tx.status = PaymentTransactionStatus.FAILED
+                tx.response_message = str(message or f"MoMo payment failed ({result_code_int})")
+                tx.provider_transaction_id = trans_id or tx.provider_transaction_id
+                tx.updated_at = datetime.utcnow()
+                db.add(tx)
+                return {"message": "failed", "order_id": order_id}
+
+            wallet = await userWalletService.get_or_create_wallet_for_update(
+                user_code=tx.user_code,
+                db=db,
+            )
+            userWalletService.ensure_wallet_can_change_balance(wallet)
+
+            before = wallet.balance
+            wallet.balance = (wallet.balance or 0) + (tx.amount or 0)
+            wallet.updated_at = datetime.utcnow()
+
+            tx.balance_before = before
+            tx.balance_after = wallet.balance
+            tx.status = PaymentTransactionStatus.SUCCESS
+            tx.response_message = str(message or "MoMo top-up completed")
+            tx.provider_transaction_id = trans_id or tx.provider_transaction_id
+            tx.updated_at = datetime.utcnow()
+
+            db.add(wallet)
+            db.add(tx)
+
+        return {"message": "topup recorded", "order_id": order_id, "payment_transaction_id": str(tx.payment_transaction_id)}
+
+    @staticmethod
     async def handle_momo_ipn(
         payload: dict[str, Any],
         db: AsyncSession,
@@ -279,6 +377,14 @@ class MomoPaymentService:
 
         if not order_id:
             raise HTTPException(status_code=400, detail="Missing orderId")
+
+        # Wallet top-up payments don't use invoice extraData; correlate by order_id.
+        if str(order_id).startswith("TOPUP-"):
+            return await MomoPaymentService._handle_wallet_topup_ipn(
+                payload=payload,
+                order_id=str(order_id),
+                db=db,
+            )
         
         try:
             extra_data = json.loads(extra_data_raw)
@@ -336,12 +442,25 @@ class MomoPaymentService:
                 if trans_id and not await MomoPaymentService._transaction_exists(
                     invoice_id=invoice.id, transaction_code=trans_id, db=db
                 ):
-                    db.add(PaymentTransaction(
-                        invoice_id=invoice.id,
-                        attempt_number=1,
-                        transaction_code=trans_id,
-                        response_message=str(message or "MoMo payment completed"),
-                    ))
+                    db.add(
+                        PaymentTransaction(
+                            user_code=invoice.user_code,
+                            wallet_id=None,
+                            invoice_id=invoice.id,
+                            subscription_id=invoice.subscription_id,
+                            transaction_type="INVOICE_DIRECT_PAYMENT",
+                            payment_method="MOMO",
+                            amount=invoice.amount,
+                            status="SUCCESS",
+                            provider="MOMO",
+                            provider_transaction_id=str(trans_id),
+                            provider_request_id=str(order_id),
+                            description="MoMo invoice payment",
+                            attempt_number=1,
+                            transaction_code=str(trans_id),
+                            response_message=str(message or "MoMo payment completed"),
+                        )
+                    )
 
                 # Mark current invoice as PAID
                 invoice.status = InvoiceStatus.PAID

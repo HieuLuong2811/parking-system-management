@@ -1,33 +1,32 @@
 const vi = {
   translation: {
-    sideBar: {
-      expand: "Mở rộng sidebar",
-      collapse: "Thu gọn sidebar",
-      parents: {
-        userManagement: "Quản lý người dùng",
-        billing: "Thanh toán & giao dịch",
+    "sideBar": {
+      "title": "Hệ thống bãi đỗ xe",
+      "subMenu": {
+        "General": "Tổng quan",
+        "Operations": "Vận hành",
+        "Billing": "Thanh toán",
+        "Management": "Quản lý",
+        "settings": "Cài đặt"
       },
-      title: "Hệ thống bãi đỗ xe",
-      subMenu: {
-        General: "Tổng quan",
-        subscriptions: "Gói đăng ký và hoá đơn",
-        system: "Hệ thống",
+      "parents": {
+        "billing": "Thanh toán",
+        "userManagement": "Quản lý người dùng"
       },
-      children: {
-        dashboard: "Dashboard",
-        parkingSessions: "Phiên gửi xe",
-        subscriptions: "Gói đăng ký",
-        plans: "Danh sách gói",
-        paymentTransactions: "Lịch sử thanh toán",
-        paymentPlans: "Hình thức thanh toán",
-        users: "Người dùng",
-        roles: "Vai trò",
-        vehicles: "Phương tiện",
-        terms: "Học kỳ",
-        notifications: "Thông báo",
-        profile: "Trang cá nhân",
-        logout: "Đăng xuất",     
-      },
+      "children": {
+        "dashboard": "Bảng điều khiển",
+        "parkingSessions": "Phiên gửi xe",
+        "subscriptions": "Gói đăng ký",
+        "paymentTransactions": "Giao dịch thanh toán",
+        "users": "Người dùng",
+        "roles": "Vai trò",
+        "paymentPlans": "Hình thức thanh toán",
+        "plans": "Gói dịch vụ",
+        "terms": "Điều khoản",
+        "notifications": "Thông báo",
+        "profile": "Hồ sơ",
+        "logout": "Đăng xuất"
+      }
     },
     common: {
       filters: {
@@ -398,8 +397,6 @@ const vi = {
         pricePerDay: "Giá gửi xe / ngày",
         allowMonthly: "Tháng",
         allowFull: "Toàn bộ",
-        maxLicensed: "Tối đa (biển)",
-        maxUnlicensed: "Tối đa (không biển)",
         after18Fee: "Phí sau 18:00",
         waiveAfter18: "Miễn sau 18:00",
         status: "Trạng thái",
@@ -416,6 +413,10 @@ const vi = {
       button: {
         add: "Thêm gói gửi xe mới",
       },
+      toast: {
+        updated: "Cập nhật gói gửi xe thành công.",
+        created: "Tạo gói gửi xe thành công.",
+      },
       dialog: {
         addTitle: "Thêm gói gửi xe",
         editTitle: "Chỉnh sửa gói gửi xe",
@@ -426,8 +427,6 @@ const vi = {
           allowMonthly: "Cho phép thanh toán theo tháng",
           allowFull: "Cho phép thanh toán toàn bộ",
           waiveAfter18: "Miễn phí sau 18:00",
-          maxLicensed: "Số xe có biển tối đa",
-          maxUnlicensed: "Số xe không biển tối đa",
           after18Fee: "Phí sau 18:00 (VND)",
           status: "Trạng thái",
         },

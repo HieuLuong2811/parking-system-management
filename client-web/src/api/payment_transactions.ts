@@ -3,20 +3,28 @@ import { useQuery } from "@tanstack/react-query";
 import { clientHttp, PaginatedResponse, requestWithContext } from "./clientApi";
 
 export type PaymentTransactionDetail = {
-  id: string;
-  invoice_id: string;
-  attempt_number: number;
-  transaction_code: string;
-  response_message: string;
+  payment_transaction_id: string;
+  invoice_id?: string | null;
+  subscription_id?: string | null;
+  attempt_number?: number | null;
+  transaction_code?: string | null;
+  response_message?: string | null;
+  transaction_type: string;
+  payment_method: string;
+  amount: number | string;
+  status: string;
+  balance_before?: number | string | null;
+  balance_after?: number | string | null;
+  description?: string | null;
   created_at: string;
 
   user_code: string;
-  user_full_name: string;
+  user_full_name?: string | null;
 
-  invoice_amount: number;
-  invoice_payment_method: string;
-  invoice_status: string;
-  invoice_created_at: string;
+  invoice_amount?: number | null;
+  invoice_payment_method?: string | null;
+  invoice_status?: string | null;
+  invoice_created_at?: string | null;
 };
 
 export type PaymentTransactionsMeQuery = {
@@ -50,4 +58,3 @@ export const useMyPaymentTransactionsPaginated = (
     placeholderData: (prev) => prev,
   });
 };
-

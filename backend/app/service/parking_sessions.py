@@ -11,12 +11,11 @@ from app.models.parking_sessions import (
     ParkingSessionRead,
     ParkingSessionUpdate,
 )
-from app.models.vehicles import Vehicle
 from app.models.users import Users
 from app.enums.parking import ParkingSessionStatus, VehicleType
 from app.service.base import CRUDService
 from sqlalchemy.ext.asyncio import AsyncSession
-
+from app.models.parking_access_cards import ParkingAccessCard
 from app.utils.pagination import PaginatedResponse
 from app.utils.search import ilike_unaccent
 
@@ -39,9 +38,12 @@ class parkingSessionService:
     @staticmethod
     def _build_admin_statement(*, ordered: bool = True):
         statement = (
-            select(ParkingSession, Vehicle, Users)
-            .join(Vehicle, Vehicle.id == ParkingSession.vehicle_id)
-            .outerjoin(Users, Users.user_code == Vehicle.user_code)
+            select(ParkingSession, ParkingAccessCard, Users)
+            .join(
+                ParkingAccessCard,
+                ParkingAccessCard.id == ParkingSession.access_card_id,
+            )
+            .outerjoin(Users, Users.user_code == ParkingAccessCard.user_code)
         )
         if ordered:
             statement = statement.order_by(desc(ParkingSession.check_in_time))
@@ -51,8 +53,8 @@ class parkingSessionService:
     async def get_sessions_by_user_code(user_code: str, db: AsyncSession) -> list[ParkingSession]:
         statement = (
             select(ParkingSession)
-            .join(Vehicle, Vehicle.id == ParkingSession.vehicle_id)
-            .where(Vehicle.user_code == user_code)
+            .join(ParkingAccessCard, ParkingAccessCard.id == ParkingSession.access_card_id)
+            .where(ParkingAccessCard.user_code == user_code)
         )
         result = await db.execute(statement)
         return result.scalars().all()
@@ -74,9 +76,9 @@ class parkingSessionService:
 
         filters = []
         if user_code:
-            filters.append(ilike_unaccent(Vehicle.user_code, user_code.strip()))
+            filters.append(ilike_unaccent(ParkingAccessCard.user_code, user_code.strip()))
         if vehicle_type is not None:
-            filters.append(Vehicle.vehicle_type == vehicle_type)
+            filters.append(ParkingSession.vehicle_type == vehicle_type)
         if status is not None:
             filters.append(ParkingSession.status == status)
         if from_time is not None:
@@ -101,11 +103,10 @@ class parkingSessionService:
         result = await db.execute(statement)
         rows = result.all()
         data: list[ParkingSessionAdminRead] = []
-        for session, vehicle, user in rows:
+        for session, card, user in rows:
             data.append(
                 ParkingSessionAdminRead(
                     id=session.id,
-                    vehicle_id=session.vehicle_id,
                     license_plate=session.license_plate,
                     check_in_time=session.check_in_time,
                     check_out_time=session.check_out_time,
@@ -114,9 +115,11 @@ class parkingSessionService:
                     total_amount=session.total_amount,
                     created_at=session.created_at,
                     updated_at=session.updated_at,
-                    user_code=vehicle.user_code,
+                    access_card_id=getattr(session, "access_card_id", None),
+                    vehicle_mode=getattr(session, "vehicle_mode", None),
+                    vehicle_type=getattr(session, "vehicle_type", None),
+                    user_code=(card.user_code if card else None),
                     user_full_name=(user.full_name if user else None),
-                    vehicle_type=vehicle.vehicle_type if vehicle else None,
                 )
             )
 
@@ -129,32 +132,41 @@ class parkingSessionService:
         }
 
     @staticmethod
-    async def get_active_session_by_vehicle(vehicle_id: str, db: AsyncSession) -> ParkingSession | None:
-        statement = select(ParkingSession).where(
-            and_(
-                ParkingSession.vehicle_id == vehicle_id,
-                ParkingSession.check_out_time.is_(None),
-                ParkingSession.status == ParkingSessionStatus.ACTIVE,
-            )
-        )
-        result = await db.execute(statement)
-        return result.scalar_one_or_none()
-
-    @staticmethod
-    async def get_latest_session_by_vehicle(vehicle_id: str, db: AsyncSession) -> ParkingSession | None:
-        statement = (
-            select(ParkingSession)
-            .where(ParkingSession.vehicle_id == vehicle_id)
-            .order_by(ParkingSession.created_at.desc())
-        )
-        result = await db.execute(statement)
-        return result.scalars().first()
-
-    @staticmethod
     async def update_session(
         session_id: str, payload: ParkingSessionUpdate, db: AsyncSession
     ) -> ParkingSession:
         return await parkingSessionService.crud.update(db, session_id, payload)
+    
+    @staticmethod
+    async def get_active_session_by_access_card(
+        access_card_id: str,
+        db: AsyncSession,
+    ) -> ParkingSession | None:
+        statement = select(ParkingSession).where(
+            and_(
+                ParkingSession.access_card_id == access_card_id,
+                ParkingSession.check_out_time.is_(None),
+                ParkingSession.status == ParkingSessionStatus.ACTIVE,
+            )
+        )
+
+        result = await db.execute(statement)
+        return result.scalar_one_or_none()
+
+
+    @staticmethod
+    async def get_latest_session_by_access_card(
+        access_card_id: str,
+        db: AsyncSession,
+    ) -> ParkingSession | None:
+        statement = (
+            select(ParkingSession)
+            .where(ParkingSession.access_card_id == access_card_id)
+            .order_by(ParkingSession.created_at.desc())
+        )
+
+        result = await db.execute(statement)
+        return result.scalars().first()
 
 
 class parkingSessionUserService:
@@ -180,48 +192,64 @@ class parkingSessionUserService:
         page = max(1, int(page or 1))
         limit = max(1, int(limit or 5))
 
-        filters = [func.lower(Vehicle.user_code) == user_code.strip().lower()]
+        filters = [
+            func.lower(ParkingAccessCard.user_code) == user_code.strip().lower()
+        ]
+
         if status is not None:
             filters.append(ParkingSession.status == status)
         if from_time is not None:
             filters.append(ParkingSession.check_in_time >= from_time)
         if to_time is not None:
             filters.append(ParkingSession.check_in_time <= to_time)
-            
+
         base_statement = (
-            select(ParkingSession, Vehicle.vehicle_type, Vehicle.license_plate)
-            .join(Vehicle, Vehicle.id == ParkingSession.vehicle_id)
+            select(ParkingSession)
+            .join(
+                ParkingAccessCard,
+                ParkingAccessCard.id == ParkingSession.access_card_id,
+            )
             .where(*filters)
         )
 
-        count_subquery = base_statement.with_only_columns(ParkingSession.id).distinct().subquery()
-        total_count = await db.scalar(select(func.count()).select_from(count_subquery))
+        count_subquery = (
+            base_statement
+            .with_only_columns(ParkingSession.id)
+            .distinct()
+            .subquery()
+        )
+
+        total_count = await db.scalar(
+            select(func.count()).select_from(count_subquery)
+        )
         total_count = int(total_count or 0)
         total_pages = math.ceil(total_count / limit) if total_count else 0
 
         offset = (page - 1) * limit
-        statement = base_statement.order_by(desc(ParkingSession.check_in_time)).offset(offset).limit(limit)
+
+        statement = (
+            base_statement
+            .order_by(desc(ParkingSession.check_in_time))
+            .offset(offset)
+            .limit(limit)
+        )
+
         result = await db.execute(statement)
-        rows = result.all()
+        sessions = result.scalars().all()
+
         data: list[ParkingSessionRead] = []
-        for session, vehicle_type, vehicle_license_plate in rows:
-            resolved_license_plate = session.license_plate or vehicle_license_plate
+
+        for session in sessions:
             if hasattr(ParkingSessionRead, "model_validate"):
-                data.append(
-                    ParkingSessionRead.model_validate(
-                        session,
-                        update={
-                            "vehicle_type": vehicle_type,
-                            "license_plate": resolved_license_plate,
-                        },
-                    )
-                )
+                data.append(ParkingSessionRead.model_validate(session))
             else:
                 data.append(
                     ParkingSessionRead(
                         id=session.id,
-                        vehicle_id=session.vehicle_id,
-                        license_plate=resolved_license_plate,
+                        access_card_id=getattr(session, "access_card_id", None),
+                        vehicle_mode=getattr(session, "vehicle_mode", None),
+                        vehicle_type=getattr(session, "vehicle_type", None),
+                        license_plate=getattr(session, "license_plate", None),
                         check_in_time=session.check_in_time,
                         check_out_time=session.check_out_time,
                         status=session.status,
@@ -229,7 +257,6 @@ class parkingSessionUserService:
                         total_amount=session.total_amount,
                         created_at=session.created_at,
                         updated_at=session.updated_at,
-                        vehicle_type=vehicle_type,
                     )
                 )
 
@@ -250,11 +277,14 @@ class parkingSessionUserService:
         status: ParkingSessionStatus | None = None,
         from_time: datetime | None = None,
         to_time: datetime | None = None,
-    ) -> list[tuple[ParkingSession, Vehicle, Users | None]]:
+    ) -> list[tuple[ParkingSession, ParkingAccessCard | None, Users | None]]:
         from_time = parkingSessionUserService._drop_tz(from_time)
         to_time = parkingSessionUserService._drop_tz(to_time)
 
-        filters = [func.lower(Vehicle.user_code) == user_code.strip().lower()]
+        filters = [
+            func.lower(ParkingAccessCard.user_code) == user_code.strip().lower()
+        ]
+
         if status is not None:
             filters.append(ParkingSession.status == status)
         if from_time is not None:
@@ -267,21 +297,24 @@ class parkingSessionUserService:
             filters.append(
                 or_(
                     ilike_unaccent(cast(ParkingSession.id, String), trimmed_query),
-                    ilike_unaccent(cast(ParkingSession.vehicle_id, String), trimmed_query),
+                    ilike_unaccent(cast(ParkingSession.access_card_id, String), trimmed_query),
                     ilike_unaccent(func.coalesce(ParkingSession.license_plate, ""), trimmed_query),
                 )
             )
 
         statement = (
-            select(ParkingSession, Vehicle, Users)
-            .join(Vehicle, Vehicle.id == ParkingSession.vehicle_id)
-            .outerjoin(Users, Users.user_code == Vehicle.user_code)
+            select(ParkingSession, ParkingAccessCard, Users)
+            .join(
+                ParkingAccessCard,
+                ParkingAccessCard.id == ParkingSession.access_card_id,
+            )
+            .outerjoin(
+                Users,
+                Users.user_code == ParkingAccessCard.user_code,
+            )
             .where(*filters)
             .order_by(desc(ParkingSession.check_in_time))
         )
+
         result = await db.execute(statement)
         return result.all()
-    
-    @staticmethod
-    async def delete_session(session_id: str, db: AsyncSession) -> ParkingSession:
-        return await parkingSessionService.crud.delete(db, session_id)

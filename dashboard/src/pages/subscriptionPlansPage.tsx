@@ -149,20 +149,6 @@ export const SubscriptionPlansPage: React.FC = () => {
         renderCell: (params) => renderBool(params.value),
       },
       {
-        field: 'max_licensed_vehicle',
-        headerName: t('subscriptionPlansPage.columns.maxLicensed', { defaultValue: 'Max plate' }),
-        width: 120,
-        sortable: true,
-        renderCell: (params) => <span>{params.value ?? '-'}</span>,
-      },
-      {
-        field: 'max_unlicensed_vehicle',
-        headerName: t('subscriptionPlansPage.columns.maxUnlicensed', { defaultValue: 'Max no-plate' }),
-        width: 140,
-        sortable: true,
-        renderCell: (params) => <span>{params.value ?? '-'}</span>,
-      },
-      {
         field: 'after_18_fee',
         headerName: t('subscriptionPlansPage.columns.after18Fee', { defaultValue: 'After 18 fee' }),
         width: 150,

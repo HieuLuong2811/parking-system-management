@@ -318,6 +318,7 @@ const en = {
         unknown: "Unknown",
         payment_due: "Payment due",
         inactive: "Inactive",
+        canceled: "Canceled",
       },
       vehicleCount: "{{count}} vehicles",
       noVehicle: "No car chosen yet.",
@@ -380,10 +381,7 @@ const en = {
       monthlyPayment: "Monthly payment supported",
       noMonthlyPayment: "Monthly payment not supported",
       fullPayment: "Full payment supported",
-      noFullPayment: "Full payment not supported",
-      licensedVehicleLimit: "Up to {{count}} licensed vehicles",
-      unlicensedVehicleLimit: "Up to {{count}} unlicensed vehicles",
-      dailyFee: "Daily fee: {{amount}}đ",
+      noFullPayment: "Full payment not supported",      dailyFee: "Daily fee: {{amount}}đ",
       after18Fee: "After 18:00: {{amount}}đ",
       after18Waived: "Free after 18:00",
     },
@@ -437,7 +435,6 @@ const en = {
     checkoutPlanNote: "The selected plan is summarized here for you to review.",
     checkoutStepper: {
       steps: [
-        "Choose vehicle",
         "Choose term",
         "Payment plan",
         "Payment details",
@@ -463,7 +460,7 @@ const en = {
       momoGeneralError:
         "Failed to start the MoMo payment flow. Please try again.",
       confirm: "Confirm payment",
-      payMomo: "Pay with MoMo",
+      pay: "Pay",
       termRange: "From {{start}} to {{end}}",
     },
     paymentModes: {

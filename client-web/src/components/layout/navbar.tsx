@@ -7,7 +7,6 @@ import PhoneInTalkRoundedIcon from "@mui/icons-material/PhoneInTalkRounded";
 import PersonIcon from "@mui/icons-material/Person";
 import LogoutIcon from "@mui/icons-material/Logout";
 import HomeRoundedIcon from "@mui/icons-material/HomeRounded";
-import DirectionsCarRoundedIcon from "@mui/icons-material/DirectionsCarRounded";
 import SubscriptionsRoundedIcon from "@mui/icons-material/SubscriptionsRounded";
 import ManageAccountsRoundedIcon from "@mui/icons-material/ManageAccountsRounded";
 import ReceiptLongIcon from '@mui/icons-material/ReceiptLong';
@@ -62,12 +61,6 @@ const paymentMenuLinks = [
 ];
 
 const accountMenuLinks = [
-  {
-    key: "nav.vehicles",
-    defaultValue: "Phương tiện",
-    to: "/profile/vehicles",
-    icon: <DirectionsCarRoundedIcon fontSize="small" />,
-  },
   {
     key: "nav.subscriptions",
     defaultValue: "Gói đã đăng ký",

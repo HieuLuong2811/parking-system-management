@@ -8,7 +8,6 @@ import InvoicesPage from "./pages/InvoicesPage";
 import TransactionsPage from "./pages/TransactionsPage";
 import CheckoutPage from "./pages/CheckoutPage";
 import { AppAuthProvider } from "./contexts/AppAuthContext";
-import VehiclePage from "./pages/VehiclePage";
 import UserSubscriptionsPage from "./pages/UserSubscriptionsPage";
 import "./App.css";
 
@@ -26,7 +25,6 @@ function App() {
             <Route path="invoices" element={<InvoicesPage />} />
             <Route path="transactions" element={<TransactionsPage />} />
             <Route path="profile/subscriptions" element={<UserSubscriptionsPage />} />
-            <Route path="profile/vehicles" element={<VehiclePage />} />
             <Route path="*" element={<Navigate to="/" replace />} />
           </Route>
         </Routes>

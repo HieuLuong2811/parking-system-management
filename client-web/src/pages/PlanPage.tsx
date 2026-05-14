@@ -177,18 +177,6 @@ export default function PlanPage() {
                   ),
                   {
                     enabled: true,
-                    label: t('plan.features.licensedVehicleLimit', {
-                      count: plan.max_licensed_vehicle ?? 0,
-                    }),
-                  },
-                  {
-                    enabled: true,
-                    label: t('plan.features.unlicensedVehicleLimit', {
-                      count: plan.max_unlicensed_vehicle ?? 0,
-                    }),
-                  },
-                  {
-                    enabled: true,
                     label: t('plan.features.dailyFee', {
                       amount: formatCurrency(dailyFee),
                     }),

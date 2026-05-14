@@ -22,7 +22,7 @@ import FilterListIcon from "@mui/icons-material/FilterList";
 import SectionCard from "../components/shared/SectionCard";
 import { useMyPaymentTransactionsPaginated } from "../api/payment_transactions";
 import useDebouncedValue from "../hooks/useDebouncedValue";
-import { formatMoney, toEndOfDay, toStartOfDay } from "../ultis/formatters";
+import { toEndOfDay, toStartOfDay } from "../ultis/formatters";
 import { getStatusChipColor } from "../ultis/status";
 
 export default function TransactionsPage() {
@@ -203,6 +203,7 @@ export default function TransactionsPage() {
       )}
 
       <TableContainer
+        component={Box}
         sx={{
           borderRadius: 3,
           border: "1px solid #E5E7EB",
@@ -271,21 +272,36 @@ export default function TransactionsPage() {
               </TableRow>
             ) : (
               transactions.map((tx) => {
-                const chipColor = getStatusChipColor(tx.invoice_status);
-                const amountText = formatMoney(
-                  tx.invoice_amount,
-                  tx.invoice_status,
-                );
-                const amountColor =
-                  String(tx.invoice_status || "").toUpperCase() === "PAID"
-                    ? "error.main"
-                    : "success.main";
+                const isTopUp =
+                  String(tx.transaction_type || "").toUpperCase() === "TOP_UP";
+                const isOutgoing = !isTopUp;
+                const numericAmount = Number(tx.amount || 0);
+                const amountText = `${isTopUp ? "+" : "-"} ${new Intl.NumberFormat(
+                  "vi-VN",
+                ).format(numericAmount)} đ`;
+                const amountColor = isOutgoing ? "error.main" : "success.main";
+                const statusText = String(tx.status || "").toLowerCase();
+                const chipColor = getStatusChipColor(statusText.toUpperCase());
                 return (
-                  <TableRow key={tx.id} hover>
+                  <TableRow
+                    key={tx.payment_transaction_id}
+                    hover
+                    sx={{
+                      transition: "0.2s",
+                      "&:hover": {
+                        bgcolor: "#F9FAFB",
+                      },
+                      "& td": {
+                        py: 1.8,
+                        fontSize: 14,
+                        borderBottom: "1px solid #EEF2F7",
+                      },
+                    }}
+                  >
                     <TableCell sx={{ fontWeight: 600 }}>
-                      {tx.invoice_id}
+                      {tx.invoice_id || "—"}
                     </TableCell>
-                    <TableCell>{tx.transaction_code}</TableCell>
+                    <TableCell>{tx.transaction_code || tx.payment_transaction_id}</TableCell>
                     <TableCell
                       align="right"
                       sx={{ fontWeight: 700, color: amountColor }}
@@ -297,9 +313,9 @@ export default function TransactionsPage() {
                         size="small"
                         color={chipColor}
                         label={t(
-                          `invoices.status.${String(tx.invoice_status || "").toLowerCase()}`,
+                          `transactions.status.${String(tx.status || "").toLowerCase()}`,
                           {
-                            defaultValue: tx.invoice_status,
+                            defaultValue: tx.status,
                           },
                         )}
                         sx={{ fontWeight: 700, borderRadius: 999 }}
@@ -316,7 +332,7 @@ export default function TransactionsPage() {
                     </TableCell>
                     <TableCell>
                       <Typography variant="body2" color="text.secondary">
-                        {tx.response_message || "—"}
+                        {tx.description || tx.response_message || "—"}
                       </Typography>
                     </TableCell>
                   </TableRow>

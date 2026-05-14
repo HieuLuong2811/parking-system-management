@@ -1,8 +1,9 @@
 from __future__ import annotations
 
 import logging
-from datetime import datetime
 import re
+from datetime import datetime
+from decimal import Decimal
 
 from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
@@ -10,51 +11,58 @@ from sqlalchemy.ext.asyncio import AsyncSession
 from app.db.session import AsyncSessionLocal
 from app.enums.parking import (
     InvoiceStatus,
+    InvoiceType,
     PaymentMethod,
+    PaymentTransactionStatus,
+    PaymentTransactionType,
     PaymentType,
     SubscriptionStatus,
 )
-from app.models.invoices import InvoiceCreate
+from app.models.invoices import InvoiceCreate, Invoice
 from app.models.notifications import NotificationCreate
 from app.models.payment_plans import PaymentPlan
+from app.models.payment_transactions import PaymentTransaction
 from app.models.subscriptions import UserSubscription, UserSubscriptionUpdate
 from app.models.terms import AcademicTermUpdate
 from app.models.users import Users
-
-from app.service.invoices import invoiceService
-from app.service.notifications import notificationService
-from app.service.payment_notifications import send_billing_failed_email
-from app.service.subscriptions import subscriptionService
-from app.service.terms import termService
+from app.scheduler.utils import (
+    DEFAULT_TZ,
+    add_years_safe,
+    is_last_day_of_month,
+    last_day_next_month,
+)
 from app.service.admin_billing_reports import (
+    build_unpaid_subscription_excel,
     get_admin_emails,
     get_unpaid_subscription_rows,
-    build_unpaid_subscription_excel,
 )
-
-from app.service.payment_notifications import send_admin_billing_report_email
-from app.scheduler.utils import DEFAULT_TZ, add_years_safe, is_last_day_of_month
+from app.service.invoices import invoiceService
+from app.service.notifications import notificationService
+from app.service.payment_notifications import (
+    send_admin_billing_report_email,
+    send_admin_billing_failure_alert_email,
+    send_billing_failed_email,
+    send_billing_success_email,
+)
+from app.service.subscriptions import subscriptionService
+from app.service.terms import termService
+from app.service.user_wallets import userWalletService
 
 logger = logging.getLogger(__name__)
 
 
-MONTHLY_BILLING_STATUSES = [
-    SubscriptionStatus.ACTIVE,
-    SubscriptionStatus.PAYMENT_DUE,
-    SubscriptionStatus.OVERDUE,
-    SubscriptionStatus.CANCELED,
-]
+MONTHLY_BILLING_STATUSES = [SubscriptionStatus.ACTIVE, SubscriptionStatus.PAYMENT_DUE]
 
 
-async def cron_monthly_billing_attempt_1():
+async def cron_monthly_billing_attempt_1() -> None:
     await _run_billing(attempt=1)
 
 
-async def cron_monthly_billing_attempt_2():
+async def cron_monthly_billing_attempt_2() -> None:
     await _run_billing(attempt=2)
 
 
-async def cron_monthly_billing_attempt_3():
+async def cron_monthly_billing_attempt_3() -> None:
     await _run_billing(attempt=3)
 
 
@@ -77,7 +85,7 @@ async def _get_subscriptions(db: AsyncSession):
     return res.all()
 
 
-async def _run_billing(*, attempt: int):
+async def _run_billing(*, attempt: int) -> None:
     today = datetime.now(DEFAULT_TZ).date()
 
     if not is_last_day_of_month(today):
@@ -100,6 +108,7 @@ async def _run_billing(*, attempt: int):
                 await db.rollback()
                 logger.exception("Billing failed sub=%s", sub.id)
 
+        # End-of-day report to admins (best-effort).
         if attempt == 3:
             try:
                 await _send_admin_billing_report(db)
@@ -116,7 +125,7 @@ async def _process_subscription(
     db: AsyncSession,
     attempt: int,
     today,
-):
+) -> None:
     invoice = await invoiceService.find_current_month_invoice_by_subscription(
         db,
         sub.id,
@@ -127,82 +136,31 @@ async def _process_subscription(
         await _handle_paid_invoice(sub=sub, db=db)
         return
 
-    if attempt == 1:
-        invoice = await _ensure_pending_invoice(sub=sub, invoice=invoice, db=db)
+    invoice = await _ensure_pending_invoice(sub=sub, invoice=invoice, db=db)
 
-        if sub.status == SubscriptionStatus.ACTIVE:
-            await subscriptionService.update_subscription(
-                str(sub.id),
-                UserSubscriptionUpdate(status=SubscriptionStatus.PAYMENT_DUE),
-                db,
-            )
-
-        await _notify_user(
-            sub=sub,
-            user=user,
-            invoice=invoice,
-            db=db,
-            message="Tạo hóa đơn tháng",
-            attempt=attempt,
-            suspended=False,
-        )
-        return
-
-    if attempt == 2:
-        if not invoice:
-            invoice = await _ensure_pending_invoice(sub=sub, invoice=None, db=db)
-
-        await _notify_user(
-            sub=sub,
-            user=user,
-            invoice=invoice,
-            db=db,
-            message="Nhắc thanh toán lần 2",
-            attempt=attempt,
-            suspended=False,
-        )
-        return
-
-    if attempt == 3:
-        if not invoice:
-            invoice = await _ensure_pending_invoice(sub=sub, invoice=None, db=db)
-
-        if sub.status in {
-            SubscriptionStatus.ACTIVE,
-            SubscriptionStatus.PAYMENT_DUE,
-        }:
-            await subscriptionService.update_subscription(
-                str(sub.id),
-                UserSubscriptionUpdate(status=SubscriptionStatus.OVERDUE),
-                db,
-            )
-
-        # CANCELED giữ nguyên CANCELED để admin còn xử lý công nợ.
-        # OVERDUE giữ nguyên OVERDUE.
-        await _notify_user(
-            sub=sub,
-            user=user,
-            invoice=invoice,
-            db=db,
-            message="Thanh toán quá hạn",
-            attempt=attempt,
-            suspended=False,
+    if sub.status == SubscriptionStatus.ACTIVE:
+        await subscriptionService.update_subscription(
+            str(sub.id),
+            UserSubscriptionUpdate(status=SubscriptionStatus.PAYMENT_DUE),
+            db,
         )
 
-        await _notify_admin_billing_overdue(
-            sub=sub,
-            user=user,
-            invoice=invoice,
-            db=db,
-        )
+    await _attempt_wallet_charge(
+        sub=sub,
+        user=user,
+        invoice=invoice,
+        db=db,
+        attempt=attempt,
+        today=today,
+    )
 
 
 async def _ensure_pending_invoice(
     *,
     sub: UserSubscription,
-    invoice,
+    invoice: Invoice | None,
     db: AsyncSession,
-):
+) -> Invoice:
     if invoice:
         return invoice
 
@@ -211,7 +169,8 @@ async def _ensure_pending_invoice(
             user_code=sub.user_code,
             subscription_id=sub.id,
             amount=sub.total_amount,
-            payment_method=PaymentMethod.MOMO,
+            invoice_type=InvoiceType.OTHER,
+            payment_method=PaymentMethod.WALLET,
             status=InvoiceStatus.PENDING,
         ),
         db,
@@ -222,19 +181,8 @@ async def _handle_paid_invoice(
     *,
     sub: UserSubscription,
     db: AsyncSession,
-):
-    if sub.status == SubscriptionStatus.CANCELED:
-        await subscriptionService.update_subscription(
-            str(sub.id),
-            UserSubscriptionUpdate(status=SubscriptionStatus.INACTIVE),
-            db,
-        )
-        return
-
-    if sub.status in {
-        SubscriptionStatus.PAYMENT_DUE,
-        SubscriptionStatus.OVERDUE,
-    }:
+) -> None:
+    if sub.status == SubscriptionStatus.PAYMENT_DUE:
         await subscriptionService.update_subscription(
             str(sub.id),
             UserSubscriptionUpdate(status=SubscriptionStatus.ACTIVE),
@@ -242,16 +190,130 @@ async def _handle_paid_invoice(
         )
 
 
-async def _notify_user(
+async def _attempt_wallet_charge(
     *,
-    sub,
-    user,
-    invoice,
-    db,
-    message: str,
+    sub: UserSubscription,
+    user: Users,
+    invoice: Invoice,
+    db: AsyncSession,
+    attempt: int,
+    today,
+) -> None:
+    wallet = await userWalletService.get_or_create_wallet_for_update(user_code=sub.user_code, db=db)
+    userWalletService.ensure_wallet_can_change_balance(wallet)
+
+    amount = Decimal(str(invoice.amount or 0))
+    current_balance = wallet.balance or Decimal("0")
+
+    if amount > 0 and current_balance >= amount:
+        balance_before = current_balance
+        wallet.balance = balance_before - amount
+        wallet.updated_at = datetime.utcnow()
+
+        invoice.status = InvoiceStatus.PAID
+        invoice.paid_at = datetime.utcnow()
+        invoice.attempt_count = max(int(invoice.attempt_count or 0), attempt)
+        invoice.payment_method = PaymentMethod.WALLET
+
+        sub.next_billing_date = last_day_next_month(today)
+        sub.billing_attempt_count = 0
+
+        db.add(
+            PaymentTransaction(
+                user_code=sub.user_code,
+                wallet_id=wallet.wallet_id,
+                invoice_id=invoice.id,
+                subscription_id=sub.id,
+                transaction_type=PaymentTransactionType.MONTHLY_CHARGE,
+                payment_method=PaymentMethod.WALLET,
+                amount=amount,
+                status=PaymentTransactionStatus.SUCCESS,
+                balance_before=balance_before,
+                balance_after=wallet.balance,
+                description="Monthly wallet charge",
+                attempt_number=attempt,
+                response_message="SUCCESS",
+            )
+        )
+
+        await subscriptionService.update_subscription(
+            str(sub.id),
+            UserSubscriptionUpdate(status=SubscriptionStatus.ACTIVE),
+            db,
+        )
+
+        await _notify_user_success(sub=sub, user=user, invoice=invoice, db=db)
+        send_billing_success_email(user=user, invoice=invoice, subscription=sub)
+        return
+
+    # Insufficient funds: record failed attempt, keep invoice pending until attempt 3.
+    invoice.attempt_count = max(int(invoice.attempt_count or 0), attempt)
+    sub.billing_attempt_count = attempt
+
+    db.add(
+        PaymentTransaction(
+            user_code=sub.user_code,
+            wallet_id=wallet.wallet_id,
+            invoice_id=invoice.id,
+            subscription_id=sub.id,
+            transaction_type=PaymentTransactionType.MONTHLY_CHARGE,
+            payment_method=PaymentMethod.WALLET,
+            amount=amount,
+            status=PaymentTransactionStatus.FAILED,
+            balance_before=current_balance,
+            balance_after=current_balance,
+            description="Monthly wallet charge failed: insufficient balance",
+            attempt_number=attempt,
+            response_message="insufficient_balance",
+        )
+    )
+
+    suspended = attempt >= 3
+    if suspended:
+        invoice.status = InvoiceStatus.FAILED
+        await subscriptionService.update_subscription(
+            str(sub.id),
+            UserSubscriptionUpdate(status=SubscriptionStatus.SUSPENDED),
+            db,
+        )
+        try:
+            admin_emails = await get_admin_emails(db)
+            send_admin_billing_failure_alert_email(
+                admin_emails=admin_emails,
+                user=user,
+                invoice=invoice,
+                subscription=sub,
+                amount_vnd=int(invoice.amount or 0),
+                lang="vi",
+            )
+        except Exception:
+            logger.exception("Failed to send admin billing failure alert for invoice=%s", invoice.id)
+
+    await _notify_user_failed(sub=sub, user=user, invoice=invoice, db=db, attempt=attempt, suspended=suspended)
+
+
+async def _notify_user_success(*, sub: UserSubscription, user: Users, invoice: Invoice, db: AsyncSession) -> None:
+    await notificationService.create_notification(
+        NotificationCreate(
+            receiver_id=sub.user_code,
+            title="Thanh toán hóa đơn",
+            content=f"Thanh toán thành công - Invoice {invoice.id}",
+            is_read=False,
+        ),
+        db,
+    )
+
+
+async def _notify_user_failed(
+    *,
+    sub: UserSubscription,
+    user: Users,
+    invoice: Invoice,
+    db: AsyncSession,
     attempt: int,
     suspended: bool,
-):
+) -> None:
+    message = "Số dư ví không đủ để thanh toán gói hàng tháng"
     await notificationService.create_notification(
         NotificationCreate(
             receiver_id=sub.user_code,
@@ -269,23 +331,6 @@ async def _notify_user(
         attempt_number=attempt,
         error_message=message,
         suspended=suspended,
-    )
-
-
-async def _notify_admin_billing_overdue(
-    *,
-    sub,
-    user,
-    invoice,
-    db,
-):
-    # TODO: thay bằng service gửi mail admin thật của bạn.
-    logger.warning(
-        "Billing overdue needs admin review: sub=%s user=%s invoice=%s status=%s",
-        sub.id,
-        sub.user_code,
-        invoice.id,
-        sub.status,
     )
 
 
@@ -320,10 +365,8 @@ async def _roll_academic_terms_forward(db: AsyncSession) -> None:
     logger.info("Academic terms rolled forward by 1 year (count=%s)", len(terms))
 
 
-_TERM_YEAR_PAIR = re.compile(
-    r"(?P<y1>\b\d{4}\b)\s*[-–]\s*(?P<y2>\b\d{4}\b)"
-)
-_TERM_SINGLE_YEAR = re.compile(r"\b\d{4}\b")
+_TERM_YEAR_PAIR = re.compile(r"(?P<y1>\\b\\d{4}\\b)\\s*[-–]\\s*(?P<y2>\\b\\d{4}\\b)")
+_TERM_SINGLE_YEAR = re.compile(r"\\b\\d{4}\\b")
 
 
 def _bump_years_in_term_name(value: str, *, delta: int) -> str:
@@ -345,6 +388,7 @@ def _bump_years_in_term_name(value: str, *, delta: int) -> str:
     year = int(match.group(0)) + delta
 
     return value[: match.start()] + str(year) + value[match.end() :]
+
 
 async def _send_admin_billing_report(db: AsyncSession) -> None:
     rows = await get_unpaid_subscription_rows(db)

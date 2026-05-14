@@ -1,13 +1,32 @@
-import { Box, Typography } from "@mui/material";
+import {
+  Alert,
+  Box,
+  FormControl,
+  FormControlLabel,
+  Radio,
+  RadioGroup,
+  Stack,
+  Typography,
+} from "@mui/material";
 import { payment_plan } from "../../../constant/config";
 
 type Props = {
   selectedPaymentMode: string | null;
+  selectedFullPaymentMethod?: "WALLET" | "MOMO" | null;
+  onSelectFullPaymentMethod?: (value: "WALLET" | "MOMO") => void;
+  walletReady?: boolean;
+  walletBalance?: number;
+  requiredAmount?: number | null;
   t: any;
 };
 
 export default function PaymentDetailStep({
   selectedPaymentMode,
+  selectedFullPaymentMethod,
+  onSelectFullPaymentMethod,
+  walletReady,
+  walletBalance,
+  requiredAmount,
   t,
 }: Props) {
   return (
@@ -36,19 +55,59 @@ export default function PaymentDetailStep({
       ) : (
         <Box className="checkout-step-box">
           <Typography variant="subtitle1">
-            {t("plan.checkoutStepper.momoTitle")}
-          </Typography>
-          <Typography variant="body2">
-            {t("plan.checkoutStepper.momoDescription")}
+            {t("plan.checkoutStepper.fullPaymentTitle", { defaultValue: "Thanh toán toàn bộ" })}
           </Typography>
 
-          <Typography variant="body2" className="checkout-momo-account">
-            {t("plan.checkoutMomoAccount")}
+          <Typography variant="body2" sx={{ mt: 1 }}>
+            {t("plan.checkoutStepper.fullPaymentDescription", {
+              defaultValue: "Chọn phương thức thanh toán cho gói.",
+            })}
           </Typography>
 
-          <Typography variant="body2" className="checkout-step-help">
-            {t("plan.checkoutStepper.momoRedirect")}
-          </Typography>
+          <Box sx={{ mt: 2 }}>
+            <FormControl>
+              <RadioGroup
+                value={selectedFullPaymentMethod ?? "MOMO"}
+                onChange={(e) =>
+                  onSelectFullPaymentMethod?.(e.target.value as "WALLET" | "MOMO")
+                }
+              >
+                <FormControlLabel
+                  value="WALLET"
+                  control={<Radio />}
+                  disabled={!walletReady}
+                  label={t("wallet.method.wallet", { defaultValue: "Ví điện tử" })}
+                />
+                <FormControlLabel
+                  value="MOMO"
+                  control={<Radio />}
+                  label={t("wallet.method.momo", { defaultValue: "MoMo" })}
+                />
+              </RadioGroup>
+            </FormControl>
+
+            {!walletReady && requiredAmount != null && (
+              <Alert severity="warning" sx={{ mt: 1.5 }}>
+                {t("wallet.insufficient", {
+                  defaultValue:
+                    "Số dư ví không đủ, vui lòng nạp thêm hoặc chọn MoMo",
+                })}
+              </Alert>
+            )}
+
+            {walletBalance != null && (
+              <Stack spacing={0.5} sx={{ mt: 1.5 }}>
+                <Typography variant="body2" color="text.secondary">
+                  {t("wallet.balance", { defaultValue: "Số dư ví" })}: {walletBalance}
+                </Typography>
+                {requiredAmount != null && (
+                  <Typography variant="body2" color="text.secondary">
+                    {t("wallet.required", { defaultValue: "Cần thanh toán" })}: {requiredAmount}
+                  </Typography>
+                )}
+              </Stack>
+            )}
+          </Box>
         </Box>
       )}
     </Box>

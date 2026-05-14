@@ -21,7 +21,6 @@ export const routeBreadcrumbs: Record<string, BreadcrumbRouteItem[]> = {
   ],
   '/subscriptions': [{ key: 'sideBar.children.subscriptions', clickable: false }],
   '/parking_sessions': [{ key: 'sideBar.children.parkingSessions', clickable: false }],
-  '/vehicles': [{ key: 'sideBar.children.vehicles', clickable: false }],
   '/users': [
     { key: 'sideBar.parents.userManagement', clickable: false },
     { key: 'sideBar.children.users', clickable: false },

@@ -23,6 +23,8 @@ from app.service.base import CRUDService
 from app.service.roles import roleService
 from app.service.user_roles import userRolesService
 from app.utils.search import ilike_unaccent
+from app.service.parking_access_cards import parkingAccessCardService
+from app.enums.parking import ParkingAccessCardHolderType, ParkingAccessCardStatus, UserRoleType
 
 class userService:
     crud = CRUDService(Users, pk_field="user_code")
@@ -83,12 +85,27 @@ class userService:
         db.add(user)
 
         try:
+            await db.flush()
+            await parkingAccessCardService.ensure_user_access_card(
+                user_code=user_in.user_code,
+                db=db,
+                holder_type=ParkingAccessCardHolderType.STUDENT,
+                initial_status=ParkingAccessCardStatus.DISABLED,
+            )
+
             await db.commit()
         except IntegrityError:
             await db.rollback()
             raise HTTPException(
                 status_code=status.HTTP_409_CONFLICT,
                 detail={"field": "user_code", "message": "User already exists"},
+            )
+        
+        except Exception as e:
+            await db.rollback()
+            raise HTTPException(
+                status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+                detail={"field": "user_code", "message": "Failed to create user"},
             )
 
         await db.refresh(user)
@@ -126,8 +143,10 @@ class userService:
                     )
                     db.add(user)
                     await db.flush()
+                
+                role_codes = set(user_def.get("roles", []))
 
-                for role_code in user_def.get("roles", []):
+                for role_code in role_codes:
                     role = role_map.get(role_code)
                     if not role:
                         continue
@@ -140,6 +159,15 @@ class userService:
                     if user_role_result.scalar_one_or_none():
                         continue
                     db.add(UserRoles(user_code=user.user_code, role_id=role.id))
+
+                if UserRoleType.USER in role_codes:
+                    await parkingAccessCardService.ensure_user_access_card(
+                        user_code=user.user_code,
+                        db=db,
+                        holder_type=ParkingAccessCardHolderType.STUDENT,
+                        initial_status=ParkingAccessCardStatus.DISABLED,
+                    )
+                    
                 seeded_users.append(user)
 
             await db.commit()

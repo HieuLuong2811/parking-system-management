@@ -294,6 +294,7 @@ const ja = {
         unknown: "保留中",
         payment_due: "支払い待ち",
         inactive: "無効",
+        canceled: "キャンセル",
       },
       vehicleCount: "{{count}}台の車両",
       noVehicle: "まだ車両が選択されていません",
@@ -357,8 +358,6 @@ const ja = {
       noMonthlyPayment: "月払い非対応",
       fullPayment: "一括払い対応",
       noFullPayment: "一括払い非対応",
-      licensedVehicleLimit: "ナンバー付き車両は最大{{count}}台まで",
-      unlicensedVehicleLimit: "ナンバーなし車両は最大{{count}}台まで",
       dailyFee: "日額料金: {{amount}}đ",
       after18Fee: "18:00以降: {{amount}}đ",
       after18Waived: "18:00以降無料",
@@ -411,7 +410,7 @@ const ja = {
     checkoutPlanNote:
       "選択したプランの概要がここに表示されます。確認してください。",
     checkoutStepper: {
-      steps: ["車両を選択", "学期を選択", "支払いプラン", "支払い情報"],
+      steps: ["学期を選択", "支払いプラン", "支払い情報"],
       termLabel: "学期",
       termPlaceholder: "学期を選択",
       termHelper: "続行する前に登録する学期を選択してください。",
@@ -432,7 +431,7 @@ const ja = {
       momoGeneralError:
         "MoMo支払いフローを開始できませんでした。もう一度お試しください。",
       confirm: "支払いを確認",
-      payMomo: "MoMoで支払う",
+      pay: "支払う",
       termRange: "{{start}} から {{end}} まで",
     },
     paymentModes: {

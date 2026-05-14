@@ -1596,7 +1596,6 @@ textarea.plain-input {
 
 .plan-option-card {
   position: relative;
-  min-height: 520px;
   border-radius: 1.7rem;
   border: 1px solid rgba(203, 213, 225, 0.75);
   padding: 1.2rem 2rem 1.65rem;

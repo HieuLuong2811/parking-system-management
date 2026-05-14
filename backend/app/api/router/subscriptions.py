@@ -1,4 +1,3 @@
-from app.models.user_subscription_vehicles import UserSubscriptionVehiclesUpdate
 from fastapi import APIRouter, Depends, Query
 from sqlalchemy.ext.asyncio import AsyncSession
 
@@ -81,20 +80,6 @@ async def get_subscription_details_paginated(
         status=status,
         page=page,
         limit=limit,
-    )
-
-@router.patch("/{subscription_id}/vehicles", response_model=UserSubscriptionRead)
-async def update_subscription_vehicles(
-    subscription_id: str,
-    payload: UserSubscriptionVehiclesUpdate,
-    db: AsyncSession = Depends(get_db),
-    current_user: AuthUser = Depends(required_roles("USER", "ADMIN")),
-):
-    return await SubscriptionController.update_subscription_vehicles_ctrl(
-        subscription_id=subscription_id,
-        payload=payload,
-        db=db,
-        current_user=current_user,
     )
 
 @router.delete("/{subscription_id}", response_model=DeleteResponse)

@@ -58,35 +58,3 @@ export const useUserSubscriptionsPaginated = (
     placeholderData: (prev) => prev,
   });
 };
-
-type UpdateSubscriptionArgs = {
-  subscriptionId: string;
-  payload: {
-    vehicle_id?: string;
-    vehicle_ids?: string[];
-  };
-};
-
-const updateSubscriptionVehicles = async ({
-  subscriptionId,
-  payload,
-}: UpdateSubscriptionArgs): Promise<UserSubscriptionInfo> => {
-  return requestWithContext(
-    clientHttp.patch<UserSubscriptionInfo>(
-      `/subscriptions/${subscriptionId}/vehicles`,
-      payload,
-    ),
-    "Update subscription vehicles",
-  );
-};
-
-export const useUpdateSubscriptionVehicles = () => {
-  const queryClient = useQueryClient();
-
-  return useMutation({
-    mutationFn: updateSubscriptionVehicles,
-    onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ["userSubscriptions"] });
-    },
-  });
-};

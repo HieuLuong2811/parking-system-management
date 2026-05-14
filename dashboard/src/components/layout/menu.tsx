@@ -8,7 +8,6 @@ import PaymentIcon from '@mui/icons-material/Payment';
 import PeopleIcon from '@mui/icons-material/People';
 import GroupIcon from '@mui/icons-material/Group';
 import DescriptionIcon from '@mui/icons-material/Description';
-import TwoWheelerIcon from '@mui/icons-material/TwoWheeler';
 import NotificationsIcon from '@mui/icons-material/Notifications';
 import LogoutIcon from '@mui/icons-material/Logout';
 import ManageAccountsIcon from '@mui/icons-material/ManageAccounts';
@@ -57,7 +56,6 @@ export const systemItems: SidebarItemConfig[] = [
   { id: 'payment_plans', icon: <PaymentIcon />, path: '/payment_plans', translationKey: 'sideBar.children.paymentPlans' },
   { id: 'plans', icon: <StarIcon />, path: '/plans', translationKey: 'sideBar.children.plans' },
   { id: 'terms', icon: <DescriptionIcon />, path: '/terms', translationKey: 'sideBar.children.terms' },
-  { id: 'vehicles', icon: <TwoWheelerIcon />, path: '/vehicles', translationKey: 'sideBar.children.vehicles' },
 ];
 
 export const footerItems: SidebarItemConfig[] = [

@@ -1,26 +1,91 @@
 from __future__ import annotations
 
 from datetime import datetime
+from decimal import Decimal
 from typing import Optional
 import uuid
 
-from sqlalchemy import Column as SAColumn, Enum, Integer, String, Text
+from sqlalchemy import Column as SAColumn, Enum, Numeric, String
 from sqlmodel import Field, SQLModel
 
-from app.enums.parking import InvoiceStatus, PaymentMethod
+from app.enums.parking import (
+    PaymentMethod,
+    PaymentTransactionStatus,
+    PaymentTransactionType,
+)
+from .mixins import TimestampMixin
 
 
 class PaymentTransactionBase(SQLModel):
-    invoice_id: uuid.UUID = Field(foreign_key="invoices.id")
-    attempt_number: int = Field(sa_column=SAColumn(Integer, nullable=False))
-    transaction_code: str = Field(max_length=255, nullable=False)
-    response_message: str = Field(sa_column=SAColumn(Text, nullable=False))
+    user_code: str = Field(foreign_key="users.user_code", index=True)
+
+    invoice_id: uuid.UUID | None = Field(
+        default=None,
+        foreign_key="invoices.id",
+        index=True,
+    )
+
+    subscription_id: uuid.UUID | None = Field(
+        default=None,
+        foreign_key="user_subscriptions.id",
+        index=True,
+    )
+
+    transaction_type: PaymentTransactionType = Field(
+        sa_column=SAColumn(
+            Enum(
+                PaymentTransactionType,
+                name="payment_transaction_type_enum",
+                create_type=False,
+            ),
+            nullable=False,
+        )
+    )
+
+    payment_method: PaymentMethod = Field(
+        sa_column=SAColumn(
+            Enum(PaymentMethod, name="payment_method_enum", create_type=False),
+            nullable=False,
+        )
+    )
+
+    amount: Decimal = Field(
+        sa_column=SAColumn(Numeric(18, 2), nullable=False),
+    )
+
+    status: PaymentTransactionStatus = Field(
+        sa_column=SAColumn(
+            Enum(
+                PaymentTransactionStatus,
+                name="payment_transaction_status_enum",
+                create_type=False,
+            ),
+            nullable=False,
+        )
+    )
+
+    balance_before: Decimal | None = Field(
+        default=None,
+        sa_column=SAColumn(Numeric(18, 2), nullable=True),
+    )
+    balance_after: Decimal | None = Field(
+        default=None,
+        sa_column=SAColumn(Numeric(18, 2), nullable=True),
+    )
+    provider_request_id: str | None = Field(default=None, max_length=255)
+
+    attempt_number: int | None = Field(default=None, sa_column=SAColumn(nullable=True))
+    transaction_code: str | None = Field(default=None, max_length=255)
 
 
-class PaymentTransaction(PaymentTransactionBase, table=True):
+class PaymentTransaction(PaymentTransactionBase, TimestampMixin, table=True):
     __tablename__ = "payment_transactions"
-    id: uuid.UUID = Field(default_factory=uuid.uuid4, primary_key=True, index=True)
-    created_at: datetime = Field(default_factory=datetime.utcnow, nullable=False)
+
+    payment_transaction_id: uuid.UUID = Field(
+        default_factory=uuid.uuid4,
+        primary_key=True,
+        index=True,
+    )
 
 
 class PaymentTransactionCreate(PaymentTransactionBase):
@@ -28,27 +93,34 @@ class PaymentTransactionCreate(PaymentTransactionBase):
 
 
 class PaymentTransactionRead(PaymentTransactionBase):
-    id: uuid.UUID
+    payment_transaction_id: uuid.UUID
     created_at: datetime
+    updated_at: datetime
 
 
 class PaymentTransactionUpdate(SQLModel):
-    attempt_number: Optional[int] = None
-    response_message: Optional[str] = None
+    status: Optional[PaymentTransactionStatus] = None
+    provider_request_id: Optional[str] = None
 
 
 class PaymentTransactionDetailRead(SQLModel):
-    id: uuid.UUID
-    invoice_id: uuid.UUID
-    attempt_number: int
-    transaction_code: str
-    response_message: str
+    payment_transaction_id: uuid.UUID
+    invoice_id: uuid.UUID | None
+    subscription_id: uuid.UUID | None
+    attempt_number: int | None
+    transaction_code: str | None
+    transaction_type: PaymentTransactionType
+    payment_method: PaymentMethod
+    amount: Decimal
+    status: PaymentTransactionStatus
+    balance_before: Decimal | None = None
+    balance_after: Decimal | None = None
     created_at: datetime
 
     user_code: str
-    user_full_name: str
+    user_full_name: str | None
 
-    invoice_amount: int
-    invoice_payment_method: PaymentMethod
-    invoice_status: InvoiceStatus
-    invoice_created_at: datetime
+    invoice_amount: int | None
+    invoice_payment_method: PaymentMethod | None
+    invoice_status: str | None
+    invoice_created_at: datetime | None

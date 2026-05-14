@@ -8,7 +8,7 @@ from .subscriptions import UserSubscription
 from .terms import AcademicTerm
 from .user_roles import UserRoles
 from .users import Users
-from .vehicles import Vehicle
 from .payment_plans import PaymentPlan
 from .notifications import Notification
 from .auth_verification_requests import AuthVerificationRequest
+from .user_wallets import UserWallet

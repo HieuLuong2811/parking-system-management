@@ -35,6 +35,13 @@ class ParkingAccessCardController:
         )
 
     @staticmethod
+    async def get_my_card_ctrl(
+        user_code: str,
+        db: AsyncSession,
+    ) -> ParkingAccessCardRead:
+        return await parkingAccessCardService.get_by_user_code(user_code, db)
+
+    @staticmethod
     async def update_card_ctrl(
         card_id: str,
         payload: ParkingAccessCardUpdate,

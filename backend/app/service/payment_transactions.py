@@ -50,6 +50,7 @@ class paymentTransactionService:
                     or_(
                         func.lower(PaymentTransaction.transaction_code).ilike(like),
                         func.lower(func.cast(PaymentTransaction.invoice_id, String)).ilike(like),
+                        func.lower(func.coalesce(PaymentTransaction.user_code, "")).ilike(like),
                     )
                 )
 
@@ -74,8 +75,8 @@ class paymentTransactionService:
     ) -> PaginatedResponse[PaymentTransactionDetailRead]:
         statement = (
             select(PaymentTransaction, Invoice, Users)
-            .join(Invoice, Invoice.id == PaymentTransaction.invoice_id)
-            .join(Users, Users.user_code == Invoice.user_code)
+            .outerjoin(Invoice, Invoice.id == PaymentTransaction.invoice_id)
+            .outerjoin(Users, Users.user_code == Invoice.user_code)
             .order_by(PaymentTransaction.created_at.desc())
         )
 
@@ -92,6 +93,7 @@ class paymentTransactionService:
                     or_(
                         func.lower(func.coalesce(PaymentTransaction.transaction_code, "")).ilike(like),
                         func.lower(func.cast(PaymentTransaction.invoice_id, String)).ilike(like),
+                        func.lower(func.coalesce(PaymentTransaction.user_code, "")).ilike(like),
                         func.lower(func.coalesce(Users.user_code, "")).ilike(like),
                         func.lower(func.coalesce(Users.full_name, "")).ilike(like),
                     )
@@ -102,18 +104,24 @@ class paymentTransactionService:
         for transaction, invoice, user in rows:
             items.append(
                 PaymentTransactionDetailRead(
-                    id=transaction.id,
+                    payment_transaction_id=transaction.payment_transaction_id,
                     invoice_id=transaction.invoice_id,
+                    subscription_id=transaction.subscription_id,
                     attempt_number=transaction.attempt_number,
                     transaction_code=transaction.transaction_code,
-                    response_message=transaction.response_message,
+                    transaction_type=transaction.transaction_type,
+                    payment_method=transaction.payment_method,
+                    amount=transaction.amount,
+                    status=transaction.status,
+                    balance_before=getattr(transaction, "balance_before", None),
+                    balance_after=getattr(transaction, "balance_after", None),
                     created_at=transaction.created_at,
-                    user_code=invoice.user_code,
-                    user_full_name=user.full_name,
-                    invoice_amount=invoice.amount,
-                    invoice_payment_method=invoice.payment_method,
-                    invoice_status=invoice.status,
-                    invoice_created_at=invoice.created_at,
+                    user_code=transaction.user_code,
+                    user_full_name=(user.full_name if user else None),
+                    invoice_amount=(invoice.amount if invoice else None),
+                    invoice_payment_method=(invoice.payment_method if invoice else None),
+                    invoice_status=(str(invoice.status) if invoice else None),
+                    invoice_created_at=(invoice.created_at if invoice else None),
                 )
             )
 
@@ -139,9 +147,9 @@ class paymentTransactionService:
     ) -> PaginatedResponse[PaymentTransactionDetailRead]:
         statement = (
             select(PaymentTransaction, Invoice, Users)
-            .join(Invoice, Invoice.id == PaymentTransaction.invoice_id)
-            .join(Users, Users.user_code == Invoice.user_code)
-            .where(Invoice.user_code == user_code)
+            .outerjoin(Invoice, Invoice.id == PaymentTransaction.invoice_id)
+            .outerjoin(Users, Users.user_code == Invoice.user_code)
+            .where(PaymentTransaction.user_code == user_code)
             .order_by(PaymentTransaction.created_at.desc())
         )
 
@@ -185,18 +193,24 @@ class paymentTransactionService:
         for transaction, invoice, user in rows:
             items.append(
                 PaymentTransactionDetailRead(
-                    id=transaction.id,
+                    payment_transaction_id=transaction.payment_transaction_id,
                     invoice_id=transaction.invoice_id,
+                    subscription_id=transaction.subscription_id,
                     attempt_number=transaction.attempt_number,
                     transaction_code=transaction.transaction_code,
-                    response_message=transaction.response_message,
+                    transaction_type=transaction.transaction_type,
+                    payment_method=transaction.payment_method,
+                    amount=transaction.amount,
+                    status=transaction.status,
+                    balance_before=getattr(transaction, "balance_before", None),
+                    balance_after=getattr(transaction, "balance_after", None),
                     created_at=transaction.created_at,
-                    user_code=invoice.user_code,
-                    user_full_name=user.full_name,
-                    invoice_amount=invoice.amount,
-                    invoice_payment_method=invoice.payment_method,
-                    invoice_status=invoice.status,
-                    invoice_created_at=invoice.created_at,
+                    user_code=transaction.user_code,
+                    user_full_name=(user.full_name if user else None),
+                    invoice_amount=(invoice.amount if invoice else None),
+                    invoice_payment_method=(invoice.payment_method if invoice else None),
+                    invoice_status=(str(invoice.status) if invoice else None),
+                    invoice_created_at=(invoice.created_at if invoice else None),
                 )
             )
 

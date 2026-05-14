@@ -11,6 +11,22 @@ def is_last_day_of_month(value: date) -> bool:
     return (value + timedelta(days=1)).month != value.month
 
 
+def last_day_of_month(value: date) -> date:
+    """
+    Return the last calendar day of the month that contains `value`.
+    """
+    first_next_month = (value.replace(day=1) + timedelta(days=32)).replace(day=1)
+    return first_next_month - timedelta(days=1)
+
+
+def last_day_next_month(value: date) -> date:
+    """
+    Return the last calendar day of the month immediately after `value`'s month.
+    """
+    first_next_month = (value.replace(day=1) + timedelta(days=32)).replace(day=1)
+    return last_day_of_month(first_next_month)
+
+
 def local_day_bounds_utc(day: date, tz: ZoneInfo = DEFAULT_TZ) -> tuple[datetime, datetime]:
     """
     Return UTC naive datetime bounds [start, end) for a local calendar day.
@@ -36,4 +52,3 @@ def add_years_safe(value: date, years: int) -> date:
             day -= 1
     # Should never happen; fallback to Jan 1 of target year.
     return date(target_year, 1, 1)
-

@@ -86,7 +86,7 @@ export const requestWithContext = async <T>(
   }
 };
 
-export type PaymentMethod = 'MOMO' | 'CASH';
+export type PaymentMethod = 'MOMO' | 'CASH' | 'WALLET' | 'SYSTEM';
 export type PaymentStatus = 'PENDING' | 'PAID' | 'FAILED';
 export type InvoiceStatus = 'PENDING' | 'PAID' | 'FAILED';
 export type VehicleType = 'MOTORBIKE' | 'BICYCLE' | 'ELECTRIC_BICYCLE';
@@ -102,17 +102,6 @@ export type PaymentPlanType = 'FULL' | 'MONTHLY';
 export type SubscriptionPlanType = 'BASIC' | 'STARTUP' | 'ENTERPRISE';
 export type ParkingSessionStatus = 'ACTIVE' | 'DONE';
 export type SubscriptionPlanStatus = 'ACTIVE' | 'INACTIVE';
-
-export interface VehicleInfo {
-  id: string;
-  user_code?: string | null;
-  vehicle_type: VehicleType;
-  license_plate?: string | null;
-  qr_code?: string | null;
-  created_at: string;
-  updated_at: string;
-  deleted_at?: string | null;
-}
 
 export interface ParkingSession {
   id: string;
@@ -164,9 +153,6 @@ export interface SubscriptionPlanRecord {
 
   allow_monthly_payment?: boolean | null;
   allow_full_payment?: boolean | null;
-
-  max_licensed_vehicle?: number | null;
-  max_unlicensed_vehicle?: number | null;
 
   after_18_fee?: number | null;
   waive_after_18_fee?: boolean | null;

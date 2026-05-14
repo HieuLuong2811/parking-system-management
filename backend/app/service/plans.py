@@ -116,8 +116,6 @@ class planService:
             price_per_day=plan.price_per_day,
             allow_monthly_payment=plan.allow_monthly_payment,
             allow_full_payment=plan.allow_full_payment,
-            max_licensed_vehicle=plan.max_licensed_vehicle,
-            max_unlicensed_vehicle=plan.max_unlicensed_vehicle,
             after_18_fee=plan.after_18_fee,
             waive_after_18_fee=plan.waive_after_18_fee,
             status=plan.status,

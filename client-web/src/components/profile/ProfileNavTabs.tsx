@@ -12,9 +12,7 @@ export default function ProfileNavTabs() {
   const tabValue =
     currentPath === "/profile/subscriptions"
       ? "/profile/subscriptions"
-      : currentPath === "/profile/vehicles"
-        ? "/profile/vehicles"
-        : "/profile";
+      : "/profile";
 
   return (
     <Tabs
@@ -42,7 +40,6 @@ export default function ProfileNavTabs() {
     >
       <Tab label={t("profile.tabs.profile")} value="/profile" />
       <Tab label={t("profile.tabs.subscriptions")} value="/profile/subscriptions" />
-      <Tab label={t("profile.tabs.vehicles")} value="/profile/vehicles" />
     </Tabs>
   );
 }

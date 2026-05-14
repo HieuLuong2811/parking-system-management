@@ -18,11 +18,11 @@ from app.api.router import (
     training,
     user_roles,
     users,
-    vehicles,
     momo_payment,
     email,
     checkout,
-    parking_access_cards
+    parking_access_cards,
+    user_wallets,
 )
 router = APIRouter()
 
@@ -35,7 +35,6 @@ router.include_router(plans.router)
 router.include_router(subscriptions.router)
 router.include_router(payment_plans.router)
 router.include_router(notifications.router)
-router.include_router(vehicles.router)
 router.include_router(parking_sessions.router)
 router.include_router(invoices.router)
 router.include_router(payment_transactions.router)
@@ -48,3 +47,4 @@ router.include_router(momo_payment.router)
 router.include_router(email.router)
 router.include_router(checkout.router)
 router.include_router(parking_access_cards.router)
+router.include_router(user_wallets.router)

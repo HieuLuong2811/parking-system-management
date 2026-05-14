@@ -66,7 +66,7 @@ export type PaginatedResponse<T> = {
   total_pages: number;
 };
 
-export type PaymentMethod = 'MOMO' | 'STRIPE' | 'CASH';
+export type PaymentMethod = 'MOMO' | 'STRIPE' | 'CASH' | 'WALLET' | 'SYSTEM';
 export type PaymentStatus = 'PENDING' | 'PAID' | 'FAILED';
 export type InvoiceStatus = 'PENDING' | 'PAID' | 'FAILED';
 export type VehicleType = 'MOTORBIKE' | 'BICYCLE' | 'ELECTRIC_BICYCLE';
@@ -138,9 +138,6 @@ export interface SubscriptionPlanRecord {
 
   allow_monthly_payment?: boolean | null;
   allow_full_payment?: boolean | null;
-
-  max_licensed_vehicle?: number | null;
-  max_unlicensed_vehicle?: number | null;
 
   after_18_fee?: number | null;
   waive_after_18_fee?: boolean | null;
@@ -262,11 +259,9 @@ export interface UserSubscriptionClientView{
   total_amount: number;
   paid_amount: number;
   created_at: string;
-  vehicle: VehicleSummary | null
   plan: SubscriptionPlanType
   payment: PaymentPlanSummary | null;
   term: AcademicTermSummary | null
-  covered_vehicles?: VehicleSummary[] | null;
 }
 
 export interface InvoiceInfo {

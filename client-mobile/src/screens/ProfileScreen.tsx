@@ -18,6 +18,9 @@ import { useAuth } from "../auth/AuthContext";
 import type { AppStackParamList } from "../navigation/AppStack";
 import { useUpdateUser } from "../api/users";
 import FormInput from "../component/FormInput";
+import { useMyWallet, useWalletTopup } from "../api/wallets";
+import { formatCurrency } from "../ultis/format";
+import * as Linking from "expo-linking";
 
 type Nav = NativeStackNavigationProp<AppStackParamList>;
 
@@ -35,6 +38,9 @@ export default function ProfileScreen() {
   const { t } = useTranslation();
   const [errors, setErrors] = useState<ProfileFormErrors>({});
   const { mutateAsync: updateUser, isPending } = useUpdateUser();
+  const { data: wallet, isLoading: walletLoading } = useMyWallet();
+  const { mutateAsync: topupWallet, isPending: topupPending } = useWalletTopup();
+  const [topupAmount, setTopupAmount] = useState("");
 
   const [form, setForm] = useState<ProfileForm>({
     full_name: "",
@@ -168,6 +174,50 @@ export default function ProfileScreen() {
     );
   };
 
+  const handleTopup = async () => {
+    if (!user) return;
+    const amount = Number(String(topupAmount || "").replace(/\D/g, ""));
+    if (!amount || amount <= 0) {
+      showAppToast(t("wallet.invalidAmount"), "error");
+      return;
+    }
+
+    try {
+      const redirectUrl = Linking.createURL("payment-return", {
+        queryParams: { invoice_id: "pending" },
+      });
+
+      const res = await topupWallet({
+        amount,
+        redirect_url: redirectUrl,
+        lang: user.language_use || "vi",
+      });
+
+      const checkoutUrl =
+        (res as any).payUrl ??
+        (res as any).deeplink ??
+        (res as any).shortLink ??
+        (res as any).qrCodeUrl ??
+        (res as any).redirectUrl ??
+        null;
+
+      if (!checkoutUrl) {
+        throw new Error(t("wallet.noPaymentUrl"));
+      }
+
+      const canOpen = await Linking.canOpenURL(checkoutUrl);
+      if (!canOpen) {
+        throw new Error(t("wallet.cannotOpenPaymentUrl"));
+      }
+
+      await Linking.openURL(checkoutUrl);
+      showAppToast(t("wallet.redirectingMomo"), "success");
+    } catch (error) {
+      const message = error instanceof Error ? error.message : t("wallet.topupFailed");
+      showAppToast(message, "error");
+    }
+  };
+
   return (
     <ScrollView
       showsVerticalScrollIndicator={false}
@@ -287,6 +337,64 @@ export default function ProfileScreen() {
           )}
         </View>
 
+        <View style={styles.walletCard}>
+          <View style={styles.sectionHeader}>
+            <Ionicons name="wallet-outline" size={18} color="#2563eb" />
+            <Text style={styles.sectionTitle}>{t("wallet.title")}</Text>
+          </View>
+
+          {walletLoading ? (
+            <ActivityIndicator color="#2563eb" />
+          ) : wallet ? (
+            <>
+              <View style={styles.walletRow}>
+                <Text style={styles.walletLabel}>{t("wallet.balance")}</Text>
+                <Text style={styles.walletValue}>
+                  {formatCurrency(Number(wallet.balance))}
+                </Text>
+              </View>
+              <View style={styles.walletRow}>
+                <Text style={styles.walletLabel}>{t("wallet.status")}</Text>
+                <Text
+                  style={[
+                    styles.walletStatus,
+                    wallet.status === "ACTIVE"
+                      ? styles.walletStatusActive
+                      : styles.walletStatusLocked,
+                  ]}
+                >
+                  {wallet.status}
+                </Text>
+              </View>
+
+              <View style={styles.topupBox}>
+                <FormInput
+                  label={t("wallet.topupAmount")}
+                  value={topupAmount}
+                  onChangeText={(value) => setTopupAmount(value.replace(/\D/g, ""))}
+                  placeholder={t("wallet.topupAmountPlaceholder")}
+                  keyboardType="numeric"
+                />
+
+                <TouchableOpacity
+                  style={[styles.topupBtn, topupPending && styles.topupBtnDisabled]}
+                  disabled={topupPending}
+                  onPress={() => void handleTopup()}
+                  activeOpacity={0.85}
+                >
+                  {topupPending ? (
+                    <ActivityIndicator color="#ffffff" size="small" />
+                  ) : (
+                    <Text style={styles.topupBtnText}>{t("wallet.topup")}</Text>
+                  )}
+                </TouchableOpacity>
+              </View>
+            </>
+          ) : (
+            <Text style={styles.emptyText}>{t("wallet.unavailable")}</Text>
+          )}
+        </View>
+
         <View style={styles.menuCard}>
           <View style={styles.sectionHeader}>
             <Ionicons name="grid-outline" size={18} color="#2563eb" />
@@ -296,13 +404,6 @@ export default function ProfileScreen() {
           </View>
 
           <View style={styles.menuList}>
-            <MenuItem
-              icon="car-outline"
-              title={t("profile.vehicles")}
-              subtitle={t("profile.vehiclesDesc")}
-              onPress={() => navigation.navigate("Vehicles")}
-            />
-
             <MenuItem
               icon="reader-outline"
               title={t("profile.subscriptions")}
@@ -419,6 +520,65 @@ const styles = StyleSheet.create({
     borderWidth: 1,
     borderColor: "#e2e8f0",
     marginBottom: 12,
+  },
+  walletCard: {
+    padding: 15,
+    borderRadius: 6,
+    backgroundColor: "#ffffff",
+    borderWidth: 1,
+    borderColor: "#e2e8f0",
+    marginBottom: 12,
+  },
+  walletRow: {
+    flexDirection: "row",
+    justifyContent: "space-between",
+    alignItems: "center",
+    marginBottom: 8,
+  },
+  walletLabel: {
+    fontSize: 13,
+    fontWeight: "800",
+    color: "#64748b",
+  },
+  walletValue: {
+    fontSize: 16,
+    fontWeight: "900",
+    color: "#0f172a",
+  },
+  walletStatus: {
+    fontSize: 12,
+    fontWeight: "900",
+    paddingHorizontal: 10,
+    paddingVertical: 4,
+    borderRadius: 999,
+    overflow: "hidden",
+  },
+  walletStatusActive: {
+    backgroundColor: "#dcfce7",
+    color: "#166534",
+  },
+  walletStatusLocked: {
+    backgroundColor: "#fee2e2",
+    color: "#991b1b",
+  },
+  topupBox: {
+    marginTop: 10,
+    gap: 10,
+  },
+  topupBtn: {
+    height: 46,
+    borderRadius: 6,
+    backgroundColor: "#2563eb",
+    alignItems: "center",
+    justifyContent: "center",
+  },
+  topupBtnDisabled: {
+    backgroundColor: "#cbd5e1",
+  },
+  topupBtnText: {
+    fontSize: 14,
+    fontWeight: "900",
+    color: "#ffffff",
   },
   menuCard: {
     padding: 15,

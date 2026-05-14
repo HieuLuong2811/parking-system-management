@@ -5,8 +5,6 @@ import { clientHttp, requestWithContext } from './clientApi';
 export interface CheckoutMomoRequest {
   sub_plan_id: string;
   term_id: string;
-  vehicle_id?: string | null;
-  vehicle_ids?: string[] | null;
   payment_plan_id: string;
   start_date: string;
   end_date: string;
@@ -47,6 +45,13 @@ export const useCheckoutRecurring = () => {
   });
 };
 
+export const useCheckoutWalletFull = () => {
+  return useMutation({
+    mutationFn: (payload: any) =>
+      requestWithContext(clientHttp.post('/checkout/wallet-full', payload), 'Checkout wallet full'),
+  });
+};
+
 const checkoutPayDebt = async (payload: CheckoutPayDebtRequest): Promise<MomoCreateResponse> => {
   return requestWithContext(clientHttp.post('/checkout/pay-debt', payload), 'Checkout pay debt');
 };
@@ -63,4 +68,3 @@ export const useCheckoutPayDebt = () => {
     },
   });
 };
-

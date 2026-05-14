@@ -120,7 +120,16 @@ const th = {
     fullPaymentNote:
       'กด “ชำระเงินผ่าน MoMo” เพื่อเปิด MoMo หรือเบราว์เซอร์และดำเนินการชำระเงินให้เสร็จสิ้น',
 
+    pay: 'ชำระเงิน',
     payWithMomo: 'ชำระเงินผ่าน MoMo',
+    payWithWallet: 'ชำระเงินด้วยวอลเล็ต',
+    choosePayMethod: 'เลือกวิธีชำระเงิน',
+    walletBalance: 'ยอดเงินวอลเล็ต: {{balance}}',
+    insufficientWallet: 'ยอดเงินวอลเล็ตไม่เพียงพอ โปรดเติมเงินหรือเลือก MoMo',
+    walletPaymentSuccess: 'ชำระเงินด้วยวอลเล็ตสำเร็จ',
+    momoNote: 'ไปที่ MoMo เพื่อชำระเงินให้เสร็จสิ้น',
+    monthlyWalletRequired:
+      'การชำระรายเดือนต้องใช้วอลเล็ต โปรดตรวจสอบให้แน่ใจว่ายอดเงินเพียงพอสำหรับเดือนแรก',
     setupRecurring: 'ยืนยันการสมัคร',
     recurringSetupSuccess: 'ตั้งค่าการสมัครรายเดือนสำเร็จแล้ว',
 
@@ -136,6 +145,30 @@ const th = {
       'คุณสามารถกลับมาที่แอปหลังจากชำระเงินได้',
     paymentFailed: 'การชำระเงินผ่าน MoMo ล้มเหลว',
     noSelectedPlan: 'ยังไม่ได้เลือกแพ็กเกจที่จอดรถ',
+  },
+
+  wallet: {
+    title: 'Wallet',
+    balance: 'Balance',
+    status: 'Status',
+    topupAmount: 'Top-up amount',
+    topupAmountPlaceholder: 'Enter amount',
+    topup: 'Top up',
+    invalidAmount: 'Invalid amount',
+    noPaymentUrl: 'No MoMo payment URL was returned.',
+    cannotOpenPaymentUrl: 'Cannot open MoMo payment URL.',
+    redirectingMomo: 'Redirecting to MoMo...',
+    topupFailed: 'Top up failed.',
+    unavailable: 'Wallet is unavailable.',
+  },
+
+  presentCard: {
+    schoolName: 'TRƯỜNG ĐẠI HỌC SPKT HƯNG YÊN',
+    fullName: 'Student name:',
+    userCode: 'Student code:',
+    noUser: 'No user info.',
+    noCard: 'No parking access card found.',
+    noBarcode: 'No barcode available.',
   },
 
   paymentReturn: {
@@ -226,7 +259,7 @@ const th = {
 
   profile: {
     title: 'ข้อมูลส่วนตัว',
-    subtitle: 'จัดการข้อมูลบัญชี ยานพาหนะ และแพ็กเกจที่จอดรถของคุณ',
+    subtitle: 'จัดการข้อมูลบัญชีและแพ็กเกจที่จอดรถของคุณ',
 
     accountInfo: 'ข้อมูลบัญชี',
     userCode: 'รหัสผู้ใช้',
@@ -251,8 +284,6 @@ const th = {
     noUserInfo: 'ยังไม่ได้โหลดข้อมูลผู้ใช้',
 
     personalManagement: 'การจัดการส่วนบุคคล',
-    vehicles: 'ยานพาหนะ',
-    vehiclesDesc: 'จัดการรายการยานพาหนะที่ใช้สำหรับจอดรถ',
     subscriptions: 'แพ็กเกจที่ลงทะเบียน',
     subscriptionsDesc:
       'ดูแพ็กเกจที่จอดรถปัจจุบันและประวัติการลงทะเบียน',

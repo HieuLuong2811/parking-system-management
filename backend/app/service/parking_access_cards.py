@@ -229,3 +229,62 @@ class parkingAccessCardService:
         await db.flush()
 
         return card
+    
+    @staticmethod
+    async def ensure_user_access_card(
+        user_code: str,
+        db: AsyncSession,
+        *,
+        holder_type: ParkingAccessCardHolderType = ParkingAccessCardHolderType.STUDENT,
+        initial_status: ParkingAccessCardStatus = ParkingAccessCardStatus.DISABLED,
+    ) -> ParkingAccessCard:
+        result = await db.execute(
+            select(ParkingAccessCard).where(
+                ParkingAccessCard.user_code == user_code,
+                ParkingAccessCard.holder_type == holder_type,
+                ParkingAccessCard.deleted_at.is_(None),
+            )
+        )
+
+        existing_card = result.scalar_one_or_none()
+
+        if existing_card:
+            return existing_card
+
+        token = await parkingAccessCardService.generate_unique_barcode_token(db)
+
+        card = ParkingAccessCard(
+            barcode_token=token,
+            holder_type=holder_type,
+            user_code=user_code,
+            user_subscription_id=None,
+            status=initial_status,
+            issued_at=datetime.utcnow(),
+        )
+
+        db.add(card)
+        await db.flush()
+
+        return card
+
+    @staticmethod
+    async def get_by_user_code(
+        user_code: str,
+        db: AsyncSession,
+    ) -> ParkingAccessCard:
+        result = await db.execute(
+            select(ParkingAccessCard).where(
+                ParkingAccessCard.user_code == user_code,
+                ParkingAccessCard.deleted_at.is_(None),
+            )
+        )
+
+        card = result.scalars().first()
+
+        if card is None:
+            raise HTTPException(
+                status_code=status.HTTP_404_NOT_FOUND,
+                detail="Parking access card not found",
+            )
+
+        return card

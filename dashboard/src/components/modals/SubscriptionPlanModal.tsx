@@ -24,8 +24,6 @@ export type SubscriptionPlanFormPayload = {
   price_per_day: number;
   allow_monthly_payment?: boolean | null;
   allow_full_payment?: boolean | null;
-  max_licensed_vehicle?: number | null;
-  max_unlicensed_vehicle?: number | null;
   after_18_fee?: number | null;
   waive_after_18_fee?: boolean | null;
   status?: string | null;
@@ -56,12 +54,6 @@ export const SubscriptionPlanModal: React.FC<SubscriptionPlanModalProps> = ({
   const [allowMonthly, setAllowMonthly] = useState(Boolean(initialValue?.allow_monthly_payment));
   const [allowFull, setAllowFull] = useState(Boolean(initialValue?.allow_full_payment));
   const [waiveAfter18, setWaiveAfter18] = useState(Boolean(initialValue?.waive_after_18_fee));
-  const [maxLicensed, setMaxLicensed] = useState(
-    initialValue?.max_licensed_vehicle != null ? String(initialValue.max_licensed_vehicle) : ''
-  );
-  const [maxUnlicensed, setMaxUnlicensed] = useState(
-    initialValue?.max_unlicensed_vehicle != null ? String(initialValue.max_unlicensed_vehicle) : ''
-  );
   const [after18Fee, setAfter18Fee] = useState(
     initialValue?.after_18_fee != null ? String(initialValue.after_18_fee) : ''
   );
@@ -103,8 +95,6 @@ export const SubscriptionPlanModal: React.FC<SubscriptionPlanModalProps> = ({
           price_per_day: numeric,
           allow_monthly_payment: allowMonthly,
           allow_full_payment: allowFull,
-          max_licensed_vehicle: maxLicensed.trim() ? Number(maxLicensed) : null,
-          max_unlicensed_vehicle: maxUnlicensed.trim() ? Number(maxUnlicensed) : null,
           after_18_fee: after18Fee.trim() ? Number(after18Fee) : null,
           waive_after_18_fee: waiveAfter18,
           status: 'ACTIVE',
@@ -118,8 +108,6 @@ export const SubscriptionPlanModal: React.FC<SubscriptionPlanModalProps> = ({
         price_per_day: Number.isNaN(backupPrice) ? 0 : backupPrice,
         allow_monthly_payment: allowMonthly,
         allow_full_payment: allowFull,
-        max_licensed_vehicle: maxLicensed.trim() ? Number(maxLicensed) : null,
-        max_unlicensed_vehicle: maxUnlicensed.trim() ? Number(maxUnlicensed) : null,
         after_18_fee: after18Fee.trim() ? Number(after18Fee) : null,
         waive_after_18_fee: waiveAfter18,
         status: 'ACTIVE',
@@ -205,25 +193,6 @@ export const SubscriptionPlanModal: React.FC<SubscriptionPlanModalProps> = ({
             />
           </Stack>
 
-          <Box sx={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 2 }}>
-            <FormInput
-              name="max_licensed_vehicle"
-              label={t('subscriptionPlansPage.dialog.fields.maxLicensed', { defaultValue: 'Max licensed vehicles' })}
-              type="text"
-              value={sanitizeNumber(maxLicensed)}
-              onChange={(e) => setMaxLicensed((e.target.value || '').replace(/\D/g, ''))}
-              inputMode="numeric"
-            />
-            <FormInput
-              name="max_unlicensed_vehicle"
-              label={t('subscriptionPlansPage.dialog.fields.maxUnlicensed', { defaultValue: 'Max unlicensed vehicles' })}
-              type="text"
-              value={sanitizeNumber(maxUnlicensed)}
-              onChange={(e) => setMaxUnlicensed((e.target.value || '').replace(/\D/g, ''))}
-              inputMode="numeric"
-            />
-
-          </Box>
           {formError && (
             <Typography variant="body2" color="error">
               {formError}

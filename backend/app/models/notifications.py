@@ -13,6 +13,7 @@ class NotificationBase(SQLModel):
     receiver_id: str = Field(max_length=50)
     title: str = Field(max_length=255, sa_column=SAColumn(String(255), nullable=False))
     content: str = Field(sa_column=SAColumn(Text, nullable=False))
+    link: Optional[str] = Field(default=None, max_length=1024)
     is_read: bool = Field(default=False, sa_column=SAColumn(Boolean, nullable=False))
 
 

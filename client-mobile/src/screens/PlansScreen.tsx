@@ -23,12 +23,6 @@ import { useConfirmDialog } from '../component/ConfirmDialogProvider';
 
 type Nav = NativeStackNavigationProp<AppStackParamList>;
 
-const formatVnd = (value: number | string | null | undefined) => {
-  const numberValue = Number(value || 0);
-  return new Intl.NumberFormat("vi-VN").format(numberValue);
-};
-
-
 type FeatureRowProps = {
   text: string;
   available?: boolean;
@@ -176,7 +170,7 @@ export default function PlansScreen() {
               const meta = getPlanMeta(plan.plans_type);
               const isInUse = Boolean((plan as any).is_in_use);
               const isDark = meta.dark;
-              const priceText = formatVnd(plan.price_per_day);
+              const priceText = formatCurrency(plan.price_per_day);
               const priceValue = Number(plan.price_per_day || 0);
               const planName = meta.labelKey
                 ? t(meta.labelKey)

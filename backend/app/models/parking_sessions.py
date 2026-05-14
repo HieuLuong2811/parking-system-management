@@ -7,15 +7,16 @@ import uuid
 from sqlalchemy import Column as SAColumn, Enum, Integer, String
 from sqlmodel import Field, SQLModel
 
-from app.enums.parking import ParkingSessionStatus, UserType, VehicleType
+from app.enums.parking import ParkingSessionStatus, ParkingVehicleMode, UserType, VehicleType
 from app.models.responses import FeeBreakdown, PlateLookupAction
 from .mixins import TimestampMixin
 
 
 class ParkingSessionBase(SQLModel):
-    vehicle_id: uuid.UUID = Field(foreign_key="vehicles.id")
     license_plate: Optional[str] = Field(
-        default=None, max_length=50, sa_column=SAColumn(String(50), nullable=True)
+        default=None,
+        max_length=50,
+        sa_column=SAColumn(String(50), nullable=True, index=True),
     )
     check_in_time: datetime
     check_out_time: Optional[datetime] = None
@@ -28,6 +29,13 @@ class ParkingSessionBase(SQLModel):
         default=UserType.GUEST,
     )
     total_amount: Optional[int] = Field(default=None, sa_column=SAColumn(Integer, nullable=True))
+    access_card_id: uuid.UUID | None = Field(
+        default=None,
+        foreign_key="parking_access_cards.id",
+        index=True,
+    )
+    vehicle_mode: ParkingVehicleMode | None = Field(default=None, index=True)
+    vehicle_type: VehicleType | None = Field(default=None, index=True)
 
 
 class ParkingSession(ParkingSessionBase, TimestampMixin, table=True):
@@ -73,3 +81,10 @@ class ParkingSessionPlateCheckIn(SQLModel):
 class ParkingSessionPlateConfirm(SQLModel):
     license_plate: str
     action: PlateLookupAction
+
+class ParkingSessionAccessConfirm(SQLModel):
+    barcode_token: str
+    action: PlateLookupAction | None = None
+    vehicle_mode: ParkingVehicleMode | None = None
+    vehicle_type: VehicleType | None = None
+    license_plate: str | None = None

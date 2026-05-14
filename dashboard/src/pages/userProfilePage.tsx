@@ -2,7 +2,6 @@ import { Box, Paper, Tabs, Tab, Typography, Chip, IconButton, Tooltip, Stack, Ta
 import { useParams } from "react-router-dom";
 import { useState } from "react";
 import { useUserDetail } from "../api/users";
-import { VehiclesPage } from "./vehiclesPage";
 import { FormInput } from "../components/common/FormInput";
 import { useTranslation } from "react-i18next";
 import { PageHeader } from "../components/common/PageHeader";
@@ -48,7 +47,7 @@ export const UserProfilePage = () => {
       headerName: t("subscriptionsPage.columns.plan", "Plan"),
       minWidth: 160,
       flex: 1,
-      renderCell: (params: any) => (
+      renderCell: (params) => (
         <Typography>{params.row.subscription_plan?.plans_type ?? "—"}</Typography>
       ),
     },
@@ -56,7 +55,7 @@ export const UserProfilePage = () => {
       field: "payment_plan",
       headerName: t("subscriptionsPage.columns.paymentPlan", "Payment plan"),
       minWidth: 140,
-      renderCell: (params: any) => (
+      renderCell: (params) => (
         <Typography>
           {t(`common.paymentPlan.${params.row.payment_plan?.payment_type}`, {
             defaultValue: params.row.payment_plan?.payment_type ?? "—",
@@ -68,7 +67,7 @@ export const UserProfilePage = () => {
       field: "term",
       headerName: t("subscriptionsPage.columns.term", "Term"),
       minWidth: 120,
-      renderCell: (params: any) => (
+      renderCell: (params) => (
         <Typography>{params.row.term?.term_name ?? "—"}</Typography>
       ),
     },
@@ -77,7 +76,7 @@ export const UserProfilePage = () => {
       headerName: t("subscriptionsPage.columns.period", "Period"),
       minWidth: 220,
       flex: 1,
-      renderCell: (params: any) => (
+      renderCell: (params) => (
         <Stack spacing={0.25}>
           <Typography variant="body2">
             {formatDateTime(params.row.start_date)} – {formatDateTime(params.row.end_date)}
@@ -89,7 +88,7 @@ export const UserProfilePage = () => {
       field: "amount",
       headerName: t("subscriptionsPage.columns.amount", "Amount"),
       minWidth: 160,
-      renderCell: (params: any) => (
+      renderCell: (params) => (
         <Stack direction="column" spacing={0.25}>
           <Typography>{formatCurrency(params.row.total_amount)}</Typography>
           <Typography variant="caption" color="text.secondary">
@@ -103,7 +102,7 @@ export const UserProfilePage = () => {
       field: "status",
       headerName: t("subscriptionsPage.columns.status", "Status"),
       minWidth: 120,
-      renderCell: (params: any) => (
+      renderCell: (params) => (
         <Chip
           label={t(`common.subscriptionStatus.${params.row.status}`, {
             defaultValue: params.row.status,
@@ -118,7 +117,7 @@ export const UserProfilePage = () => {
       headerName: t("subscriptionsPage.columns.actions", "Actions"),
       minWidth: 100,
       sortable: false,
-      renderCell: (params: any) => (
+      renderCell: (params) => (
         <Tooltip title={t("subscriptionsPage.viewInvoicesTooltip", { defaultValue: "View invoices" })}>
           <IconButton
             size="small"
@@ -178,18 +177,11 @@ export const UserProfilePage = () => {
       <Box flex="1 1 0">
         <Paper>
           <Tabs value={tab} onChange={(_, v) => setTab(v)}>
-            <Tab label="Vehicles" />
             <Tab label="Subscriptions" />
           </Tabs>
 
           <Box sx={{ p: 2 }}>
             {tab === 0 && (
-              <Box>
-                <VehiclesPage user_code={userCode} />
-              </Box>
-            )}
-
-            {tab === 1 && (
               <Box>
                 <SoftDataGrid
                   rows={subscriptionRows}

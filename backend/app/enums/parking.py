@@ -1,5 +1,9 @@
 from enum import Enum
 
+class UserRoleType(str, Enum):
+    USER = "USER"
+    ADMIN = "ADMIN"
+    SECURITY = "SECURITY"
 
 class PaymentType(str, Enum):
     FULL = "FULL"
@@ -30,12 +34,20 @@ class VehicleType(str, Enum):
 class PaymentMethod(str, Enum):
     CASH = "CASH"
     MOMO = "MOMO"
+    WALLET = "WALLET"
+    SYSTEM = "SYSTEM"
 
 
 class InvoiceStatus(str, Enum):
     PENDING = "PENDING"
     PAID = "PAID"
     FAILED = "FAILED"
+
+
+class InvoiceType(str, Enum):
+    SUBSCRIPTION_FULL = "SUBSCRIPTION_FULL"
+    TOP_UP = "TOP_UP"
+    OTHER = "OTHER"
 
 class ParkingSessionStatus(str, Enum):
     ACTIVE = "ACTIVE"
@@ -67,3 +79,26 @@ class ParkingAccessCardStatus(str, Enum):
     LOST = "LOST"
 
 
+class ParkingVehicleMode(str, Enum):
+    LICENSED = "LICENSED"
+    UNLICENSED = "UNLICENSED"
+
+
+class WalletStatus(str, Enum):
+    ACTIVE = "ACTIVE"
+    LOCKED = "LOCKED"
+
+
+class PaymentTransactionType(str, Enum):
+    TOP_UP = "TOP_UP"
+    SUBSCRIPTION_FULL_PAYMENT = "SUBSCRIPTION_FULL_PAYMENT"
+    MONTHLY_CHARGE = "MONTHLY_CHARGE"
+    INVOICE_DIRECT_PAYMENT = "INVOICE_DIRECT_PAYMENT"
+    REFUND = "REFUND"
+    ADMIN_ADJUSTMENT = "ADMIN_ADJUSTMENT"
+
+
+class PaymentTransactionStatus(str, Enum):
+    PENDING = "PENDING"
+    SUCCESS = "SUCCESS"
+    FAILED = "FAILED"

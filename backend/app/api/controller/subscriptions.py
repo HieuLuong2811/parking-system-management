@@ -1,4 +1,3 @@
-from app.models.user_subscription_vehicles import UserSubscriptionVehiclesUpdate
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.enums.parking import PaymentType, SubscriptionPlanType, SubscriptionStatus
@@ -8,7 +7,6 @@ from app.models.subscriptions import (
     UserSubscriptionClientView,
     UserSubscriptionCreate,
     UserSubscriptionRead,
-    UserSubscriptionUpdate,
 )
 from app.authen.current_user import AuthUser
 from app.service.subscriptions import subscriptionService
@@ -77,20 +75,6 @@ class SubscriptionController:
             status=status,
             page=page,
             limit=limit,
-        )
-
-    @staticmethod
-    async def update_subscription_vehicles_ctrl(
-        subscription_id: str,
-        payload: UserSubscriptionVehiclesUpdate,
-        db: AsyncSession,
-        current_user: AuthUser,
-    ):
-        return await subscriptionService.update_subscription_vehicles_for_user(
-            subscription_id=subscription_id,
-            vehicle_ids=payload.vehicle_ids,
-            db=db,
-            current_user=current_user,
         )
 
     @staticmethod

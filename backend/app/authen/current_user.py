@@ -1,3 +1,4 @@
+from app.enums.parking import UserRoleType
 from fastapi import Depends, HTTPException, status
 from app.models.auth import AuthUser
 from app.api.deps import get_current_user
@@ -10,7 +11,7 @@ def _normalize_roles(roles: list[str]) -> set[str]:
 
 
 def is_admin_user(user: AuthUser) -> bool:
-    return "ADMIN" in _normalize_roles(user.roles)
+    return UserRoleType.ADMIN in _normalize_roles(user.roles)
 
 
 def required_roles(*roles: str):

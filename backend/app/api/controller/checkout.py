@@ -44,3 +44,9 @@ class CheckoutController:
         return await CheckoutService.create_subscription_only(
             payload, db, current_user
         )
+
+    @staticmethod
+    async def checkout_wallet_full_ctrl(payload, db, current_user):
+        return await CheckoutService.create_subscription_full_paid_by_wallet(
+            payload, db, current_user
+        )

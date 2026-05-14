@@ -37,14 +37,8 @@ export default function CheckoutSummaryPanel({
     ),
     {
       enabled: true,
-      label: t("plan.features.licensedVehicleLimit", {
-        count: plan?.max_licensed_vehicle ?? 0,
-      }),
-    },
-    {
-      enabled: true,
-      label: t("plan.features.unlicensedVehicleLimit", {
-        count: plan?.max_unlicensed_vehicle ?? 0,
+      label: t("plan.features.accessCardIncluded", {
+        defaultValue: "Cấp thẻ gửi xe/barcode khi đăng ký thành công",
       }),
     },
     {

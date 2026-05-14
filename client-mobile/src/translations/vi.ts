@@ -116,7 +116,16 @@ const vi = {
     fullPaymentNote:
       'Bấm “Thanh toán MoMo” để chuyển sang MoMo hoặc trình duyệt và hoàn tất thanh toán.',
 
+    pay: 'Thanh toán',
     payWithMomo: 'Thanh toán MoMo',
+    payWithWallet: 'Thanh toán bằng ví',
+    choosePayMethod: 'Chọn phương thức thanh toán',
+    walletBalance: 'Số dư ví: {{balance}}',
+    insufficientWallet: 'Số dư ví không đủ, vui lòng nạp thêm hoặc chọn MoMo',
+    walletPaymentSuccess: 'Thanh toán bằng ví thành công.',
+    momoNote: 'Chuyển sang MoMo để hoàn tất thanh toán.',
+    monthlyWalletRequired:
+      'Thanh toán hàng tháng bắt buộc dùng ví. Vui lòng đảm bảo ví đủ số dư cho kỳ đầu tiên.',
     setupRecurring: 'Xác nhận đăng ký',
     recurringSetupSuccess: 'Đăng ký thanh toán hàng tháng thành công.',
 
@@ -131,6 +140,30 @@ const vi = {
       'Bạn có thể quay lại app sau khi thanh toán.',
     paymentFailed: 'Thanh toán MoMo thất bại.',
     noSelectedPlan: 'Chưa có gói gửi xe được chọn.',
+  },
+
+  wallet: {
+    title: 'Ví điện tử',
+    balance: 'Số dư',
+    status: 'Trạng thái',
+    topupAmount: 'Số tiền nạp',
+    topupAmountPlaceholder: 'Nhập số tiền',
+    topup: 'Nạp tiền',
+    invalidAmount: 'Số tiền không hợp lệ',
+    noPaymentUrl: 'Không nhận được URL thanh toán MoMo.',
+    cannotOpenPaymentUrl: 'Thiết bị không thể mở URL thanh toán MoMo.',
+    redirectingMomo: 'Đang chuyển sang MoMo...',
+    topupFailed: 'Nạp tiền thất bại.',
+    unavailable: 'Không thể tải thông tin ví.',
+  },
+
+  presentCard: {
+    schoolName: 'TRƯỜNG ĐẠI HỌC SPKT HƯNG YÊN',
+    fullName: 'Họ tên sinh viên:',
+    userCode: 'Mã sinh viên:',
+    noUser: 'Chưa có thông tin người dùng.',
+    noCard: 'Chưa có thẻ ra vào.',
+    noBarcode: 'Không có mã vạch.',
   },
 
   paymentReturn: {
@@ -221,7 +254,7 @@ const vi = {
 
   profile: {
     title: 'Thông tin cá nhân',
-    subtitle: 'Quản lý thông tin tài khoản, phương tiện và gói gửi xe.',
+    subtitle: 'Quản lý thông tin tài khoản và gói gửi xe.',
 
     accountInfo: 'Thông tin tài khoản',
     userCode: 'Mã người dùng',
@@ -245,8 +278,6 @@ const vi = {
     noUserInfo: 'Chưa tải thông tin người dùng.',
 
     personalManagement: 'Quản lý cá nhân',
-    vehicles: 'Phương tiện',
-    vehiclesDesc: 'Quản lý danh sách phương tiện dùng để gửi xe.',
     subscriptions: 'Gói đã đăng ký',
     subscriptionsDesc: 'Xem gói gửi xe hiện tại và lịch sử đăng ký.',
 
@@ -282,64 +313,6 @@ const vi = {
     },
   },
 
-  vehicles: {
-    title: "Phương tiện",
-    subtitle: "Quản lý phương tiện có biển số và không có biển số của bạn.",
-    loadError: "Không tải được danh sách phương tiện.",
-
-    registerPlan: "Đăng ký gói gửi xe",
-    addVehicle: "Thêm phương tiện",
-
-    withPlate: "Có biển số",
-    withoutPlate: "Không biển số",
-    searchPlatePlaceholder: "Tìm theo biển số",
-
-    empty: "Chưa có phương tiện.",
-    emptyDesc: "Bạn có thể thêm phương tiện mới để đăng ký gói gửi xe.",
-
-    autoBarcode: "Tự động tạo mã barcode",
-    vehicleId: "Mã phương tiện",
-    createdAt: "Ngày tạo",
-
-    edit: "Sửa",
-    delete: "Xóa",
-
-    createSuccess: "Đã thêm phương tiện",
-    updateSuccess: "Đã cập nhật phương tiện",
-    deleteSuccess: "Đã xóa phương tiện",
-
-    saveFailed: "Không thể lưu phương tiện.",
-    deleteFailed: "Không thể xóa phương tiện.",
-
-    deleteConfirmTitle: "Xóa phương tiện",
-    deleteConfirmMessage: "Bạn có chắc muốn xóa phương tiện này không?",
-
-    types: {
-      motorbike: "Xe máy",
-      bicycle: "Xe đạp",
-      electric_bicycle: "Xe đạp điện",
-    },
-
-    form: {
-      missingUser: "Không tìm thấy thông tin người dùng.",
-      vehicleType: "Loại phương tiện",
-      vehicleTypeRequired: "Vui lòng chọn loại phương tiện.",
-      invalidVehicleType: "Loại phương tiện không hợp lệ.",
-      licensePlate: "Biển số xe",
-      licensePlateRequired: "Vui lòng nhập biển số xe.",
-      licensePlatePlaceholder: "VD: 30K12345",
-      barcodeNote:
-        "Phương tiện không có biển số sẽ được hệ thống tự động tạo barcode sau khi lưu.",
-    },
-
-    modal: {
-      createTitle: "Thêm phương tiện",
-      editTitle: "Cập nhật phương tiện",
-      subtitle: "Chọn loại phương tiện và nhập thông tin cần thiết.",
-      create: "Lưu phương tiện",
-      save: "Lưu thay đổi",
-    },
-  },
 
   auth: {
     loginTitle: 'Đăng nhập',

@@ -7,7 +7,7 @@ import uuid
 from sqlalchemy import Column as SAColumn, Enum, Integer
 from sqlmodel import Field, SQLModel
 
-from app.enums.parking import PaymentType, SubscriptionPlanType, SubscriptionStatus, VehicleType
+from app.enums.parking import PaymentType, SubscriptionPlanType, SubscriptionStatus
 from .mixins import TimestampMixin
 
 
@@ -23,6 +23,8 @@ class UserSubscriptionBase(SQLModel):
     )
     start_date: date
     end_date: date
+    next_billing_date: date | None = Field(default=None)
+    billing_attempt_count: int = Field(default=0, sa_column=SAColumn(Integer, nullable=False))
 
 
 class UserSubscription(UserSubscriptionBase, TimestampMixin, table=True):
@@ -31,10 +33,7 @@ class UserSubscription(UserSubscriptionBase, TimestampMixin, table=True):
 
 
 class UserSubscriptionCreate(UserSubscriptionBase):
-    # Backward compatible single-vehicle field (not persisted on `user_subscriptions` table).
-    vehicle_id: uuid.UUID | None = None
-    # New API path: attach multiple vehicles to a subscription.
-    vehicle_ids: list[uuid.UUID] | None = None
+    pass
 
 
 class UserSubscriptionRead(UserSubscriptionBase):
@@ -44,10 +43,6 @@ class UserSubscriptionRead(UserSubscriptionBase):
 
 
 class UserSubscriptionUpdate(SQLModel):
-    # Backward compatible: allow switching licensed vehicle on an ACTIVE subscription.
-    # This field is not persisted on `user_subscriptions` table; it is applied to `user_subscription_vehicles` mappings.
-    vehicle_id: Optional[uuid.UUID] = None
-    vehicle_ids: list[uuid.UUID] | None = None
     sub_plan_id: Optional[uuid.UUID] = None
     payment_plan_id: Optional[uuid.UUID] = None
     status: Optional[SubscriptionStatus] = None
@@ -55,14 +50,6 @@ class UserSubscriptionUpdate(SQLModel):
     end_date: Optional[date] = None
     total_amount: Optional[int] = None
     paid_amount: Optional[int] = None
-
-
-class VehicleSummary(SQLModel):
-    id: Optional[uuid.UUID] = None
-    vehicle_type: VehicleType
-    license_plate: Optional[str] = None
-    # Mobile client expects `qr_code`; backend stores it as `barcode_payload` on Vehicle.
-    qr_code: Optional[str] = None
 
 
 class SubscriptionPlanSummary(SQLModel):
@@ -83,13 +70,6 @@ class UserSummary(SQLModel):
     email: str
     phone_number: Optional[str] = None
 
-class UserSubscriptionDetail(SQLModel):
-    subscription_plan: Optional[SubscriptionPlanSummary] = None
-    payment_plan: Optional[PaymentPlanSummary] = None
-    term: Optional[AcademicTermSummary] = None
-    vehicle: Optional[VehicleSummary] = None
-    covered_vehicles: list[VehicleSummary] | None = None
-
 class UserSubscriptionClientView(SQLModel):
     id: uuid.UUID
     status: SubscriptionStatus
@@ -98,12 +78,9 @@ class UserSubscriptionClientView(SQLModel):
     total_amount: int
     paid_amount: int
     created_at: datetime
-    # Backward compatible fields used by `client-web`
-    vehicle: Optional[VehicleSummary] = None
     plan: Optional[SubscriptionPlanType] = None
     payment: Optional[PaymentPlanSummary] = None
     term: Optional[AcademicTermSummary] = None
-    covered_vehicles: list[VehicleSummary] | None = None
 
 class UserSubscriptionAdminView(SQLModel): 
     id: uuid.UUID 
@@ -120,6 +97,4 @@ class UserSubscriptionAdminView(SQLModel):
     subscription_plan: Optional[SubscriptionPlanSummary] = None
     payment_plan: Optional[PaymentPlanSummary] = None
     term: Optional[AcademicTermSummary] = None
-    vehicle: Optional[VehicleSummary] = None
-    covered_vehicles: list[VehicleSummary] | None = None
     

@@ -295,6 +295,7 @@ const th = {
         unknown: "รอดำเนินการ",
         payment_due: "รอชำระเงิน",
         inactive: "ไม่ใช้งาน",
+        canceled: "ยกเลิก",
       },
       vehicleCount: "{{count}} vehicles",
       noVehicle: "ยังไม่ได้เลือกรถ",
@@ -358,9 +359,6 @@ const th = {
       noMonthlyPayment: "ไม่รองรับการชำระรายเดือน",
       fullPayment: "รองรับการชำระเต็มจำนวน",
       noFullPayment: "ไม่รองรับการชำระเต็มจำนวน",
-      licensedVehicleLimit: "สูงสุด {{count}} คันสำหรับยานพาหนะมีป้ายทะเบียน",
-      unlicensedVehicleLimit:
-        "สูงสุด {{count}} คันสำหรับยานพาหนะไม่มีป้ายทะเบียน",
       dailyFee: "ค่าธรรมเนียมรายวัน: {{amount}}đ",
       after18Fee: "หลัง 18:00: {{amount}}đ",
       after18Waived: "ฟรีหลัง 18:00",
@@ -411,7 +409,6 @@ const th = {
     checkoutPlanNote: "สรุปแพ็กเกจที่เลือกไว้ที่นี่เพื่อให้คุณตรวจสอบ",
     checkoutStepper: {
       steps: [
-        "เลือกยานพาหนะ",
         "เลือกภาคการศึกษา",
         "แผนการชำระเงิน",
         "รายละเอียดการชำระเงิน",
@@ -435,7 +432,7 @@ const th = {
       momoGeneralError:
         "ไม่สามารถเริ่มขั้นตอนการชำระเงิน MoMo ได้ กรุณาลองอีกครั้ง",
       confirm: "ยืนยันการชำระเงิน",
-      payMomo: "ชำระด้วย MoMo",
+      pay: "ชำระเงิน",
       termRange: "จาก {{start}} ถึง {{end}}",
     },
     paymentModes: {

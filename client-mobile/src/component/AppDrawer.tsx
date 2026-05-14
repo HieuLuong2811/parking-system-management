@@ -163,13 +163,6 @@ export default function AppDrawer() {
               />
 
               <DrawerMenuItem
-                icon="car-outline"
-                title={t("profile.vehicles")}
-                subtitle={t("profile.vehiclesDesc")}
-                onPress={() => goToStack("Vehicles")}
-              />
-
-              <DrawerMenuItem
                 icon="reader-outline"
                 title={t("profile.subscriptions")}
                 subtitle={t("profile.subscriptionsDesc")}

@@ -14,9 +14,7 @@ from app.models.parking_sessions import (
     ParkingSessionAdminRead,
     ParkingSessionRead,
     ParkingSessionUpdate,
-    ParkingSessionBarcodeCheckIn,
-    ParkingSessionPlateCheckIn,
-    ParkingSessionPlateConfirm
+    ParkingSessionAccessConfirm,
 )
 from app.utils.pagination import PaginatedResponse
 
@@ -27,22 +25,6 @@ router = APIRouter(prefix="/parking_sessions", tags=["parking_sessions"])
 async def create_session(payload: ParkingSessionCreate, db: AsyncSession = Depends(get_db)):
     return await ParkingSessionController.create_session_ctrl(payload, db)
 
-
-@router.post("/barcode_checkin", response_model=ParkingSessionRead)
-async def barcode_checkin(payload: ParkingSessionBarcodeCheckIn, db: AsyncSession = Depends(get_db)):
-    return await ParkingSessionController.create_session_via_barcode_ctrl(payload, db)
-
-
-@router.post("/plate_checkin", response_model=ParkingSessionRead)
-async def plate_checkin(payload: ParkingSessionPlateCheckIn, db: AsyncSession = Depends(get_db)):
-    return await ParkingSessionController.create_session_via_plate_ctrl(payload, db)
-
-@router.post("/plate/confirm", response_model=ParkingSessionRead)
-async def plate_confirm(
-    payload: ParkingSessionPlateConfirm,
-    db: AsyncSession = Depends(get_db),
-):
-    return await ParkingSessionController.confirm_session_via_plate_ctrl(payload, db)
 
 @router.get("/", response_model=PaginatedResponse[ParkingSessionAdminRead])
 async def list_sessions(
@@ -107,6 +89,15 @@ async def export_my_sessions_xlsx(
         to_time=to_time,
     )
 
+@router.post("/access/confirm", response_model=ParkingSessionRead)
+async def access_confirm(
+    payload: ParkingSessionAccessConfirm,
+    db: AsyncSession = Depends(get_db),
+):
+    return await ParkingSessionController.confirm_session_via_access_ctrl(
+        payload,
+        db,
+    )
 
 @router.get("/{session_id}", response_model=ParkingSessionRead)
 async def get_session(session_id: str, db: AsyncSession = Depends(get_db)):

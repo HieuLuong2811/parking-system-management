@@ -40,6 +40,12 @@ _ADMIN_BILLING_REPORT_SUBJECTS: dict[str, str] = {
     "th": "[{project_name}] รายงานแพ็กเกจที่จอดรถค้างชำระ - {report_date}",
 }
 
+_ADMIN_BILLING_FAILURE_ALERT_SUBJECTS: dict[str, str] = {
+    "en": "[{project_name}] Subscription suspended - Invoice {invoice_id}",
+    "vi": "[{project_name}] Gói gửi xe bị tạm ngưng - Invoice {invoice_id}",
+    "th": "[{project_name}] แพ็กเกจถูกระงับ - Invoice {invoice_id}",
+}
+
 def _iter_billing_recipients(user: Users) -> list[str]:
     recipients: list[str] = []
     if user.email:
@@ -362,6 +368,61 @@ def send_admin_billing_report_email(
         except Exception as exc:
             logger.exception(
                 "Failed to send admin billing report email to %s: %s",
+                to_email,
+                exc,
+            )
+
+
+def send_admin_billing_failure_alert_email(
+    *,
+    admin_emails: list[str],
+    user: Users,
+    invoice: Invoice,
+    subscription: UserSubscription,
+    amount_vnd: int,
+    lang: str = "vi",
+) -> None:
+    """
+    Send an immediate alert to admins when a monthly subscription is suspended after billing retries.
+    """
+    if not settings.emails_enabled:
+        logger.debug("Email is disabled; skipping admin billing failure alert")
+        return
+
+    recipients: list[str] = []
+    for email in admin_emails or []:
+        if email and email not in recipients:
+            recipients.append(str(email))
+
+    if not recipients:
+        return
+
+    selected_lang = (lang or settings.DEFAULT_EMAIL_LANG or "vi").lower()
+    subject_template = _ADMIN_BILLING_FAILURE_ALERT_SUBJECTS.get(
+        selected_lang,
+        _ADMIN_BILLING_FAILURE_ALERT_SUBJECTS["vi"],
+    )
+
+    subject = subject_template.format(
+        project_name=settings.PROJECT_NAME,
+        invoice_id=invoice.id,
+    )
+
+    body = (
+        "Monthly billing failed after 3 attempts.\n"
+        f"User: {user.user_code} - {user.full_name}\n"
+        f"Subscription: {subscription.id}\n"
+        f"Invoice: {invoice.id}\n"
+        f"Amount due: {amount_vnd:,} VND\n"
+        "Action required: review and contact user."
+    )
+
+    for to_email in recipients:
+        try:
+            _send_smtp_message(to_email=to_email, subject=subject, body=body)
+        except Exception as exc:
+            logger.exception(
+                "Failed to send admin billing failure alert email to %s: %s",
                 to_email,
                 exc,
             )

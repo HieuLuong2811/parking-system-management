@@ -317,6 +317,7 @@ const vi = {
         unknown: "Không xác định",
         payment_due: "Chưa thanh toán",
         inactive: "Không hoạt động",
+        canceled: "Đã huỷ"
       },
       vehicleCount: "{{count}} xe",
       noVehicle: "Chưa có xe nào được chọn.",
@@ -380,8 +381,6 @@ const vi = {
       noMonthlyPayment: "Không hỗ trợ thanh toán theo tháng",
       fullPayment: "Hỗ trợ thanh toán toàn bộ",
       noFullPayment: "Không hỗ trợ thanh toán toàn bộ",
-      licensedVehicleLimit: "Tối đa {{count}} phương tiện có biển số",
-      unlicensedVehicleLimit: "Tối đa {{count}} phương tiện không có biển số",
       dailyFee: "Phí theo ngày: {{amount}}đ",
       after18Fee: "Sau 18:00: {{amount}}đ",
       after18Waived: "Miễn phí sau 18:00",
@@ -436,7 +435,6 @@ const vi = {
     checkoutPlanNote: "Gói đã chọn được tóm tắt tại đây để bạn kiểm tra lại.",
     checkoutStepper: {
       steps: [
-        "Chọn phương tiện",
         "Chọn học kỳ",
         "Hình thức thanh toán",
         "Thông tin thanh toán",
@@ -462,7 +460,7 @@ const vi = {
       momoGeneralError:
         "Không thể bắt đầu quy trình thanh toán MoMo. Vui lòng thử lại.",
       confirm: "Xác nhận thanh toán",
-      payMomo: "Thanh toán bằng MoMo",
+      pay: "Thanh toán",
       termRange: "Từ {{start}} đến {{end}}",
     },
     paymentModes: {

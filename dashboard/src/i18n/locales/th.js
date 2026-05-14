@@ -1,21 +1,32 @@
 const th = {
   translation: {
-    sideBar: {
-      title: "ระบบที่จอดรถ",
-      subMenu: {
-        General: "ทั่วไป",
-        Operations: "การควบคุม",
-        Billing: "การชําระเงิน",
-        Management: "การจัดการ",
-        settings: "การตั้งค่า",
+    "sideBar": {
+      "title": "ระบบที่จอดรถ",
+      "subMenu": {
+        "General": "ทั่วไป",
+        "Operations": "การควบคุม",
+        "Billing": "การชําระเงิน",
+        "Management": "การจัดการ",
+        "settings": "การตั้งค่า"
       },
-      children: {
-        dashboard: "แดชบอร์ด",
-        users: "ผู้ใช้งาน",
-        resources: "หมวดหมู่การจัดการ",
-        notifications: "การแจ้งเตือน",
-        profile: "โปรไฟล์",
+      "parents": {
+        "billing": "การชําระเงิน",
+        "userManagement": "การจัดการผู้ใช้"
       },
+      "children": {
+        "dashboard": "แดชบอร์ด",
+        "parkingSessions": "การจอดรถ",
+        "subscriptions": "การสมัครสมาชิก",
+        "paymentTransactions": "ธุรกรรมการชำระเงิน",
+        "users": "ผู้ใช้งาน",
+        "roles": "บทบาท",
+        "paymentPlans": "แพ็กเกจการชําระเงิน",
+        "plans": "แพ็กเกจ",
+        "terms": "ข้อกำหนด",
+        "notifications": "การแจ้งเตือน",
+        "profile": "โปรไฟล์",
+        "logout": "ออกจากระบบ"
+      }
     },
     common: {
       filters: {
@@ -378,14 +389,13 @@ const th = {
     },
     subscriptionPlansPage: {
       title: "แผนสมัครสมาชิก",
+      description: "ตั้งค่าแพ็กเกจการสมัครสมาชิกและกฎการกำหนดราคาที่เกี่ยวข้อง",
       empty: "ยังไม่มีแผนที่ถูกกำหนด",
       columns: {
         planName: "ชื่อแพ็กเกจ",
         pricePerDay: "ค่าจอดรถต่อวัน",
         allowMonthly: "รายเดือน",
         allowFull: "จ่ายครบ",
-        maxLicensed: "สูงสุด(ป้าย)",
-        maxUnlicensed: "สูงสุด(ไม่มีป้าย)",
         after18Fee: "ค่าหลัง 18:00",
         waiveAfter18: "ยกเว้น 18+",
         status: "สถานะ",
@@ -394,13 +404,16 @@ const th = {
         updatedAt: "อัปเดตเมื่อ",
         actions: "การดำเนินการ",
       },
+      toast: {
+        updated: "อัปเดตแผนการสมัครสมาชิกสำเร็จแล้ว.",
+        created: "สร้างแผนการสมัครสมาชิกสำเร็จแล้ว.",
+      },
+
       dialog: {
         fields: {
           allowMonthly: "อนุญาตชำระรายเดือน",
           allowFull: "อนุญาตชำระเต็มจำนวน",
           waiveAfter18: "ยกเว้นค่าหลัง 18:00",
-          maxLicensed: "จำนวนรถมีป้ายสูงสุด",
-          maxUnlicensed: "จำนวนรถไม่มีป้ายสูงสุด",
           after18Fee: "ค่าหลัง 18:00 (VND)",
           status: "สถานะ",
         },

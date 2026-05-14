@@ -7,7 +7,6 @@ import { UsersPage } from '../pages/usersPage';
 import { SettingsPage } from '../pages/SettingsPage';
 import { NotFoundPage } from '../pages/notFoundPage';
 import { InvoicesPage } from '../pages/invoicesPage';
-import { VehiclesPage } from '../pages/vehiclesPage';
 import { RolesPage } from '../pages/rolesPage';
 import { TermsPage } from '../pages/termsPage';
 import { SubscriptionPlansPage } from '../pages/subscriptionPlansPage';
@@ -43,7 +42,6 @@ export const AppRouter = () => {
             <Route path="/users/:userCode/user-details" element={<UserProfilePage />} />
             <Route path="invoices/overview" element={<InvoicesPage />} />
             <Route path="parking_sessions" element={<ParkingSessionsPage />} />
-            <Route path="vehicles" element={<VehiclesPage />} />
             <Route path="roles" element={<RolesPage />} />
             <Route path="terms" element={<TermsPage />} />
             <Route path="plans" element={<SubscriptionPlansPage />} />

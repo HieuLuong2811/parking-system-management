@@ -1,11 +1,5 @@
 import type { ColumnConfig, FormField, ResourceConfig, SearchField } from '../types/admin';
 
-const vehicleTypeOptions = [
-  { value: 'MOTORBIKE', label: 'Motorbike' },
-  { value: 'BICYCLE', label: 'Bicycle' },
-  { value: 'ELECTRIC_BICYCLE', label: 'Electric Bicycle' },
-];
-
 const paymentMethodOptions = [
   { value: 'SYSTEM', label: 'System' },
   { value: 'CASH', label: 'Cash' },
@@ -91,31 +85,6 @@ export const resourceConfigs: ResourceConfig[] = [
       makeField('password', 'Password', 'text', true),
     ],
     searchFields: [makeSearch('user_code', 'User code'), makeSearch('phone_number', 'Phone number')],
-  },
-  {
-    id: 'vehicles',
-    label: 'Vehicles',
-    translationKey: 'resources.tables.vehicles',
-    endpoint: 'vehicles',
-    primaryKey: 'id',
-    hasSoftDelete: true,
-    allowDelete: true,
-    columns: [
-      makeColumn('id', 'Vehicle ID', 220),
-      makeColumn('user_code', 'User code', 160),
-      makeColumn('vehicle_type', 'Vehicle type', 160),
-      makeColumn('license_plate', 'License plate', 160),
-      makeColumn('barcode_token', 'Barcode', 220, (value) => (value ? String(value) : '-')),
-      makeColumn('created_at', 'Created at', 180),
-      makeColumn('deleted_at', 'Deleted at', 180),
-    ],
-    formFields: [
-      makeField('user_code', 'User code', 'text', true),
-      makeField('vehicle_type', 'Vehicle type', 'select', true, vehicleTypeOptions),
-      makeField('license_plate', 'License plate', 'text', true),
-      makeField('barcode_token', 'Barcode', 'text'),
-    ],
-    searchFields: [makeSearch('id', 'Vehicle ID')],
   },
   {
     id: 'roles',
@@ -213,7 +182,9 @@ export const resourceConfigs: ResourceConfig[] = [
     primaryKey: 'id',
     columns: [
       makeColumn('id', 'Session ID', 220),
-      makeColumn('vehicle_id', 'Vehicle ID', 180),
+      makeColumn('access_card_id', 'Access Card ID', 220),
+      makeColumn('vehicle_mode', 'Vehicle mode', 140),
+      makeColumn('vehicle_type', 'Vehicle type', 160),
       makeColumn('license_plate', 'License plate', 160),
       makeColumn('check_in_time', 'Check in', 180),
       makeColumn('check_out_time', 'Check out', 180),
@@ -221,7 +192,9 @@ export const resourceConfigs: ResourceConfig[] = [
       makeColumn('total_amount', 'Amount', 140),
     ],
     formFields: [
-      makeField('vehicle_id', 'Vehicle ID', 'text', true),
+      makeField('access_card_id', 'Access Card ID', 'text', true),
+      makeField('vehicle_mode', 'Vehicle mode', 'text'),
+      makeField('vehicle_type', 'Vehicle type', 'text'),
       makeField('license_plate', 'License plate', 'text'),
       makeField('check_in_time', 'Check-in', 'datetime-local', true),
       makeField('check_out_time', 'Check-out', 'datetime-local'),
@@ -232,7 +205,7 @@ export const resourceConfigs: ResourceConfig[] = [
       makeField('user_type', 'User type', 'text', true),
       makeField('total_amount', 'Total amount', 'number'),
     ],
-    searchFields: [makeSearch('vehicle_id', 'Vehicle ID'), makeSearch('status', 'Status')],
+    searchFields: [makeSearch('access_card_id', 'Access Card ID'), makeSearch('status', 'Status')],
   },
   {
     id: 'invoices',
@@ -302,9 +275,6 @@ export const resourceConfigs: ResourceConfig[] = [
     searchFields: [makeSearch('user_code', 'User code'), makeSearch('event_type', 'Event type')],
   },
 ];
-
-
-
 
 
 

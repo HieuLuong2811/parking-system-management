@@ -1,7 +1,8 @@
-import { Box, Typography } from "@mui/material";
+import { Alert, Box, Typography } from "@mui/material";
 import { payment_plan } from "../../../constant/config";
 import { PaymentModeId } from "../types";
 import { SubscriptionPlanRecord } from "../../../api/clientApi";
+import { useMyWallet } from "../../../api/wallets";
 
 type Props = {
   plan?: SubscriptionPlanRecord | null;
@@ -54,6 +55,15 @@ export default function PaymentModeStep(props: Props) {
     return true;
   });
 
+  const { data: wallet } = useMyWallet();
+  const recurringAmount = recurringModePricing?.amount ?? null;
+  const walletBalanceNumber = wallet ? Number(wallet.balance) : 0;
+  const walletReadyForRecurring =
+    Boolean(wallet) &&
+    Boolean(recurringAmount) &&
+    wallet?.status === "ACTIVE" &&
+    walletBalanceNumber >= Number(recurringAmount);
+
   return (
     <Box className="checkout-step-plan">
       <Typography variant="subtitle1" className="checkout-payment-label">
@@ -78,6 +88,8 @@ export default function PaymentModeStep(props: Props) {
             Boolean(mode.badgeKey) &&
             (mode.id !== payment_plan.ONE_TIME ||
               (typeof badgeNumber === "number" && badgeNumber > 0));
+          const isRecurring = mode.id === payment_plan.RECURRING;
+          const disabledRecurring = isRecurring && !walletReadyForRecurring;
           return (
             <Box
               key={mode.id}
@@ -87,11 +99,13 @@ export default function PaymentModeStep(props: Props) {
                   : ""
               }`}
               onClick={() => {
+                if (disabledRecurring) return;
                 if (!planPricing || !modePricing) {
                   return;
                 }
                 selectPaymentMode(mode.id);
               }}
+              style={disabledRecurring ? { opacity: 0.55, pointerEvents: "auto" } : undefined}
             >
               <Box className="checkout-payment-header">
                 <Typography variant="subtitle1">{t(mode.titleKey)}</Typography>
@@ -131,6 +145,14 @@ export default function PaymentModeStep(props: Props) {
               >
                 {t(mode.descriptionKey)}
               </Typography>
+              {disabledRecurring && (
+                <Alert severity="warning" sx={{ mt: 1.5 }}>
+                  {t("wallet.insufficient", {
+                    defaultValue:
+                      "Số dư ví không đủ, vui lòng nạp thêm hoặc chọn MoMo",
+                  })}
+                </Alert>
+              )}
             </Box>
           );
         })}

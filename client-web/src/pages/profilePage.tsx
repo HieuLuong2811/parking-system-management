@@ -6,6 +6,7 @@ import { FormInput } from "../components/common/FormInput";
 import ChangePasswordDialog from "../components/profile/ChangePasswordDialog";
 import { useAppAuth } from "../contexts/useAppAuth";
 import { useUpdateUser } from "../api/users";
+import { useMyWallet, useWalletTopUp } from "../api/wallets";
 
 type ProfileFormValues = {
   full_name: string;
@@ -16,6 +17,8 @@ type ProfileFormValues = {
 export default function ProfilePage() {
   const { t } = useTranslation();
   const { user, status, patchUser } = useAppAuth();
+  const { data: wallet } = useMyWallet();
+  const { mutateAsync: topUpWallet, isPending: topUpPending } = useWalletTopUp();
 
   const [formValues, setFormValues] = useState<ProfileFormValues>({
     full_name: "",
@@ -30,6 +33,7 @@ export default function ProfilePage() {
   const [statusMessage, setStatusMessage] = useState<string | null>(null);
   const [passwordDialogOpen, setPasswordDialogOpen] = useState(false);
   const [passwordSuccess, setPasswordSuccess] = useState<string | null>(null);
+  const [topUpAmount, setTopUpAmount] = useState<string>("50000");
 
   const { mutateAsync: updateUser, isPending } = useUpdateUser();
 
@@ -108,6 +112,30 @@ export default function ProfilePage() {
 
     if (message) {
       setPasswordSuccess(message);
+    }
+  };
+
+  const handleTopUp = async () => {
+    const amount = Number(topUpAmount);
+    if (!amount || amount <= 0) {
+      setStatusMessage(t("common.error"));
+      return;
+    }
+
+    try {
+      const res = await topUpWallet({
+        amount,
+        redirect_url: `${window.location.origin}/profile`,
+        description: "Wallet top-up",
+      });
+
+      const url = res.pay_url || res.short_link || res.qr_code_url;
+      if (!url) {
+        throw new Error(t("common.error"));
+      }
+      window.location.assign(url);
+    } catch (error) {
+      setStatusMessage(error instanceof Error ? error.message : t("common.error"));
     }
   };
 
@@ -247,6 +275,51 @@ export default function ProfilePage() {
             {t("profile.passwordDialog.button")}
           </Button>
         </Stack>
+
+        <Box sx={{ mt: 4, pt: 3, borderTop: "1px solid #E5E7EB" }}>
+          <Typography variant="h6" sx={{ fontWeight: 700, mb: 0.5 }}>
+            {t("wallet.title", { defaultValue: "Ví điện tử" })}
+          </Typography>
+          <Typography variant="body2" color="text.secondary" sx={{ mb: 2 }}>
+            {t("wallet.subtitle", { defaultValue: "Nạp tiền và sử dụng số dư ví để thanh toán." })}
+          </Typography>
+
+          <Stack direction={{ xs: "column", sm: "row" }} spacing={2} alignItems="center">
+            <Box sx={{ flex: 1 }}>
+              <Typography variant="body2" color="text.secondary">
+                {t("wallet.balance", { defaultValue: "Số dư" })}
+              </Typography>
+              <Typography variant="h5" sx={{ fontWeight: 800 }}>
+                {wallet ? `${wallet.balance} ${wallet.currency}` : "--"}
+              </Typography>
+              {wallet?.status && (
+                <Typography variant="caption" color="text.secondary">
+                  {t("wallet.status", { defaultValue: "Trạng thái" })}: {wallet.status}
+                </Typography>
+              )}
+            </Box>
+
+            <Stack direction={{ xs: "column", sm: "row" }} spacing={1.5} sx={{ width: { xs: "100%", sm: "auto" } }}>
+              <FormInput
+                id="wallet-topup-amount"
+                label={t("wallet.topupAmount", { defaultValue: "Số tiền nạp" })}
+                value={topUpAmount}
+                onChange={(v) => setTopUpAmount(v)}
+                inputClassName="plain-input"
+                labelClassName="profile-field-label"
+                placeholder="50000"
+              />
+              <Button
+                variant="contained"
+                onClick={handleTopUp}
+                disabled={topUpPending || wallet?.status === "LOCKED"}
+                sx={{ borderRadius: 2, textTransform: "none", fontWeight: 700, px: 2.5, height: 44 }}
+              >
+                {t("wallet.topup", { defaultValue: "Nạp tiền" })}
+              </Button>
+            </Stack>
+          </Stack>
+        </Box>
 
         {statusMessage && (
           <Snackbar

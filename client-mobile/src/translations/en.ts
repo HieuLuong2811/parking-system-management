@@ -119,7 +119,16 @@ const en = {
     fullPaymentNote:
       'Tap “Pay with MoMo” to open MoMo or browser and complete the payment.',
 
+    pay: 'Pay',
     payWithMomo: 'Pay with MoMo',
+    payWithWallet: 'Pay with wallet',
+    choosePayMethod: 'Choose payment method',
+    walletBalance: 'Wallet balance: {{balance}}',
+    insufficientWallet: 'Insufficient wallet balance. Please top up or choose MoMo.',
+    walletPaymentSuccess: 'Wallet payment successful.',
+    momoNote: 'Proceed to MoMo to complete payment.',
+    monthlyWalletRequired:
+      'Monthly payment requires wallet. Please ensure your wallet has enough balance for the first month.',
     setupRecurring: 'Confirm subscription',
     recurringSetupSuccess: 'Monthly subscription setup successfully.',
 
@@ -135,6 +144,30 @@ const en = {
       'You can return to the app after payment.',
     paymentFailed: 'MoMo payment failed.',
     noSelectedPlan: 'No parking plan selected.',
+  },
+
+  wallet: {
+    title: 'Wallet',
+    balance: 'Balance',
+    status: 'Status',
+    topupAmount: 'Top-up amount',
+    topupAmountPlaceholder: 'Enter amount',
+    topup: 'Top up',
+    invalidAmount: 'Invalid amount',
+    noPaymentUrl: 'No MoMo payment URL was returned.',
+    cannotOpenPaymentUrl: 'This device cannot open the MoMo payment URL.',
+    redirectingMomo: 'Redirecting to MoMo...',
+    topupFailed: 'Top up failed.',
+    unavailable: 'Wallet is unavailable.',
+  },
+
+  presentCard: {
+    schoolName: 'TRƯỜNG ĐẠI HỌC SPKT HƯNG YÊN',
+    fullName: 'Student name:',
+    userCode: 'Student code:',
+    noUser: 'User information is not available.',
+    noCard: 'No parking access card found.',
+    noBarcode: 'No barcode available.',
   },
 
   paymentReturn: {
@@ -226,7 +259,7 @@ const en = {
 
   profile: {
     title: 'Personal information',
-    subtitle: 'Manage your account information, vehicles, and parking plans.',
+    subtitle: 'Manage your account information and parking plans.',
 
     accountInfo: 'Account information',
     userCode: 'User code',
@@ -251,8 +284,6 @@ const en = {
     noUserInfo: 'User information has not been loaded.',
 
     personalManagement: 'Personal management',
-    vehicles: 'Vehicles',
-    vehiclesDesc: 'Manage the list of vehicles used for parking.',
     subscriptions: 'Registered plans',
     subscriptionsDesc: 'View your current parking plan and registration history.',
 
@@ -284,65 +315,6 @@ const en = {
       canceled: 'Canceled',
       suspended: 'Suspended',
       inactive: 'Inactive',
-    },
-  },
-
-  vehicles: {
-    title: "Vehicles",
-    subtitle: "Manage your licensed and unlicensed vehicles.",
-    loadError: "Unable to load vehicles.",
-
-    registerPlan: "Register parking plan",
-    addVehicle: "Add vehicle",
-
-    withPlate: "With plate",
-    withoutPlate: "Without plate",
-    searchPlatePlaceholder: "Search by license plate",
-
-    empty: "No vehicles yet.",
-    emptyDesc: "Add a vehicle to register for a parking plan.",
-
-    autoBarcode: "Barcode will be generated automatically",
-    vehicleId: "Vehicle ID",
-    createdAt: "Created at",
-
-    edit: "Edit",
-    delete: "Delete",
-
-    createSuccess: "Vehicle added successfully",
-    updateSuccess: "Vehicle updated successfully",
-    deleteSuccess: "Vehicle deleted successfully",
-
-    saveFailed: "Unable to save vehicle.",
-    deleteFailed: "Unable to delete vehicle.",
-
-    deleteConfirmTitle: "Delete vehicle",
-    deleteConfirmMessage: "Are you sure you want to delete this vehicle?",
-
-    types: {
-      motorbike: "Motorbike",
-      bicycle: "Bicycle",
-      electric_bicycle: "Electric bicycle",
-    },
-
-    form: {
-      missingUser: "User information was not found.",
-      vehicleType: "Vehicle type",
-      vehicleTypeRequired: "Please select a vehicle type.",
-      invalidVehicleType: "Invalid vehicle type.",
-      licensePlate: "License plate",
-      licensePlateRequired: "Please enter the license plate.",
-      licensePlatePlaceholder: "E.g. 30K12345",
-      barcodeNote:
-        "For vehicles without a license plate, the system will automatically generate a barcode after saving.",
-    },
-
-    modal: {
-      createTitle: "Add vehicle",
-      editTitle: "Update vehicle",
-      subtitle: "Select the vehicle type and enter the required information.",
-      create: "Save vehicle",
-      save: "Save changes",
     },
   },
 

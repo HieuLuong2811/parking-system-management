@@ -4,8 +4,6 @@ import { clientHttp, requestWithContext } from "./clientApi";
 export interface CheckoutMomoRequest {
   sub_plan_id: string;
   term_id: string;
-  vehicle_id?: string | null;
-  vehicle_ids?: string[] | null;
   payment_plan_id: string;
   start_date: string;
   end_date: string;

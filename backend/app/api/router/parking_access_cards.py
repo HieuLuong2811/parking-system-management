@@ -38,6 +38,17 @@ async def lookup_parking_access_card(
     )
 
 
+@router.get("/me", response_model=ParkingAccessCardRead)
+async def get_my_parking_access_card(
+    db: AsyncSession = Depends(get_db),
+    current_user: AuthUser = Depends(required_roles("USER", "ADMIN", "SECURITY")),
+):
+    return await ParkingAccessCardController.get_my_card_ctrl(
+        current_user.user_code,
+        db,
+    )
+
+
 @router.get("/{card_id}", response_model=ParkingAccessCardRead)
 async def get_parking_access_card(
     card_id: str,

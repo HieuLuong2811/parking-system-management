@@ -3,22 +3,18 @@ import { useMemo } from "react";
 import { useTranslation } from "react-i18next";
 import { SubscriptionPlanRecord } from "../../api/clientApi";
 import { useAcademicTerms } from "../../api/academic_terms";
-import { useVehicles } from "../../api/vehicles";
 import { useAppAuth } from "../../contexts/useAppAuth";
 import { getPlanCardKey } from "../../ultis/planCards";
 import { useCheckoutState } from "./hooks/useCheckoutState";
 import { usePlanCheckoutPricing } from "./hooks/usePlanCheckoutPricing";
 import { useCheckoutValidation } from "./hooks/useCheckoutValidation";
 import { useCheckoutPayment } from "./hooks/useCheckoutPayment";
+import { useMyWallet } from "../../api/wallets";
 
 import { AcademicTermOption, paymentModes, RawTermCard } from "./types";
 import { payment_plan, PlanType } from "../../constant/config";
 
-import VehicleRegistrationModal from '../../components/vehicle/VehicleRegistrationModal';
-import useModal from '../../hooks/useModal';
-
 // Component con
-import VehicleStep from "./components/VehicleStep";
 import TermStep from "./components/TermStep";
 import PaymentModeStep from "./components/PaymentModeStep";
 
@@ -51,18 +47,6 @@ export default function PlanCheckoutPanel({
 
   const { user: currentUser } = useAppAuth();
   const { data: academicTerms = [] } = useAcademicTerms();
-  const { data: vehicles = [] } = useVehicles();
-
-  const registerModal = useModal();
-
-  // Handlers cho modal
-  const handleOpenCreate = () => registerModal.openModal();
-  const handleCloseModal = () => registerModal.closeModal();
-
-  // Filtered Vehicles
-  const filteredVehicles = useMemo(() => {
-    return vehicles;
-  }, [vehicles]);
 
   const checkoutSteps = useMemo(
     () => t("plan.checkoutStepper.steps", { returnObjects: true }) as string[],
@@ -95,16 +79,13 @@ export default function PlanCheckoutPanel({
   const { state: checkoutState, actions } = useCheckoutState(
     plan?.id,
     academicTermOptions,
-    vehicles,
-    initialVehicleId
   );
 
   const {
     activeStep,
     selectedTermId,
     selectedPaymentMode,
-    selectedLicensedVehicleId,
-    selectedUnlicensedVehicleId,
+    selectedFullPaymentMethod,
     isProcessing,
     processingError,
   } = checkoutState;
@@ -113,8 +94,7 @@ export default function PlanCheckoutPanel({
     setActiveStep,
     selectTerm,
     selectPaymentMode,
-    setLicensedVehicleId,
-    setUnlicensedVehicleId,
+    selectFullPaymentMethod,
   } = actions;
 
   const selectedTermRecord = academicTerms.find((term) => term.id === selectedTermId) ?? null;
@@ -128,34 +108,41 @@ export default function PlanCheckoutPanel({
     fullModePricing,
   } = usePlanCheckoutPricing(plan?.id, selectedTermRecord?.id, activeStep >= 1);
 
-  // Selected Vehicle & Summary
-  const selectedLicensedVehicle = filteredVehicles.find((vehicle) => vehicle.id === selectedLicensedVehicleId);
-  const selectedUnlicensedVehicle = filteredVehicles.find((vehicle) => vehicle.id === selectedUnlicensedVehicleId);
-  const licensedVehicles = filteredVehicles.filter(v => Boolean((v as any)?.license_plate?.trim?.() || (v as any)?.license_plate));
-  const unlicensedVehicles = filteredVehicles.filter(v => !Boolean((v as any)?.license_plate?.trim?.() || (v as any)?.license_plate));
-
   const recurringPlanId = recurringModePricing?.payment_plan_id ?? null;
   const fullPlanId = fullModePricing?.payment_plan_id ?? null;
 
-  // Ready states
   const momoReady =
     Boolean(currentUser) &&
     Boolean(selectedTermRecord) &&
     Boolean(fullPlanId) &&
-    (Boolean(selectedLicensedVehicle) || Boolean(selectedUnlicensedVehicle)) &&
     planPricingReady &&
     Boolean(fullModePricing);
 
-  const { handleRecurringSetup, handleMomoCheckout } = useCheckoutPayment({
+  const { data: wallet } = useMyWallet();
+  const requiredAmount = fullModePricing?.amount ?? null;
+  const recurringAmount = recurringModePricing?.amount ?? null;
+  const walletBalanceNumber = wallet ? Number(wallet.balance) : 0;
+  const walletReady =
+    Boolean(wallet) &&
+    Boolean(requiredAmount) &&
+    wallet?.status === "ACTIVE" &&
+    walletBalanceNumber >= Number(requiredAmount);
+
+  const walletReadyRecurring =
+    Boolean(wallet) &&
+    Boolean(recurringAmount) &&
+    wallet?.status === "ACTIVE" &&
+    walletBalanceNumber >= Number(recurringAmount);
+    
+  const { handleRecurringSetup, handleFullPayment } = useCheckoutPayment({
     plan,
     selectedTermRecord,
-    selectedLicensedVehicle,
-    selectedUnlicensedVehicle,
     recurringModePricing,
     fullModePricing,
     recurringPlanId,
     fullPlanId,
     currentUser,
+    selectedFullPaymentMethod,
     t,
     setProcessing: actions.setProcessing,
     setProcessingError: actions.setProcessingError,
@@ -165,8 +152,9 @@ export default function PlanCheckoutPanel({
   const { primaryDisabled, getPrimaryLabel } = useCheckoutValidation({
     state: checkoutState,
     plan,
-    selectedVehicle: selectedLicensedVehicle || selectedUnlicensedVehicle,
     momoReady,
+    walletReady,
+    walletReadyRecurring,
     isProcessing,
     checkoutSteps,
   });
@@ -182,7 +170,7 @@ export default function PlanCheckoutPanel({
       if (selectedPaymentMode === payment_plan.RECURRING) {
         await handleRecurringSetup();
       } else if (selectedPaymentMode === payment_plan.ONE_TIME) {
-        await handleMomoCheckout();
+        await handleFullPayment();
       }
     };
 
@@ -211,19 +199,6 @@ export default function PlanCheckoutPanel({
 
           <Box className="checkout-step-content">
             {activeStep === 0 && (
-              <VehicleStep
-                licensedVehicles={licensedVehicles}
-                unlicensedVehicles={unlicensedVehicles}
-                selectedLicensedVehicleId={selectedLicensedVehicleId}
-                selectedUnlicensedVehicleId={selectedUnlicensedVehicleId}
-                setLicensedVehicleId={setLicensedVehicleId}
-                setUnlicensedVehicleId={setUnlicensedVehicleId}
-                handleOpenCreate={handleOpenCreate}
-                t={t}
-              />
-            )}
-
-            {activeStep === 1 && (
               <TermStep
                 availableTermCards={availableTermCards}
                 selectedTermId={selectedTermId}
@@ -232,7 +207,7 @@ export default function PlanCheckoutPanel({
               />
             )}
 
-            {activeStep === 2 && (
+            {activeStep === 1 && (
               <PaymentModeStep
                 plan={plan}
                 paymentModes={paymentModes}
@@ -247,9 +222,14 @@ export default function PlanCheckoutPanel({
               />
             )}
 
-            {activeStep === 3 && (
+            {activeStep === 2 && (
               <PaymentDetailStep
                 selectedPaymentMode={selectedPaymentMode}
+                selectedFullPaymentMethod={selectedFullPaymentMethod}
+                onSelectFullPaymentMethod={(value) => selectFullPaymentMethod(value)}
+                walletReady={walletReady}
+                walletBalance={walletBalanceNumber}
+                requiredAmount={requiredAmount ? Number(requiredAmount) : null}
                 t={t}
               />
             )}
@@ -277,8 +257,6 @@ export default function PlanCheckoutPanel({
         formatCurrency={formatCurrency}
         t={t}
       />
-
-      <VehicleRegistrationModal open={registerModal.open} onClose={handleCloseModal} />
     </Box>
   );
 }
