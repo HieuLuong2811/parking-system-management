@@ -37,6 +37,9 @@ async def list_transactions(
 @router.get("/details", response_model=PaginatedResponse[PaymentTransactionDetailRead])
 async def list_transactions_details(
     search: str | None = None,
+    user_code: str | None = None,
+    invoice_id: str | None = None,
+    transaction_code: str | None = None,
     page: int = Query(1, ge=1, description="Page number"),
     limit: int = Query(5, ge=1, le=100, description="Number of items per page"),
     from_time: datetime | None = Query(None, description="Filter by created_at (from)"),
@@ -47,6 +50,9 @@ async def list_transactions_details(
     return await PaymentTransactionController.get_transactions_details_ctrl(
         db,
         search=search,
+        user_code=user_code,
+        invoice_id=invoice_id,
+        transaction_code=transaction_code,
         from_time=from_time,
         to_time=to_time,
         page=page,
@@ -58,6 +64,8 @@ async def list_transactions_details(
 async def list_my_transactions_details(
     invoice_id: str | None = None,
     transaction_code: str | None = None,
+    transaction_type: str | None = None,
+    direction: str | None = None,
     page: int = Query(1, ge=1, description="Page number"),
     limit: int = Query(5, ge=1, le=100, description="Number of items per page"),
     from_time: datetime | None = Query(None, description="Filter by created_at (from)"),
@@ -70,6 +78,8 @@ async def list_my_transactions_details(
         db,
         invoice_id=invoice_id,
         transaction_code=transaction_code,
+        transaction_type=transaction_type,
+        direction=direction,
         from_time=from_time,
         to_time=to_time,
         page=page,

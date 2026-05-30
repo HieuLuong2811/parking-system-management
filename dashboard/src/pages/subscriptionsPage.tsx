@@ -119,7 +119,7 @@ export const SubscriptionsPage: React.FC = () => {
         minWidth: 180,
         flex: 1,
         renderCell: (params) => (
-          <Typography>{params.row.subscription_plan?.plans_type ?? '—'}</Typography>
+          <Typography>{t('common.subscriptionPlans.' + params.row.subscription_plan?.plans_type, { defaultValue: '—' })}</Typography>
         ),
       },
       {
@@ -128,14 +128,6 @@ export const SubscriptionsPage: React.FC = () => {
         minWidth: 170,
         renderCell: (params) => (
           <Typography>{t(`common.paymentPlan.${params.row.payment_plan?.payment_type}`)}</Typography>
-        ),
-      },
-      {
-        field: 'term',
-        headerName: t('subscriptionsPage.columns.term', 'Term'),
-        minWidth: 150,
-        renderCell: (params) => (
-          <Typography>{params.row.term?.term_name ?? '—'}</Typography>
         ),
       },
       {
@@ -169,14 +161,6 @@ export const SubscriptionsPage: React.FC = () => {
         ),
       },
       {
-        field: 'vehicle',
-        headerName: t('subscriptionsPage.columns.vehicle', 'Vehicle'),
-        minWidth: 150,
-        renderCell: (params) => (
-          <Typography>{params.row.vehicle?.license_plate ?? '—'}</Typography>
-        ),
-      },
-      {
         field: 'status',
         headerName: t('subscriptionsPage.columns.status', 'Status'),
         minWidth: 120,
@@ -193,6 +177,9 @@ export const SubscriptionsPage: React.FC = () => {
         headerName: t('subscriptionsPage.columns.actions', 'Actions'),
         minWidth: 120,
         sortable: false,
+        align: 'center',
+        headerAlign: 'center',
+        filterable: false,
         renderCell: (params) => (
           <Tooltip title={t('subscriptionsPage.viewInvoicesTooltip', 'View invoices')}>
            <IconButton
@@ -322,6 +309,17 @@ export const SubscriptionsPage: React.FC = () => {
             setPage(0);
           }}
           rowsPerPageOptions={[5, 10, 20, 50, 100]}
+          labelRowsPerPage={t('common.pagination.rowsPerPage', {
+            defaultValue: 'Rows per page:',
+          })}
+          labelDisplayedRows={({ from, to, count }) =>
+            t('common.pagination.displayedRows', {
+              from,
+              to,
+              count,
+              defaultValue: `${from}-${to} of ${count !== -1 ? count : `more than ${to}`}`,
+            })
+          }
         />
       </Box>
     </Box>

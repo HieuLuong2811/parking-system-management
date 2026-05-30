@@ -17,10 +17,8 @@ import {
 } from "@mui/material";
 import { Fragment, useMemo, useState } from "react";
 import { useTranslation } from "react-i18next";
-import useModal from "../hooks/useModal";
 import SubscriptionVehicleDrawer from "../components/subscription/SubscriptionVehicleDrawer";
 import SubscriptionsIcon from "@mui/icons-material/Subscriptions";
-import CalendarMonthIcon from "@mui/icons-material/CalendarMonth";
 import InfoOutlinedIcon from "@mui/icons-material/InfoOutlined";
 import VisibilityIcon from "@mui/icons-material/Visibility";
 import VisibilityOffIcon from '@mui/icons-material/VisibilityOff';
@@ -40,7 +38,6 @@ export default function UserSubscriptionsPage() {
   const [drawerSubscription, setDrawerSubscription] = useState<any | null>(
     null,
   );
-  const registerVehicleModal = useModal();
 
   const {
     data: subscriptionsPaginated,
@@ -70,7 +67,7 @@ export default function UserSubscriptionsPage() {
   };
 
   return (
-    <Box className="profile-page-shell">
+    <Box className="profile-page-shell" p={2}>
       <Box sx={{ mb: 3 }}>
         <Typography
           variant="h5"
@@ -81,7 +78,7 @@ export default function UserSubscriptionsPage() {
           }}
         >
           {t("profile.subscriptions.heading", {
-            defaultValue: "Gói gửi xe đã đăng ký",
+            defaultValue: "Vé gửi xe đã đăng ký",
           })}
         </Typography>
 
@@ -117,9 +114,6 @@ export default function UserSubscriptionsPage() {
             >
               <TableCell>
                 {t("profile.subscriptions.plan")}
-              </TableCell>
-              <TableCell>
-                {t("profile.subscriptions.term")}
               </TableCell>
               <TableCell>
                 {t("profile.subscriptions.paymentPlan")}
@@ -172,13 +166,13 @@ export default function UserSubscriptionsPage() {
 
                   <Typography fontWeight={700} color="text.primary">
                     {t("profile.subscriptions.emptyTitle", {
-                      defaultValue: "Chưa có gói gửi xe",
+                      defaultValue: "Chưa có vé gửi xe",
                     })}
                   </Typography>
 
                   <Typography variant="body2" color="text.secondary" mt={0.5}>
                     {t("profile.subscriptions.empty", {
-                      defaultValue: "Bạn chưa đăng ký gói gửi xe nào.",
+                      defaultValue: "Bạn chưa đăng ký vé gửi xe nào.",
                     })}
                   </Typography>
                 </TableCell>
@@ -235,16 +229,6 @@ export default function UserSubscriptionsPage() {
 
                           <Typography fontWeight={700}>
                             {t(`plan.cards.${subscription.plan.toLowerCase()}`)}
-                          </Typography>
-                        </Stack>
-                      </TableCell>
-
-                      <TableCell>
-                        <Stack direction="row" spacing={1} alignItems="center">
-                          <CalendarMonthIcon fontSize="small" color="action" />
-
-                          <Typography fontWeight={500}>
-                            {subscription.term?.term_name ?? "—"}
                           </Typography>
                         </Stack>
                       </TableCell>

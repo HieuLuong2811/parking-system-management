@@ -1,6 +1,7 @@
 import React from 'react';
 import DashboardIcon from '@mui/icons-material/Dashboard';
 import TableChartIcon from '@mui/icons-material/TableChart';
+import CreditCardIcon from '@mui/icons-material/CreditCard';
 import SubscriptionsIcon from '@mui/icons-material/Subscriptions';
 import StarIcon from '@mui/icons-material/Star';
 import ReceiptLongIcon from '@mui/icons-material/ReceiptLong';
@@ -30,6 +31,7 @@ export type SidebarGroupConfig = {
 export const overviewItems: SidebarItemConfig[] = [
   { id: 'dashboard', icon: <DashboardIcon />, path: '/', translationKey: 'sideBar.children.dashboard' },
   { id: 'parking_sessions', icon: <TableChartIcon />, path: '/parking_sessions', translationKey: 'sideBar.children.parkingSessions' },
+  { id: 'parking_access_cards', icon: <CreditCardIcon />, path: '/parking_access_cards', translationKey: 'sideBar.children.parkingAccessCards' },
 ];
 
 export const billingGroup: SidebarGroupConfig = {

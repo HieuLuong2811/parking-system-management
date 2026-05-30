@@ -8,11 +8,12 @@ from app.models.parking_sessions import (
     ParkingSession,
     ParkingSessionCreate,
     ParkingSessionAdminRead,
+    ParkingSessionMeRead,
     ParkingSessionRead,
     ParkingSessionUpdate,
 )
 from app.models.users import Users
-from app.enums.parking import ParkingSessionStatus, VehicleType
+from app.enums.parking import ParkingSessionStatus, ParkingVehicleMode
 from app.service.base import CRUDService
 from sqlalchemy.ext.asyncio import AsyncSession
 from app.models.parking_access_cards import ParkingAccessCard
@@ -39,7 +40,7 @@ class parkingSessionService:
     def _build_admin_statement(*, ordered: bool = True):
         statement = (
             select(ParkingSession, ParkingAccessCard, Users)
-            .join(
+            .outerjoin(
                 ParkingAccessCard,
                 ParkingAccessCard.id == ParkingSession.access_card_id,
             )
@@ -66,7 +67,6 @@ class parkingSessionService:
         page: int = 1,
         limit: int = 5,
         user_code: str | None = None,
-        vehicle_type: VehicleType | None = None,
         status: ParkingSessionStatus | None = None,
         from_time: datetime | None = None,
         to_time: datetime | None = None,
@@ -77,8 +77,6 @@ class parkingSessionService:
         filters = []
         if user_code:
             filters.append(ilike_unaccent(ParkingAccessCard.user_code, user_code.strip()))
-        if vehicle_type is not None:
-            filters.append(ParkingSession.vehicle_type == vehicle_type)
         if status is not None:
             filters.append(ParkingSession.status == status)
         if from_time is not None:
@@ -117,9 +115,10 @@ class parkingSessionService:
                     updated_at=session.updated_at,
                     access_card_id=getattr(session, "access_card_id", None),
                     vehicle_mode=getattr(session, "vehicle_mode", None),
-                    vehicle_type=getattr(session, "vehicle_type", None),
                     user_code=(card.user_code if card else None),
                     user_full_name=(user.full_name if user else None),
+                    check_in_plate_image_url=getattr(session, "check_in_plate_image_url", None),
+                    check_out_plate_image_url=getattr(session, "check_out_plate_image_url", None),
                 )
             )
 
@@ -188,7 +187,9 @@ class parkingSessionUserService:
         status: ParkingSessionStatus | None = None,
         from_time: datetime | None = None,
         to_time: datetime | None = None,
-    ) -> PaginatedResponse[ParkingSessionRead]:
+        vehicle_mode: ParkingVehicleMode | None = None,
+        license_plate: str | None = None,
+    ) -> PaginatedResponse[ParkingSessionMeRead]:
         page = max(1, int(page or 1))
         limit = max(1, int(limit or 5))
 
@@ -202,6 +203,17 @@ class parkingSessionUserService:
             filters.append(ParkingSession.check_in_time >= from_time)
         if to_time is not None:
             filters.append(ParkingSession.check_in_time <= to_time)
+        if vehicle_mode is not None:
+            filters.append(ParkingSession.vehicle_mode == vehicle_mode)
+        if license_plate:
+            trimmed_plate = license_plate.strip()
+            if trimmed_plate:
+                filters.append(
+                    ilike_unaccent(
+                        func.coalesce(ParkingSession.license_plate, ""),
+                        trimmed_plate,
+                    )
+                )
 
         base_statement = (
             select(ParkingSession)
@@ -237,18 +249,17 @@ class parkingSessionUserService:
         result = await db.execute(statement)
         sessions = result.scalars().all()
 
-        data: list[ParkingSessionRead] = []
+        data: list[ParkingSessionMeRead] = []
 
         for session in sessions:
-            if hasattr(ParkingSessionRead, "model_validate"):
-                data.append(ParkingSessionRead.model_validate(session))
+            if hasattr(ParkingSessionMeRead, "model_validate"):
+                data.append(ParkingSessionMeRead.model_validate(session))
             else:
                 data.append(
-                    ParkingSessionRead(
+                    ParkingSessionMeRead(
                         id=session.id,
                         access_card_id=getattr(session, "access_card_id", None),
                         vehicle_mode=getattr(session, "vehicle_mode", None),
-                        vehicle_type=getattr(session, "vehicle_type", None),
                         license_plate=getattr(session, "license_plate", None),
                         check_in_time=session.check_in_time,
                         check_out_time=session.check_out_time,

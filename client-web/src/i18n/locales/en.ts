@@ -64,6 +64,7 @@ const en = {
   },
   common: {
     loading: "Loading...",
+    all: "All",
     error: "An error occurred. Please try again.",
     tryAgainLater: "Try again later.",
     actions: "Action",
@@ -74,10 +75,28 @@ const en = {
       cancel: "Cancel",
       continue: "Continue",
     },
+    pagination: {
+      rowsPerPage: "Rows per page:",
+      displayedRows: "{{from}}-{{to}} of {{count}}",
+    },
     filters: {
       search: "Search by :",
       reset: "Clear filters",
     },
+    vehicleType: {
+      LICENSED: 'Licensed vehicle',
+      UNLICENSED: 'Unlicensed vehicle',
+    },
+    licensePlateLabel: 'Plate: {{license}}',
+    sessionStatus: {
+      ACTIVE: "Active",
+      DONE: "Done",
+    },
+    paymentTransactionStatus: {
+      PENDING: "Pending",
+      SUCCESS: "Success",
+      FAILED: "Failed",
+    }
   },
   validation: {
     requiredField: "{{field}} is required.",
@@ -92,98 +111,6 @@ const en = {
       max: "Maximum {{max}} characters",
     },
   },
-  vehicle: {
-    title: "Personal vehicle management",
-    subtitle:
-      "Manage your personal vehicles and reserve parking spaces quickly.",
-    registerPlanButton: "Register parking",
-    registerVehicleButton: "Register vehicle",
-    alerts: {
-      noPlateAlreadyRegistered:
-        "Vehicles without a license plate only need to be registered once.",
-    },
-    search: {
-      userCode: "User code",
-      license: "License plate",
-    },
-    clearFilter: "Clear",
-    table: {
-      vehicle_type: "Vehicle type",
-      license_plate: "License plate",
-      barcode_token: "Parking ticket code",
-      created_at: "Created at",
-      actions: "Actions",
-      actionsMenu: {
-        edit: "Edit",
-        download: "Download parking ticket code",
-        delete: "Delete",
-      },
-    },
-    empty: "No vehicles found.",
-    error: {
-      load: "Unable to load vehicles. Please try again later.",
-    },
-    tabs: {
-      withPlate: "With license plate",
-      withoutPlate: "Without license plate",
-    },
-    modal: {
-      title: "Add vehicle",
-      editTitle: "Update vehicle",
-      subtitle: "Select the vehicle type and enter the required information.",
-
-      cancel: "Cancel",
-      submit: "Save vehicle",
-      save: "Save changes",
-
-      tabs: {
-        withPlate: "With plate",
-        withoutPlate: "Without plate",
-      },
-
-      fields: {
-        userCode: "User code",
-        vehicleType: "Vehicle type",
-        vehicleTypePlaceholder: "Select a vehicle type",
-        licensePlate: "License plate",
-        licensePlatePlaceholder: "E.g. 30K12345",
-      },
-
-      types: {
-        motorbike: "Motorbike",
-        bicycle: "Bicycle",
-        electricBicycle: "Electric bicycle",
-      },
-
-      barcodeNote:
-        "For vehicles without a license plate, the system will automatically generate a barcode after saving.",
-
-      errors: {
-        generic: "Unable to save the vehicle. Please try again.",
-      },
-    },
-    form: {
-      plateLabel: "License plate",
-      platePlaceholder: "e.g. 51A-123.45",
-      brandLabel: "Vehicle name",
-      brandPlaceholder: "Toyota Vios 2023",
-      colorLabel: "Color",
-      colorPlaceholder: "Pearl white",
-      purposeLabel: "Purpose",
-      purposeOptions: {
-        personal: "Personal car",
-        family: "Family car",
-        work: "Work commute",
-      },
-      saveButton: "Save vehicle",
-    },
-    toast: {
-      createSuccess: "Vehicle added successfully",
-      updateSuccess: "Vehicle updated successfully",
-      deleteSuccess: "Vehicle deleted successfully",
-      deleteError: "Unable to delete vehicle",
-    },
-  },
   invoices: {
     sectionTitle: "List of invoices",
     subtitle:
@@ -192,6 +119,7 @@ const en = {
     filters: {
       from: "From",
       to: "To",
+      status: "Status",
     },
     resultsTitle: "Matching invoices",
     empty: "No invoices match the selected date range.",
@@ -203,6 +131,8 @@ const en = {
       amount: "Amount",
       status: "Status",
       actions: "Actions",
+      paymentMethod: "Payment method",
+      paid_at: "Paid at",
     },
     issuedOn: "Issued",
     dueOn: "Due",
@@ -236,6 +166,7 @@ const en = {
     filters: {
       from: "From",
       to: "To",
+      status: "Status",
     },
     table: {
       vehicle: "Vehicle",
@@ -273,6 +204,11 @@ const en = {
       phone: "Phone number",
       saveSuccess: "Profile has been updated.",
     },
+    menu: {
+      profileInfo: "Profile Information",
+      wallet: "User Wallet",
+      parkingCards: "Parking Cards",
+    },
     momo: {
       confirming: "Confirming MoMo payment...",
       success: "Payment confirmed.",
@@ -297,7 +233,7 @@ const en = {
     subscriptions: {
       heading: "Registered subscriptions",
       subtitle:
-        "Track your parking package, applicable semester, linked vehicle, and usage status.",
+        "Track your parking ticket, validity period, and usage status.",
       empty: "No registered subscriptions yet.",
       vehicleUpdated: "Vehicle updated successfully.",
       plan: "Plan",
@@ -347,19 +283,56 @@ const en = {
       },
     },
   },
+  parkingCards: {
+    title: "Parking Cards",
+    subtitle: "Manage your parking access cards.",
+    empty: "No parking cards.",
+    statusLabel: "Status",
+    actions: {
+      activate: "Activate card",
+      reportLost: "Report lost",
+      lostReported: "Lost reported",
+    },
+    toast: {
+      activated: "Card activated.",
+      lostReported: "Lost reported.",
+      loadError: "Failed to load parking cards.",
+    },
+  },
+  presentCard: {
+    warning: {
+      title: "Parking card usage rules",
+      rule1: "Student parking card is valid during the time studying at the school.",
+      rule2: "Student parking card is used to identify the student when parking on campus.",
+      rule3: "Students must not lend, erase, or modify card information.",
+      rule4:
+        "In case the card is lost or damaged, please contact the Student Affairs office (one-stop service) to be reissued.",
+    },
+  },
   transactions: {
     sectionTitle: "Transaction history",
     subtitle: "Track your payment attempts and related invoice statuses.",
     loadError: "Unable to load transaction history. Please try again.",
     empty: "No transactions found.",
     filters: {
-      invoiceId: "Invoice ID",
-      invoiceIdPlaceholder: "Enter the full invoice code.",
-      transactionCode: "Transaction code",
-      transactionCodePlaceholder: "Enter the full transaction code.",
+      all: "All",
+      transactionType: "Transaction type",
+      direction: "Cash flow",
       from: "From",
       to: "To",
       invalidRange: "`To` date cannot be earlier than `From` date.",
+    },
+    transactionType: {
+      top_up: "Top up",
+      invoice_direct_payment: "Invoice payment",
+      monthly_charge: "Monthly charge",
+      subscription_full_payment: "Subscription payment",
+      refund: "Refund",
+      admin_adjustment: "Adjustment",
+    },
+    direction: {
+      in: "Money in",
+      out: "Money out",
     },
     table: {
       invoiceId: "Invoice ID",
@@ -381,14 +354,15 @@ const en = {
       monthlyPayment: "Monthly payment supported",
       noMonthlyPayment: "Monthly payment not supported",
       fullPayment: "Full payment supported",
-      noFullPayment: "Full payment not supported",      dailyFee: "Daily fee: {{amount}}đ",
-      after18Fee: "After 18:00: {{amount}}đ",
+      noFullPayment: "Full payment not supported",      
+      dailyFee: "Daily fee: {{amount}}",
+      after18Fee: "After 18:00: {{amount}}",
       after18Waived: "Free after 18:00",
     },
     cards: {
-      basic: "Basic",
-      startup: "Startup",
-      enterprise: "Enterprise",
+      basic: "Basic ticket",
+      startup: "Startup ticket",
+      enterprise: "Enterprise ticket",
     },
     steps: ["Choose semester", "Update preferences", "Confirm"],
     calculatingPrice: "Calculating price…",

@@ -1,6 +1,6 @@
 import { useMutation, useQueryClient } from '@tanstack/react-query';
 
-import { clientHttp, requestWithContext } from './clientApi';
+import { clientHttp, PaymentPlanType, requestWithContext } from './clientApi';
 
 export interface CheckoutMomoRequest {
   sub_plan_id: string;
@@ -11,6 +11,7 @@ export interface CheckoutMomoRequest {
   amount: number;
   redirect_url?: string;
   lang?: string;
+  payment_type: PaymentPlanType;
 }
 
 export type MomoCreateResponse = {

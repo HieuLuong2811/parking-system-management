@@ -54,6 +54,7 @@ class CheckoutService:
                 sub_plan_id=payload.sub_plan_id,
                 term_id=payload.term_id,
                 payment_plan_id=payload.payment_plan_id,
+                payment_type=payload.payment_type,
                 total_amount=int(amount),
                 paid_amount=0,
                 status=SubscriptionStatus.PAYMENT_DUE,
@@ -112,7 +113,10 @@ class CheckoutService:
             if amount <= 0:
                 raise HTTPException(status_code=400, detail="Invalid amount")
 
-            async with db.begin():
+            # SQLAlchemy AsyncSession uses "autobegin": a transaction may already be started
+            # by earlier implicit work on the same session. Use a nested transaction in that case.
+            tx_ctx = db.begin_nested() if db.in_transaction() else db.begin()
+            async with tx_ctx:
                 wallet = await userWalletService.get_or_create_wallet_for_update(
                     user_code=current_user.user_code,
                     db=db,
@@ -174,7 +178,10 @@ class CheckoutService:
                 )
                 db.add(tx)
 
-            await db.commit()
+            # When using `db.begin()` / `db.begin_nested()`, commit is handled by the context.
+            # Keep an explicit commit only if there is no transaction (shouldn't happen here).
+            if not db.in_transaction():
+                await db.commit()
 
             return {
                 "subscription_id": str(subscription.id),

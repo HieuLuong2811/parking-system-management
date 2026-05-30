@@ -6,13 +6,14 @@ from sqlalchemy.ext.asyncio import AsyncSession
 from app.api.controller.parking_sessions import ParkingSessionController
 from app.authen.current_user import required_roles
 from app.db.session import get_db
-from app.enums.parking import ParkingSessionStatus, VehicleType
+from app.enums.parking import ParkingSessionStatus, ParkingVehicleMode, VehicleType
 from app.models.auth import AuthUser
 from app.models.responses import DeleteResponse
 from app.models.parking_sessions import (
     ParkingSessionCreate,
     ParkingSessionAdminRead,
     ParkingSessionRead,
+    ParkingSessionMeRead,
     ParkingSessionUpdate,
     ParkingSessionAccessConfirm,
 )
@@ -26,14 +27,13 @@ async def create_session(payload: ParkingSessionCreate, db: AsyncSession = Depen
     return await ParkingSessionController.create_session_ctrl(payload, db)
 
 
-@router.get("/", response_model=PaginatedResponse[ParkingSessionAdminRead])
+@router.get("", response_model=PaginatedResponse[ParkingSessionAdminRead])
 async def list_sessions(
     db: AsyncSession = Depends(get_db),
-    current_user: AuthUser = Depends(required_roles("ADMIN")),
+    current_user: AuthUser = Depends(required_roles("ADMIN", "SECURITY")),
     page: int = Query(1, ge=1, description="Page number (1-based)"),
     limit: int = Query(20, ge=1, le=100, description="Number of items per page"),
     user_code: str | None = Query(None, description="Filter by user code"),
-    vehicle_type: VehicleType | None = Query(None, description="Filter by vehicle type"),
     status: ParkingSessionStatus | None = Query(None, description="Filter by session status"),
     from_time: datetime | None = Query(None, description="Filter by check-in time (from)"),
     to_time: datetime | None = Query(None, description="Filter by check-in time (to)"),
@@ -43,14 +43,13 @@ async def list_sessions(
         page=page,
         limit=limit,
         user_code=user_code,
-        vehicle_type=vehicle_type,
         status=status,
         from_time=from_time,
         to_time=to_time,
     )
 
 
-@router.get("/me", response_model=PaginatedResponse[ParkingSessionRead])
+@router.get("/me", response_model=PaginatedResponse[ParkingSessionMeRead])
 async def list_my_sessions(
     db: AsyncSession = Depends(get_db),
     current_user: AuthUser = Depends(required_roles("USER", "ADMIN", "SECURITY")),
@@ -59,6 +58,8 @@ async def list_my_sessions(
     status: ParkingSessionStatus | None = Query(None, description="Filter by session status"),
     from_time: datetime | None = Query(None, description="Filter by check-in time (from)"),
     to_time: datetime | None = Query(None, description="Filter by check-in time (to)"),
+    vehicle_mode: ParkingVehicleMode | None = Query(None, description="Filter by vehicle mode"),
+    license_plate: str | None = Query(None, description="Filter by license plate (contains)"),
 ):
     return await ParkingSessionController.get_sessions_paginated_ctrl(
         db,
@@ -68,6 +69,8 @@ async def list_my_sessions(
         status=status,
         from_time=from_time,
         to_time=to_time,
+        vehicle_mode=vehicle_mode,
+        license_plate=license_plate,
     )
 
 
@@ -89,12 +92,22 @@ async def export_my_sessions_xlsx(
         to_time=to_time,
     )
 
-@router.post("/access/confirm", response_model=ParkingSessionRead)
+@router.post("/access/confirm", response_model=ParkingSessionAdminRead)
 async def access_confirm(
     payload: ParkingSessionAccessConfirm,
     db: AsyncSession = Depends(get_db),
 ):
     return await ParkingSessionController.confirm_session_via_access_ctrl(
+        payload,
+        db,
+    )
+
+@router.post("/access/preview", response_model=dict)
+async def access_preview(
+    payload: ParkingSessionAccessConfirm,
+    db: AsyncSession = Depends(get_db),
+):
+    return await ParkingSessionController.preview_session_via_access_ctrl(
         payload,
         db,
     )

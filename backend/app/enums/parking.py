@@ -10,6 +10,11 @@ class PaymentType(str, Enum):
     MONTHLY = "MONTHLY"
 
 
+class UserSubscriptionPaymentType(str, Enum):
+    FULL_PAYMENT = "FULL_PAYMENT"
+    MONTHLY_PAYMENT = "MONTHLY_PAYMENT"
+
+
 class SubscriptionPlanType(str, Enum):
     BASIC = "BASIC"
     STARTUP = "STARTUP"

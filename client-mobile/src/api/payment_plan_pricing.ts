@@ -19,7 +19,10 @@ export const usePaymentPlanPricing = (planId?: string, termId?: string, enabled 
     queryKey: ['paymentPlanPricing', planId, termId],
     queryFn: () => fetchPaymentPlanPricing(planId!, termId!),
     enabled: enabled && Boolean(planId && termId),
-    staleTime: 0,
+    staleTime: 5 * 60 * 1000,
+    gcTime: 30 * 60 * 1000,
+    refetchOnMount: false,
+    refetchOnWindowFocus: false,
+    refetchOnReconnect: false,
   });
 };
-

@@ -1,5 +1,5 @@
-import React, { useMemo, useState } from 'react';
-import { Alert, Box, Paper, Stack, TextField, Typography } from '@mui/material';
+import React, { useMemo } from 'react';
+import { Alert, Box, Paper, Stack, Typography } from '@mui/material';
 import type { GridColDef } from '@mui/x-data-grid';
 import { useTranslation } from 'react-i18next';
 
@@ -23,20 +23,11 @@ const columns: GridColDef<RoleRecord>[] = [
 
 export const RolesPage: React.FC = () => {
   const { t } = useTranslation();
-  const [searchTerm, setSearchTerm] = useState('');
   const { data = [], isLoading, isError, error } = useAdminRoles();
 
-  const normalizedSearch = searchTerm.trim().toLowerCase();
   const filteredRows = useMemo(() => {
-    if (!normalizedSearch) return data;
-    return data.filter((row) => {
-      const values = [row.id, row.role_code];
-      return values.some((value) => {
-        if (value === null || value === undefined) return false;
-        return String(value).toLowerCase().includes(normalizedSearch);
-      });
-    });
-  }, [data, normalizedSearch]);
+    return data;
+  }, [data]);
 
   const errorMessage = useMemo(() => {
     if (!isError) return '';
@@ -52,19 +43,6 @@ export const RolesPage: React.FC = () => {
         <Typography variant="body2" color="text.secondary">
           Danh sách vai trò và mã định danh.
         </Typography>
-      </Stack>
-
-      <Stack direction="row" justifyContent="space-between" alignItems="center" flexWrap="wrap" gap={2}>
-        <TextField
-          fullWidth
-          size="small"
-          variant="outlined"
-          value={searchTerm}
-          label={t('rolesPage.searchLabel')}
-          placeholder={t('rolesPage.searchPlaceholder')}
-          onChange={(event) => setSearchTerm(event.target.value)}
-          sx={{ maxWidth: 420 }}
-        />
       </Stack>
 
       {errorMessage && (

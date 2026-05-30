@@ -25,12 +25,6 @@ class PaymentTransactionBase(SQLModel):
         index=True,
     )
 
-    subscription_id: uuid.UUID | None = Field(
-        default=None,
-        foreign_key="user_subscriptions.id",
-        index=True,
-    )
-
     transaction_type: PaymentTransactionType = Field(
         sa_column=SAColumn(
             Enum(
@@ -106,7 +100,6 @@ class PaymentTransactionUpdate(SQLModel):
 class PaymentTransactionDetailRead(SQLModel):
     payment_transaction_id: uuid.UUID
     invoice_id: uuid.UUID | None
-    subscription_id: uuid.UUID | None
     attempt_number: int | None
     transaction_code: str | None
     transaction_type: PaymentTransactionType

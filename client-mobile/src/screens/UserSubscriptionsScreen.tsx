@@ -64,6 +64,7 @@ export default function UserSubscriptionsScreen() {
       loading={isLoading}
       error={isError ? t("userSubscriptions.loadError") : null}
       showBack
+      hiddenHeader={true}
       onBack={() => navigation.goBack()}
     >
       <ScrollView
@@ -154,7 +155,7 @@ export default function UserSubscriptionsScreen() {
 
                     <View style={styles.cardTitleBox}>
                       <Text style={styles.planName} numberOfLines={1}>
-                        {sub.subscription_plan?.plans_type ?? "—"}
+                        {sub.plan ?? "—"}
                       </Text>
 
                       <CopyableId
@@ -189,12 +190,6 @@ export default function UserSubscriptionsScreen() {
                   <View style={styles.divider} />
 
                   <View style={styles.infoGrid}>
-                    <InfoItem
-                      icon="school-outline"
-                      label={t("userSubscriptions.term")}
-                      value={sub.term?.term_name ?? "—"}
-                    />
-
                     <InfoItem
                       icon="calendar-outline"
                       label={t("userSubscriptions.period")}
@@ -305,7 +300,7 @@ function CopyableId({
 
     showAppToast(
       t('userSubscriptions.copySuccess', {
-        defaultValue: 'Đã sao chép mã gói vào clipboard',
+        defaultValue: 'Đã sao chép mã vé xe vào clipboard',
       }),
       'success',
     );

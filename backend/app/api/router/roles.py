@@ -11,7 +11,7 @@ router = APIRouter(prefix="/roles", tags=["roles"])
 async def create_role(role_in: RolesCreate, db: AsyncSession = Depends(get_db)):
     return await RoleController.create_role_ctrl(role_in, db)
 
-@router.get("/", response_model=list[RolesRead])
+@router.get("", response_model=list[RolesRead])
 async def get_all_roles(db: AsyncSession = Depends(get_db)):
     roles = await RoleController.get_all_roles_ctrl(db)
     return roles

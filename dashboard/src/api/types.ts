@@ -1,3 +1,9 @@
+export type HolderType = 'STUDENT' | 'TEACHER' | 'GUEST';
+export type ParkingAccessCardStatus = 'AVAILABLE' | 'ASSIGNED' | 'ACTIVE' | 'DISABLED' | 'LOST';
+export type TimePreset = 'CUSTOM' | 'TODAY' | 'YESTERDAY' | 'LAST_7_DAYS';
+export type SubscriptionPlanType = 'BASIC' | 'STARTUP' | 'ENTERPRISE';
+export type UserSubscriptionStatus = 'ACTIVE' | 'PAYMENT_DUE' | 'OVERDUE' | 'SUSPENDED' | 'CANCELED' | 'INACTIVE';
+
 export type AdminUser = {
   user_code: string;
   full_name: string;
@@ -11,7 +17,7 @@ export type AdminUser = {
 
 export type SubscriptionPlanRecord = {
   id: string;
-  plans_type: 'BASIC' | 'STARTUP' | 'ENTERPRISE';
+  plans_type: SubscriptionPlanType;
   price_per_day: number;
   allow_monthly_payment?: boolean | null;
   allow_full_payment?: boolean | null;
@@ -31,7 +37,6 @@ export type AcademicTermRecord = {
   end_date: string;
   created_at: string;
   updated_at: string;
-  is_in_use?: boolean;
 };
 
 export type PaymentPlanRecord = {
@@ -39,6 +44,7 @@ export type PaymentPlanRecord = {
   payment_type: 'FULL' | 'MONTHLY';
   discount_percent?: number | null;
   is_active: boolean;
+  is_in_use?: boolean;
   created_at: string;
   updated_at: string;
 };
@@ -47,11 +53,10 @@ export type UserSubscriptionRecord = {
   id: string;
   user_code: string;
   sub_plan_id: string;
-  term_id: string;
   payment_plan_id: string;
   total_amount: number;
   paid_amount: number;
-  status: 'ACTIVE' | 'EXPIRED' | 'SUSPENDED';
+  status: UserSubscriptionStatus;
   start_date: string;
   end_date: string;
   created_at: string;
@@ -68,7 +73,7 @@ export type UserSubscriptionDetailRecord = {
   id: string;
   user_code: string;
   user?: AdminUser | null;
-  status: 'ACTIVE' | 'EXPIRED' | 'SUSPENDED';
+  status: UserSubscriptionStatus;
   start_date: string;
   end_date: string;
   total_amount: number;
@@ -77,7 +82,6 @@ export type UserSubscriptionDetailRecord = {
   updated_at: string;
   subscription_plan?: SubscriptionPlanRecord | null;
   payment_plan?: PaymentPlanRecord | null;
-  term?: AcademicTermRecord | null;
   detail?: Record<string, unknown> | null;
 };
 
@@ -92,15 +96,10 @@ export type InvoiceAdminRecord = {
   created_at: string;
 };
 
-export type InvoiceSearchRow = InvoiceAdminRecord & {
-  user?: AdminUser;
-};
-
 export type ParkingSessionRecord = {
   id: string;
   access_card_id?: string | null;
   vehicle_mode?: string | null;
-  vehicle_type?: string | null;
   license_plate?: string | null;
   check_in_time: string;
   check_out_time?: string | null;
@@ -109,11 +108,28 @@ export type ParkingSessionRecord = {
   total_amount?: number | null;
   created_at: string;
   updated_at: string;
+  check_in_plate_image_url?: string | null;
+  check_out_plate_image_url?: string | null;
 };
 
 export type ParkingSessionAdminRow = ParkingSessionRecord & {
   user_code?: string | null;
   user_full_name?: string | null;
+};
+
+export type ParkingAccessCardAdminRow = {
+  id: string;
+  barcode_token: string;
+  holder_type: HolderType;
+  user_code?: string | null;
+  user_subscription_id?: string | null;
+  status: ParkingAccessCardStatus;
+  current_session_id?: string | null;
+  created_at: string;
+  updated_at: string;
+  deleted_at?: string | null;
+  user_full_name?: string | null;
+  is_in_use: boolean;
 };
 
 export type RoleRecord = {

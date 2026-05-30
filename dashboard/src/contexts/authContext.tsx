@@ -3,6 +3,7 @@ import { Box, CircularProgress, Typography } from '@mui/material';
 import { AuthContext, AUTH_STATUS, type AuthContextValue, type AuthStatus } from './authContextCore';
 import { fetchCurrentUser, exchangeAuthCode, logoutAuth } from '../api/auth';
 import { VITE_LOGIN_URL } from '../constant/config';
+import WarningIcon from '@mui/icons-material/Warning';
 
 const bypassAuth = import.meta.env.VITE_BYPASS_AUTH === 'true';
 
@@ -93,7 +94,10 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
   if (status === AUTH_STATUS.FORBIDDEN) {
     return (
       <Box sx={{ height: '100vh', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
-        <Typography>Quyền truy cập bị từ chối.</Typography>
+        <Box sx={{ textAlign: 'center', bgcolor: '#fff', p: 2, borderRadius: 2, maxWidth: 400, mx: 'auto', border: '1px solid #eeeeee' }}>
+          <WarningIcon sx={{ fontSize: 100, color: 'warning.main' }} />
+          <Typography fontWeight={600}>Quyền truy cập bị từ chối.</Typography>
+        </Box>
       </Box>
     );
   }

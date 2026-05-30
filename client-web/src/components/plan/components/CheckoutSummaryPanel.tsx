@@ -2,7 +2,7 @@ import { Box, Typography } from "@mui/material";
 import CheckCircleIcon from "@mui/icons-material/CheckCircle";
 import CancelIcon from "@mui/icons-material/Cancel";
 
-import { getBooleanLabel } from "../../../ultis/formatters";
+import { getBooleanLabel, getPlanDisplayKey } from "../../../ultis/formatters";
 import { getPlanIcon } from "../../../ultis/status";
 
 type Props = {
@@ -37,12 +37,6 @@ export default function CheckoutSummaryPanel({
     ),
     {
       enabled: true,
-      label: t("plan.features.accessCardIncluded", {
-        defaultValue: "Cấp thẻ gửi xe/barcode khi đăng ký thành công",
-      }),
-    },
-    {
-      enabled: true,
       label: t("plan.features.dailyFee", {
         amount: formatCurrency(dailyFee),
       }),
@@ -67,7 +61,7 @@ export default function CheckoutSummaryPanel({
 
           {planTitle ? (
             <Typography className="plan-card-title" fontSize={20} fontWeight={700} lineHeight={1.25}>
-              {planTitle}
+              {t(`plan.cards.${getPlanDisplayKey(planTitle)}`)}
             </Typography>
           ) : null}
         </Box>

@@ -13,15 +13,15 @@ import { useTranslation } from "react-i18next";
 
 import HomeScreen from "../screens/HomeScreen";
 import ParkingSessionsScreen from "../screens/ParkingSessionsScreen";
-import InvoicesScreen from "../screens/InvoicesScreen";
 import ProfileScreen from "../screens/ProfileScreen";
 import PresentCardScreen from "../screens/PresentCardScreen";
+import PlansScreen from "../screens/PlansScreen";
 
 export type RootTabParamList = {
   Home: undefined;
   Sessions: undefined;
   PresentCard: undefined;
-  Invoices: undefined;
+  Plans: undefined;
   Profile: undefined;
 };
 
@@ -77,52 +77,22 @@ export default function BottomTabs() {
         },
         tabBarIcon: ({ color, size, focused }) => {
           if (route.name === "Home") {
-            return (
-              <Ionicons
-                name={focused ? "home" : "home-outline"}
-                size={22}
-                color={color}
-              />
-            );
+            return <Ionicons name={focused ? "home" : "home-outline"} size={22} color={color} />;
           }
 
           if (route.name === "Sessions") {
-            return (
-              <Ionicons
-                name={focused ? "time" : "time-outline"}
-                size={22}
-                color={color}
-              />
-            );
+            return <Ionicons name={focused ? "time" : "time-outline"} size={22} color={color} />;
           }
 
-          if (route.name === "Invoices") {
-            return (
-              <Ionicons
-                name={focused ? "receipt" : "receipt-outline"}
-                size={22}
-                color={color}
-              />
-            );
+          if (route.name === "Plans") {
+            return <Ionicons name={focused ? "list" : "list-outline"} size={22} color={color} />;
           }
 
           if (route.name === "Profile") {
-            return (
-              <Ionicons
-                name={focused ? "person" : "person-outline"}
-                size={22}
-                color={color}
-              />
-            );
+            return <Ionicons name={focused ? "person" : "person-outline"} size={22} color={color} />;
           }
 
-          return (
-            <MaterialCommunityIcons
-              name="card-account-details-outline"
-              size={28}
-              color="#ffffff"
-            />
-          );
+          return <MaterialCommunityIcons name="card-account-details-outline" size={28} color="#ffffff" />;
         },
       })}
     >
@@ -135,12 +105,13 @@ export default function BottomTabs() {
       />
 
       <Tab.Screen
-        name="Sessions"
-        component={ParkingSessionsScreen}
+        name="Plans"
+        component={PlansScreen}
         options={{
-          title: t("tabs.sessions"),
+          title: t("tabs.plans"),
         }}
       />
+
 
       <Tab.Screen
         name="PresentCard"
@@ -161,21 +132,17 @@ export default function BottomTabs() {
           ),
           tabBarButton: (props) => (
             <CenterTabButton onPress={props.onPress}>
-              <MaterialCommunityIcons
-                name="card-account-details-outline"
-                size={28}
-                color="#fff"
-              />
+              <MaterialCommunityIcons name="card-account-details-outline" size={28} color="#fff" />
             </CenterTabButton>
           ),
         }}
       />
 
       <Tab.Screen
-        name="Invoices"
-        component={InvoicesScreen}
+        name="Sessions"
+        component={ParkingSessionsScreen}
         options={{
-          title: t("tabs.invoices"),
+          title: t("tabs.sessions"),
         }}
       />
 

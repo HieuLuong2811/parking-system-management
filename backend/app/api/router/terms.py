@@ -19,7 +19,7 @@ async def create_term(
     return await TermController.create_term_ctrl(term_in, db)
 
 
-@router.get("/", response_model=list[AcademicTermRead])
+@router.get("", response_model=list[AcademicTermRead])
 async def list_terms(db: AsyncSession = Depends(get_db)):
     terms = await TermController.get_all_terms_ctrl(db)
     return terms

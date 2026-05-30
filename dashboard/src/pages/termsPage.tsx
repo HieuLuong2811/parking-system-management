@@ -1,6 +1,5 @@
 import { Alert, Box, Button, IconButton, Paper, Snackbar, Stack, TextField, Tooltip, Typography } from '@mui/material';
 import type { GridColDef } from '@mui/x-data-grid';
-import AddIcon from '@mui/icons-material/Add';
 import DeleteIcon from '@mui/icons-material/Delete';
 import EditIcon from '@mui/icons-material/Edit';
 import React, { useCallback, useMemo, useState } from 'react';
@@ -17,6 +16,7 @@ import {
 import type { AcademicTermRecord } from '../api/types';
 import { formatDateTime } from '../ultis/format';
 import { PageHeader } from '../components/common/PageHeader';
+import { ConfirmDialog } from '../components/common/ConfirmDialog';
 
 type ToastSeverity = 'success' | 'error';
 
@@ -30,12 +30,13 @@ export const TermsPage: React.FC = () => {
   const [editingTerm, setEditingTerm] = useState<AcademicTermRecord | null>(null);
   const [isSaving, setIsSaving] = useState(false);
   const [toast, setToast] = useState<{ message: string; severity: ToastSeverity } | null>(null);
-
+  const [deleteConfirmOpen, setDeleteConfirmOpen] = useState(false);
+  const [selectedDeleteTerm, setSelectedDeleteTerm] = useState<AcademicTermRecord | null>(null);
   const { data: terms = [], isLoading, isError, error } = useAdminAcademicTerms();
 
   const { mutateAsync: createTermAsync } = useCreateAcademicTerm();
   const { mutateAsync: updateTermAsync } = useUpdateAcademicTerm();
-  const { mutateAsync: deleteTermAsync } = useDeleteAcademicTerm();
+  const { mutateAsync: deleteTermAsync, isPending: isDeleting } = useDeleteAcademicTerm();
 
   const handleOpenNew = useCallback(() => {
     setEditingTerm(null);
@@ -76,24 +77,35 @@ export const TermsPage: React.FC = () => {
     [createTermAsync, editingTerm, handleCloseModal, updateTermAsync]
   );
 
-  const handleDeleteTerm = useCallback(
-    async (term: AcademicTermRecord) => {
-      const confirmed = window.confirm('Are you sure you want to delete this academic term?');
-      if (!confirmed) {
-        return;
-      }
-      try {
-        await deleteTermAsync(term.id);
-        setToast({ severity: 'success', message: 'Academic term deleted.' });
-      } catch (deleteError) {
-        setToast({
-          severity: 'error',
-          message: getErrorMessage(deleteError, 'Unable to delete academic term.'),
-        });
-      }
-    },
-    [deleteTermAsync]
-  );
+  const handleDeleteTerm = useCallback((term: AcademicTermRecord) => {
+    setSelectedDeleteTerm(term);
+    setDeleteConfirmOpen(true);
+  }, []);
+
+  const handleCloseDeleteConfirm = useCallback(() => {
+    setDeleteConfirmOpen(false);
+    setSelectedDeleteTerm(null);
+  }, []);
+
+  const handleConfirmDeleteTerm = useCallback(async () => {
+    if (!selectedDeleteTerm) return;
+
+    try {
+      await deleteTermAsync(selectedDeleteTerm.id);
+
+      setToast({
+        severity: "success",
+        message: t("termsPage.delete.success"),
+      });
+
+      handleCloseDeleteConfirm();
+    } catch (deleteError) {
+      setToast({
+        severity: "error",
+        message: getErrorMessage(deleteError, t("termsPage.delete.error")),
+      });
+    }
+  }, [selectedDeleteTerm, deleteTermAsync, handleCloseDeleteConfirm, t]);
 
   const columns: GridColDef[] = useMemo(
     () => [
@@ -114,7 +126,6 @@ export const TermsPage: React.FC = () => {
         width: 150,
         renderCell: (params) => {
           const term = params.row as AcademicTermRecord;
-          const disabled = Boolean(term.is_in_use);
           return (
             <Box sx={{ display: 'flex', gap: 0.5 }}>
               <Tooltip title={t('termsPage.tooltips.edit')}>
@@ -122,13 +133,12 @@ export const TermsPage: React.FC = () => {
                   <EditIcon fontSize="small" />
                 </IconButton>
               </Tooltip>
-              <Tooltip title={disabled ? t('termsPage.tooltips.inUse') : t('termsPage.tooltips.delete')}>
+              <Tooltip title={t('termsPage.tooltips.delete')}>
                 <span>
                   <IconButton
                     size="small"
                     onClick={() => handleDeleteTerm(term)}
                     aria-label="delete"
-                    disabled={disabled}
                   >
                     <DeleteIcon fontSize="small" />
                   </IconButton>
@@ -190,7 +200,7 @@ export const TermsPage: React.FC = () => {
             </Button>
           </Box>
           <Stack direction="row" spacing={1}>
-            <Button variant="contained" size="small" onClick={handleOpenNew} startIcon={<AddIcon />}>
+            <Button variant="contained" onClick={handleOpenNew}>
               {t('termsPage.buttons.add', { defaultValue: 'Add new term' })}
             </Button>
           </Stack>
@@ -220,6 +230,19 @@ export const TermsPage: React.FC = () => {
         onSubmit={handleSubmitTerm}
         initialValue={editingTerm}
         submitting={isSaving}
+      />
+
+      <ConfirmDialog
+        open={deleteConfirmOpen}
+        title={t("termsPage.delete.title")}
+        content={t("termsPage.delete.message", {
+          name: selectedDeleteTerm?.term_name ?? "",
+        })}
+        confirmText={t("termsPage.delete.confirm")}
+        cancelText={t("termsPage.delete.cancel")}
+        loading={isDeleting}
+        onClose={handleCloseDeleteConfirm}
+        onConfirm={handleConfirmDeleteTerm}
       />
 
       <Snackbar

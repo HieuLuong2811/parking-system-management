@@ -1,3 +1,4 @@
+import os
 import math
 
 from app.mappers.subscription_mapper import SubscriptionMapper
@@ -17,7 +18,6 @@ from app.models.subscriptions import (
     UserSubscriptionUpdate
 )
 from app.models.users import Users
-from app.models.terms import AcademicTerm
 from app.service.base import CRUDService
 from app.utils.pagination import PaginatedResponse
 from app.utils.search import ilike_unaccent
@@ -128,26 +128,54 @@ class subscriptionService:
     @staticmethod
     def subscription_grants_parking_benefit(
         subscription: UserSubscription | None,
+        *,
+        at_date=None,
     ) -> bool:
         if not subscription:
             return False
 
-        print('subscription', subscription)
+        debug_enabled = os.getenv("DEBUG_PARKING_FEE", "").strip().lower() in {"1", "true", "yes", "on"}
 
         if subscription.status not in {
             SubscriptionStatus.ACTIVE,
             SubscriptionStatus.PAYMENT_DUE,
             SubscriptionStatus.OVERDUE
         }:
+            if debug_enabled:
+                print(
+                    "[fee] subscription_ineligible_status",
+                    str(getattr(subscription, "status", None)),
+                )
             return False
 
         if subscription.start_date and subscription.end_date:
             from datetime import date as _date
 
-            now = _date.today()
-            if now < subscription.start_date or now > subscription.end_date:
+            ref_date = at_date or _date.today()
+            if ref_date < subscription.start_date or ref_date > subscription.end_date:
+                if debug_enabled:
+                    print(
+                        "[fee] subscription_out_of_range",
+                        f"today={ref_date}",
+                        f"start={subscription.start_date}",
+                        f"end={subscription.end_date}",
+                    )
                 return False
 
+        # If it's ACTIVE and fully paid, it's definitely eligible.
+        try:
+            if (
+                subscription.status == SubscriptionStatus.ACTIVE
+                and int(getattr(subscription, "paid_amount", 0) or 0) >= int(getattr(subscription, "total_amount", 0) or 0)
+            ):
+                if debug_enabled:
+                    print("[fee] subscription_fully_paid_active=True")
+                return True
+        except Exception:
+            pass
+
+        if debug_enabled:
+            print("[fee] subscription_grants_parking_benefit=True")
         return True
 
 
@@ -158,12 +186,10 @@ class subscriptionService:
                 UserSubscription,
                 Users,
                 PaymentPlan,
-                AcademicTerm,
                 SubscriptionPlan,
             )
             .outerjoin(Users, Users.user_code == UserSubscription.user_code)
             .outerjoin(PaymentPlan, PaymentPlan.id == UserSubscription.payment_plan_id)
-            .outerjoin(AcademicTerm, AcademicTerm.id == UserSubscription.term_id)
             .outerjoin(SubscriptionPlan, SubscriptionPlan.id == UserSubscription.sub_plan_id)
         )
         if ordered:
@@ -223,13 +249,12 @@ class subscriptionService:
 
         details: list[UserSubscriptionClientView] = []
 
-        for subscription, _user, payment_plan, term, subscription_plan in rows:
+        for subscription, _user, payment_plan, subscription_plan in rows:
             details.append(
                 SubscriptionMapper.to_client_view(
                     subscription,
                     payment_plan,
                     subscription_plan,
-                    term,
                 )
             )
 
@@ -275,13 +300,12 @@ class subscriptionService:
 
         details: list[UserSubscriptionAdminView] = []
 
-        for subscription, user, payment_plan, term, subscription_plan in rows:
+        for subscription, user, payment_plan, subscription_plan in rows:
             details.append(
                 SubscriptionMapper.to_admin_view(
                     subscription,
                     user,
                     payment_plan,
-                    term,
                     subscription_plan,
                 )
             )
@@ -330,7 +354,6 @@ class subscriptionService:
                     ilike_unaccent(Users.full_name, trimmed_search),
                     ilike_unaccent(func.cast(SubscriptionPlan.plans_type, String), trimmed_search),
                     ilike_unaccent(func.cast(PaymentPlan.payment_type, String), trimmed_search),
-                    ilike_unaccent(AcademicTerm.term_name, trimmed_search),
                 )
             )
 
@@ -354,13 +377,12 @@ class subscriptionService:
         rows = result.all()
         details: list[UserSubscriptionAdminView] = []
         
-        for subscription, user, payment_plan, term, subscription_plan in rows:
+        for subscription, user, payment_plan, subscription_plan in rows:
             details.append(
                 SubscriptionMapper.to_admin_view(
                     subscription,
                     user,
                     payment_plan,
-                    term,
                     subscription_plan,
                 )
             )

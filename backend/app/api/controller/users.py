@@ -32,7 +32,7 @@ class UserController:
 
     @staticmethod
     async def get_user_by_userCode_ctrl(user_code: str, db: AsyncSession) -> UsersRead | None:
-        return await userService.get_users_by_user_codes(user_code, db)
+        return await userService.get_user_by_user_code(user_code, db)
 
     @staticmethod
     async def seed_users_ctrl(db: AsyncSession) -> list[UsersRead]:
@@ -50,6 +50,10 @@ class UserController:
     async def delete_user_ctrl(user_code: str, db: AsyncSession) -> DeleteResponse:
         await userService.delete_user(user_code, db)
         return DeleteResponse(message="Deleted user")
+
+    @staticmethod
+    async def reactivate_user_ctrl(user_code: str, db: AsyncSession) -> UsersRead:
+        return await userService.reactivate_user(user_code, db)
 
     @staticmethod
     async def import_users_ctrl(role_code: str, payload: UserBulkImportRequest, db: AsyncSession) -> list[UsersRead]:

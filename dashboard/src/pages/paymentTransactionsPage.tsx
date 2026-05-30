@@ -2,6 +2,7 @@ import React, { useMemo, useState } from "react";
 import {
   Alert,
   Box,
+  Button,
   Paper,
   Snackbar,
   Stack,
@@ -16,17 +17,39 @@ import { usePaymentTransactions } from "../api/paymentTransactions";
 import type {
   PaginatedResponse,
   PaymentTransactionDetailRecord,
+  TimePreset,
 } from "../api/types";
 import { UserIdentityCell } from "../components/common/UserIdentityCell";
 import { formatCurrency, formatDateTime } from "../ultis/format";
 import { useTranslation } from "react-i18next";
 import { PageHeader } from "../components/common/PageHeader";
+import FilterListIcon from "@mui/icons-material/FilterList";
+import { useDebouncedValue } from "../hooks/useDebouncedValue";
+import { TimeRangePopoverFilter } from "../components/common/TimeRangePopoverFilter";
 
 export const PaymentTransactionsPage: React.FC = () => {
   const { t } = useTranslation();
-  const [searchTerm, setSearchTerm] = useState("");
+  const [filters, setFilters] = useState({
+    userCode: "",
+    invoiceId: "",
+    transactionCode: "",
+    timePreset: "CUSTOM" as TimePreset,
+    from: "",
+    to: "",
+  });
   const [page, setPage] = useState(0);
   const [rowsPerPage, setRowsPerPage] = useState(5);
+
+  const debouncedFilters = useDebouncedValue(filters, 400);
+
+  const formatDateOnly = (value?: string | null) => {
+    if (!value) return "-";
+    const date = new Date(value);
+    if (Number.isNaN(date.getTime())) return "-";
+    return date.toLocaleDateString("vi-VN", { year: "numeric", month: "2-digit", day: "2-digit" });
+  };
+  const dateToFromTime = (dateValue: string) => `${dateValue}T00:00:00`;
+  const dateToToTime = (dateValue: string) => `${dateValue}T23:59:59`;
 
   const {
     data: paginated,
@@ -34,7 +57,11 @@ export const PaymentTransactionsPage: React.FC = () => {
     isError,
     error,
   } = usePaymentTransactions({
-    search: searchTerm || undefined,
+    user_code: debouncedFilters.userCode.trim() || undefined,
+    invoice_id: debouncedFilters.invoiceId.trim() || undefined,
+    transaction_code: debouncedFilters.transactionCode.trim() || undefined,
+    from_time: debouncedFilters.from ? dateToFromTime(debouncedFilters.from) : undefined,
+    to_time: debouncedFilters.to ? dateToToTime(debouncedFilters.to) : undefined,
     page: page + 1,
     limit: rowsPerPage,
   }) as unknown as {
@@ -117,13 +144,6 @@ export const PaymentTransactionsPage: React.FC = () => {
         sortable: true,
       },
       {
-        field: "response_message",
-        headerName: t("paymentTransactionsPage.columns.response"),
-        flex: 1,
-        sortable: false,
-        renderCell: (params) => <span>{params.value ?? "-"}</span>,
-      },
-      {
         field: "created_at",
         headerName: t("paymentTransactionsPage.columns.createdAt"),
         width: 200,
@@ -132,6 +152,18 @@ export const PaymentTransactionsPage: React.FC = () => {
       },
     ];
   }, [t]);
+
+  const handleClearFilters = () => {
+    setFilters({
+      userCode: "",
+      invoiceId: "",
+      transactionCode: "",
+      timePreset: "CUSTOM",
+      from: "",
+      to: "",
+    });
+    setPage(0);
+  };
 
   return (
     <Box sx={{ display: "flex", flexDirection: "column", gap: 2 }}>
@@ -152,28 +184,73 @@ export const PaymentTransactionsPage: React.FC = () => {
 
       <Stack
         direction="row"
-        justifyContent="space-between"
-        alignItems="center"
         flexWrap="wrap"
         gap={2}
+        alignItems="center"
       >
+        <Box sx={{ display: "flex", gap: 0.5, alignItems: "center" }}>
+          <FilterListIcon color="action" />
+          <Typography variant="body2">{t("common.filters.search")}</Typography>
+        </Box>
         <TextField
-          fullWidth
           size="small"
-          variant="outlined"
-          value={searchTerm}
-          label={t("paymentTransactionsPage.searchLabel", {
-            defaultValue: "Tìm kiếm",
-          })}
-          placeholder={t("paymentTransactionsPage.searchPlaceholder", {
-            defaultValue: "Tìm theo hóa đơn, mã giao dịch, người dùng",
-          })}
+          label={t("paymentTransactionsPage.filters.userCode.label", { defaultValue: "User code" })}
+          placeholder={t("paymentTransactionsPage.filters.userCode.placeholder", { defaultValue: "Enter user code" })}
+          value={filters.userCode}
           onChange={(event) => {
-            setSearchTerm(event.target.value);
+            setFilters((prev) => ({ ...prev, userCode: event.target.value }));
             setPage(0);
           }}
-          sx={{ maxWidth: 420 }}
         />
+
+        <TextField
+          size="small"
+          label={t("paymentTransactionsPage.filters.invoiceId.label", { defaultValue: "Invoice" })}
+          placeholder={t("paymentTransactionsPage.filters.invoiceId.placeholder", { defaultValue: "Invoice id" })}
+          value={filters.invoiceId}
+          onChange={(event) => {
+            setFilters((prev) => ({ ...prev, invoiceId: event.target.value }));
+            setPage(0);
+          }}
+          sx={{ minWidth: 220 }}
+        />
+
+        <TextField
+          size="small"
+          label={t("paymentTransactionsPage.filters.transactionCode.label", { defaultValue: "Transaction code" })}
+          placeholder={t("paymentTransactionsPage.filters.transactionCode.placeholder", { defaultValue: "Transaction code" })}
+          value={filters.transactionCode}
+          onChange={(event) => {
+            setFilters((prev) => ({ ...prev, transactionCode: event.target.value }));
+            setPage(0);
+          }}
+          sx={{ minWidth: 200 }}
+        />
+
+        <TimeRangePopoverFilter
+          value={{ preset: filters.timePreset, from: filters.from, to: filters.to }}
+          onChange={(next) => {
+            setFilters((prev) => ({ ...prev, timePreset: next.preset, from: next.from, to: next.to }));
+            setPage(0);
+          }}
+          labels={{
+            triggerLabel: t("paymentTransactionsPage.filters.timePreset.label", { defaultValue: "Time range" }),
+            presetLabel: t("paymentTransactionsPage.filters.timePreset.label", { defaultValue: "Time range" }),
+            fromLabel: t("paymentTransactionsPage.filters.from.label", { defaultValue: "From" }),
+            toLabel: t("paymentTransactionsPage.filters.to.label", { defaultValue: "To" }),
+            presets: {
+              CUSTOM: t("paymentTransactionsPage.filters.timePreset.options.custom", { defaultValue: "Custom" }),
+              TODAY: t("paymentTransactionsPage.filters.timePreset.options.today", { defaultValue: "Today" }),
+              YESTERDAY: t("paymentTransactionsPage.filters.timePreset.options.yesterday", { defaultValue: "Yesterday" }),
+              LAST_7_DAYS: t("paymentTransactionsPage.filters.timePreset.options.last7Days", { defaultValue: "Last 7 days" }),
+            },
+          }}
+          formatDateOnly={formatDateOnly}
+        />
+
+        <Button variant="text" onClick={handleClearFilters}>
+          {t("common.filters.reset")}
+        </Button>
       </Stack>
 
       <Paper elevation={0}>
@@ -198,6 +275,17 @@ export const PaymentTransactionsPage: React.FC = () => {
             setPage(0);
           }}
           rowsPerPageOptions={[5, 10, 20, 50, 100]}
+          labelRowsPerPage={t('common.pagination.rowsPerPage', {
+            defaultValue: 'Rows per page:',
+          })}
+          labelDisplayedRows={({ from, to, count }) =>
+            t('common.pagination.displayedRows', {
+              from,
+              to,
+              count,
+              defaultValue: `${from}-${to} of ${count !== -1 ? count : `more than ${to}`}`,
+            })
+          }
         />
       </Paper>
 

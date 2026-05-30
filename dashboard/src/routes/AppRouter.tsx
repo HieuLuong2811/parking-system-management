@@ -12,11 +12,13 @@ import { TermsPage } from '../pages/termsPage';
 import { SubscriptionPlansPage } from '../pages/subscriptionPlansPage';
 import { SubscriptionsPage } from '../pages/subscriptionsPage';
 import { ParkingSessionsPage } from '../pages/parkingSessionsPage';
+import { ParkingAccessCardsPage } from '../pages/parkingAccessCardsPage';
 import { PaymentTransactionsPage } from '../pages/paymentTransactionsPage';
 import { SubscriptionInvoicesPage } from '../pages/subscriptionInvoicesPage';
 import { NotificationsPage } from '../pages/notificationsPage';
 import { UserProfilePage } from '../pages/userProfilePage';
 import { PaymentPlansPage } from '../pages/paymentPlansPage';
+import { MyProfilePage } from '../pages/myProfilePage';
 import { useAuth } from '../contexts/useAuth';
 import { Navigate } from 'react-router-dom';
 import React from 'react';
@@ -42,6 +44,7 @@ export const AppRouter = () => {
             <Route path="/users/:userCode/user-details" element={<UserProfilePage />} />
             <Route path="invoices/overview" element={<InvoicesPage />} />
             <Route path="parking_sessions" element={<ParkingSessionsPage />} />
+            <Route path="parking_access_cards" element={<ParkingAccessCardsPage />} />
             <Route path="roles" element={<RolesPage />} />
             <Route path="terms" element={<TermsPage />} />
             <Route path="plans" element={<SubscriptionPlansPage />} />
@@ -50,6 +53,7 @@ export const AppRouter = () => {
             <Route path="subscriptions/:subscriptionId/invoices" element={<SubscriptionInvoicesPage />} />
             <Route path="payment_transactions" element={<PaymentTransactionsPage />} />
             <Route path="notifications" element={<NotificationsPage />} />
+            <Route path="profile" element={<MyProfilePage />} />
             <Route path="settings" element={<SettingsPage />} />
             <Route path="*" element={<NotFoundPage />} />
           </Route>

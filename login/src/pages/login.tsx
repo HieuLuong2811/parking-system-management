@@ -119,8 +119,27 @@ const LoginPage: React.FC = () => {
     setFieldErrors({});
     setError("");
 
+    const resolveLoginErrorMessage = (err: unknown) => {
+      if (!axios.isAxiosError(err)) {
+        return err instanceof Error ? err.message : t("login.error.invalid");
+      }
+
+      // Network / CORS / no response
+      if (!err.response) {
+        return t("login.error.network");
+      }
+
+      const status = err.response.status;
+      if (status === 401 || status === 400) return t("login.error.invalid");
+      if (status === 404) return t("login.error.notFound");
+      if (status >= 500) return t("login.error.server");
+      return t("login.error.invalid");
+    };
+
     try {
-        mutate({ user_code: usercode, password }, {
+      mutate(
+        { user_code: usercode, password },
+        {
           onSuccess: (data) => {
           if (!data.code) {
             setError(t("login.error.invalid"));
@@ -134,16 +153,13 @@ const LoginPage: React.FC = () => {
           }
         },
         onError: (error) => {
-          setError(
-            error instanceof Error ? error.message : t("login.error.invalid"),
-          );
+          setError(resolveLoginErrorMessage(error));
         },
-      });
+        }
+      );
     } catch (error) {
       setFieldErrors({});
-      setError(
-        error instanceof Error ? error.message : t("login.error.invalid"),
-      );
+      setError(resolveLoginErrorMessage(error));
     }
   };
 

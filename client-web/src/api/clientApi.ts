@@ -66,10 +66,10 @@ export type PaginatedResponse<T> = {
   total_pages: number;
 };
 
-export type PaymentMethod = 'MOMO' | 'STRIPE' | 'CASH' | 'WALLET' | 'SYSTEM';
+export type PaymentMethod = 'MOMO' | 'CASH' | 'WALLET' | 'SYSTEM';
 export type PaymentStatus = 'PENDING' | 'PAID' | 'FAILED';
 export type InvoiceStatus = 'PENDING' | 'PAID' | 'FAILED';
-export type VehicleType = 'MOTORBIKE' | 'BICYCLE' | 'ELECTRIC_BICYCLE';
+export type VehicleType = 'LICENSED' | 'UNLICENSED';
 export type SubscriptionStatus = 'ACTIVE' | 'PAYMENT_DUE' | 'OVERDUE' | 'SUSPENDED' | 'CANCELED' | 'INACTIVE';
 export type UserType = 'GUEST' | 'STUDENT' | 'STAFF' | 'VISITOR';
 export type PaymentPlanType = 'FULL' | 'MONTHLY';
@@ -80,7 +80,6 @@ export type SubscriptionPlanStatus = 'ACTIVE' | 'INACTIVE';
 export interface VehicleInfo {
   id: string;
   user_code?: string | null;
-  vehicle_type: VehicleType;
   license_plate?: string | null;
   barcode_token?: string | null;
   created_at: string;
@@ -99,6 +98,7 @@ export interface ParkingSession {
   total_amount?: number | null;
   created_at: string;
   updated_at: string;
+  vehicle_mode: VehicleType;
 }
 
 export interface Notification {
@@ -234,7 +234,6 @@ export interface UserSubscriptionPayload {
 
 export interface VehicleSummary {
   id?: string | null;
-  vehicle_type: VehicleType;
   license_plate?: string | null;
   qr_code?: string | null;
 }
@@ -273,4 +272,5 @@ export interface InvoiceInfo {
   status: InvoiceStatus;
   created_at: string;
   metadata?: Record<string, unknown>;
+  paid_at?: string;
 }

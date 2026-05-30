@@ -7,15 +7,24 @@ import uuid
 from sqlalchemy import Column as SAColumn, Enum, Integer
 from sqlmodel import Field, SQLModel
 
-from app.enums.parking import PaymentType, SubscriptionPlanType, SubscriptionStatus
+from app.enums.parking import PaymentType, SubscriptionPlanType, SubscriptionStatus, UserSubscriptionPaymentType
 from .mixins import TimestampMixin
 
 
 class UserSubscriptionBase(SQLModel):
     user_code: str = Field(foreign_key="users.user_code", max_length=50)
     sub_plan_id: uuid.UUID = Field(foreign_key="subscription_plans.id")
-    term_id: uuid.UUID = Field(foreign_key="academic_terms.id")
     payment_plan_id: uuid.UUID = Field(foreign_key="payment_plans.id")
+    payment_type: UserSubscriptionPaymentType = Field(
+        sa_column=SAColumn(
+            Enum(
+                UserSubscriptionPaymentType,
+                name="user_subscription_payment_type_enum",
+                create_type=False,
+            ),
+            nullable=False,
+        )
+    )
     total_amount: int = Field(sa_column=SAColumn(Integer, nullable=False))
     paid_amount: int = Field(default=0, sa_column=SAColumn(Integer, nullable=False))
     status: SubscriptionStatus = Field(
@@ -24,7 +33,6 @@ class UserSubscriptionBase(SQLModel):
     start_date: date
     end_date: date
     next_billing_date: date | None = Field(default=None)
-    billing_attempt_count: int = Field(default=0, sa_column=SAColumn(Integer, nullable=False))
 
 
 class UserSubscription(UserSubscriptionBase, TimestampMixin, table=True):
@@ -80,7 +88,6 @@ class UserSubscriptionClientView(SQLModel):
     created_at: datetime
     plan: Optional[SubscriptionPlanType] = None
     payment: Optional[PaymentPlanSummary] = None
-    term: Optional[AcademicTermSummary] = None
 
 class UserSubscriptionAdminView(SQLModel): 
     id: uuid.UUID 
@@ -96,5 +103,4 @@ class UserSubscriptionAdminView(SQLModel):
     # Backward compatible fields used by `dashboard` + `client-mobile`
     subscription_plan: Optional[SubscriptionPlanSummary] = None
     payment_plan: Optional[PaymentPlanSummary] = None
-    term: Optional[AcademicTermSummary] = None
     

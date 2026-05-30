@@ -1,10 +1,10 @@
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 
 import { httpDelete, httpGet, httpPatch, httpPost } from './httpClient';
-import type { SubscriptionPlanRecord } from './types';
+import type { SubscriptionPlanRecord, SubscriptionPlanType } from './types';
 
 export type SubscriptionPlanCreatePayload = {
-  plans_type: 'BASIC' | 'STARTUP' | 'ENTERPRISE';
+  plans_type: SubscriptionPlanType;
   price_per_day: number;
   allow_monthly_payment?: boolean | null;
   allow_full_payment?: boolean | null;
@@ -15,7 +15,7 @@ export type SubscriptionPlanCreatePayload = {
 
 export type SubscriptionPlanUpdatePayload = Partial<SubscriptionPlanCreatePayload & { deleted_at?: string | null }>;
 
-const fetchSubscriptionPlans = () => httpGet<SubscriptionPlanRecord[]>('/subscription_plans');
+const fetchSubscriptionPlans = () => httpGet<SubscriptionPlanRecord[]>('/subscription_plans/');
 
 export const useAdminSubscriptionPlans = () => {
   return useQuery({
@@ -27,7 +27,7 @@ export const useAdminSubscriptionPlans = () => {
 };
 
 const createSubscriptionPlan = (payload: SubscriptionPlanCreatePayload) =>
-  httpPost<SubscriptionPlanRecord>('/subscription_plans', payload);
+  httpPost<SubscriptionPlanRecord>('/subscription_plans/', payload);
 
 const updateSubscriptionPlan = (id: string, payload: SubscriptionPlanUpdatePayload) =>
   httpPatch<SubscriptionPlanRecord>(`/subscription_plans/${id}`, payload);

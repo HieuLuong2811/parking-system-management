@@ -9,6 +9,7 @@ import {
   FormControl,
   FormControlLabel,
   FormLabel,
+  IconButton,
   Paper,
   Radio,
   RadioGroup,
@@ -42,14 +43,16 @@ import { statusColor } from "../ultis/status";
 import { LAST_7_DAYS } from "../constant/config";
 import FilterListIcon from "@mui/icons-material/FilterList";
 import useDebouncedValue from "../hooks/useDebouncedValue";
-import LocalParkingIcon from '@mui/icons-material/LocalParking';
+import LocalParkingIcon from "@mui/icons-material/LocalParking";
 import AccessTimeIcon from "@mui/icons-material/AccessTime";
 import FileDownloadIcon from "@mui/icons-material/FileDownload";
+import CloseIcon from "@mui/icons-material/Close";
 
 export default function SessionPage() {
   const { t } = useTranslation();
   const [fromDate, setFromDate] = useState("");
   const [toDate, setToDate] = useState("");
+  const [status, setStatus] = useState<"" | "ACTIVE" | "DONE">("");
   const debouncedFromDate = useDebouncedValue(fromDate, 500);
   const debouncedToDate = useDebouncedValue(toDate, 500);
   const [page, setPage] = useState(0);
@@ -61,6 +64,7 @@ export default function SessionPage() {
   } = useParkingSessions({
     page: page + 1,
     limit: rowsPerPage,
+    status: status || undefined,
     from_time: toStartOfDay(debouncedFromDate) || undefined,
     to_time: toEndOfDay(debouncedToDate) || undefined,
   });
@@ -69,7 +73,7 @@ export default function SessionPage() {
 
   useEffect(() => {
     setPage(0);
-  }, [debouncedFromDate, debouncedToDate]);
+  }, [debouncedFromDate, debouncedToDate, status]);
 
   const filterFields = [
     { key: "from", type: "date", value: fromDate, setter: setFromDate },
@@ -79,6 +83,7 @@ export default function SessionPage() {
   const clearFilters = () => {
     setFromDate("");
     setToDate("");
+    setStatus("");
     setPage(0);
   };
 
@@ -156,7 +161,7 @@ export default function SessionPage() {
     }
   };
 
-  const tableColumns = ["checkIn", "checkOut", "status", "amount"];
+  const tableColumns = ["vehicle", "checkIn", "checkOut", "status", "amount"];
 
   const pagedSessions = useMemo(() => sessions, [sessions]);
 
@@ -174,7 +179,7 @@ export default function SessionPage() {
           {t("sessions.sectionTitle")}
         </Typography>
 
-        <Typography variant="body2" fontSize='medium' color="text.secondary">
+        <Typography variant="body2" fontSize="medium" color="text.secondary">
           {t("sessions.subtitle", {
             defaultValue:
               "Theo dõi lịch sử gửi xe, thời điểm vào/ra và trạng thái phiên gửi xe của bạn.",
@@ -203,7 +208,6 @@ export default function SessionPage() {
             gap={2}
             alignItems={{ xs: "stretch", md: "center" }}
           >
-
             <Box
               sx={{
                 display: "flex",
@@ -223,8 +227,32 @@ export default function SessionPage() {
                 label={t(`sessions.filters.${key}`)}
                 type={type}
                 value={value}
-                onChange={(event) => setter(event.target.value)}
+                onChange={(event) => {
+                  const next = event.target.value;
+                  if (key === "from") {
+                    setFromDate(next);
+                    if (toDate && next && next > toDate) {
+                      setToDate(next);
+                    }
+                    return;
+                  }
+                  if (key === "to") {
+                    setToDate(next);
+                    if (fromDate && next && next < fromDate) {
+                      setFromDate(next);
+                    }
+                    return;
+                  }
+                  setter(next);
+                }}
                 InputLabelProps={{ shrink: true }}
+                inputProps={
+                  key === "from"
+                    ? { max: toDate || undefined }
+                    : key === "to"
+                      ? { min: fromDate || undefined }
+                      : undefined
+                }
                 disabled={isLoading || isError}
                 size="small"
                 sx={{
@@ -236,9 +264,38 @@ export default function SessionPage() {
                 }}
               />
             ))}
+            <TextField
+              select
+              SelectProps={{ native: true }}
+              label={t("sessions.filters.status", { defaultValue: "Status" })}
+              value={status}
+              onChange={(event) =>
+                setStatus((event.target.value as "ACTIVE" | "DONE" | "") || "")
+              }
+              disabled={isLoading || isError}
+              size="small"
+              InputLabelProps={{ shrink: true }}
+              sx={{
+                minWidth: { xs: "100%", sm: 180 },
+                bgcolor: "#FFFFFF",
+                "& .MuiOutlinedInput-root": {
+                  borderRadius: 2,
+                },
+              }}
+            >
+              <option value="">
+                {t("common.all", { defaultValue: "All" })}
+              </option>
+              <option value="ACTIVE">
+                {t("common.sessionStatus.ACTIVE", { defaultValue: "Active" })}
+              </option>
+              <option value="DONE">
+                {t("common.sessionStatus.DONE", { defaultValue: "Done" })}
+              </option>
+            </TextField>
             <Button
               onClick={clearFilters}
-              disabled={!fromDate && !toDate}
+              disabled={!fromDate && !toDate && !status}
               variant="outlined"
               sx={{
                 borderRadius: 2,
@@ -341,6 +398,34 @@ export default function SessionPage() {
                   }}
                 >
                   <TableCell>
+                    <Stack spacing={0.5}>
+                      <Typography fontWeight={600}>
+                        {t(`common.vehicleType.${session.vehicle_mode}`, {
+                          defaultValue:
+                            session.vehicle_mode === "LICENSED"
+                              ? "Xe có biển số"
+                              : "Xe không biển số",
+                        })}
+                      </Typography>
+
+                      {session.vehicle_mode === "LICENSED" &&
+                      session.license_plate ? (
+                        <Typography
+                          variant="body2"
+                          sx={{
+                            color: "#3b4450",
+                            fontWeight: 600,
+                          }}
+                        >
+                          {t("common.licensePlateLabel", {
+                            license: session.license_plate,
+                            defaultValue: `BKS: ${session.license_plate}`,
+                          })}
+                        </Typography>
+                      ) : null}
+                    </Stack>
+                  </TableCell>
+                  <TableCell>
                     <Stack direction="row" spacing={1} alignItems="center">
                       <AccessTimeIcon fontSize="small" color="action" />
                       <Typography fontWeight={500}>
@@ -360,13 +445,13 @@ export default function SessionPage() {
                       </Stack>
                     ) : (
                       <Typography color="text.secondary" fontStyle="italic">
-                        {t("common.none", { defaultValue: "Chưa có" })}
+                        {"-"}
                       </Typography>
                     )}
                   </TableCell>
                   <TableCell>
                     <Chip
-                      label={session.status ?? t("sessions.statusUnknown")}
+                      label={t(`common.sessionStatus.${session.status}`)}
                       color={statusColor(session.status)}
                       size="small"
                       sx={{ textTransform: "capitalize" }}
@@ -408,18 +493,40 @@ export default function SessionPage() {
               color: theme.palette.text.secondary,
             },
         }}
+        labelRowsPerPage={t("common.pagination.rowsPerPage", {
+          defaultValue: "Rows per page:",
+        })}
+        labelDisplayedRows={({ from, to, count }) =>
+          t("common.pagination.displayedRows", {
+            from,
+            to,
+            count,
+            defaultValue: `${from}-${to} of ${count !== -1 ? count : `more than ${to}`}`,
+          })
+        }
       />
 
       <Dialog
         open={exportOpen}
-        onClose={closeExportDialog}
         fullWidth
         maxWidth="sm"
       >
-        <DialogTitle>
+        <DialogTitle sx={{ display: "flex", alignItems: "center" , justifyContent: "space-between"}}>
           {t("sessions.actions.exportTitle", {
             defaultValue: "Export check in/out history",
           })}
+          <IconButton
+            aria-label="close"
+            onClick={() => setExportOpen(false)}
+            sx={{
+              position: "absolute",
+              top: 8,
+              right: 8,
+              color: (theme) => theme.palette.grey[500],
+            }}
+          >
+            <CloseIcon />
+          </IconButton>
         </DialogTitle>
         <DialogContent>
           {exportError ? (
@@ -472,8 +579,15 @@ export default function SessionPage() {
                 label={t("sessions.filters.from")}
                 type="date"
                 value={exportFrom}
-                onChange={(event) => setExportFrom(event.target.value)}
+                onChange={(event) => {
+                  const next = event.target.value;
+                  setExportFrom(next);
+                  if (exportTo && next && next > exportTo) {
+                    setExportTo(next);
+                  }
+                }}
                 InputLabelProps={{ shrink: true }}
+                inputProps={{ max: exportTo || undefined }}
                 disabled={exportBusy}
                 sx={{ flex: 1 }}
               />
@@ -481,8 +595,15 @@ export default function SessionPage() {
                 label={t("sessions.filters.to")}
                 type="date"
                 value={exportTo}
-                onChange={(event) => setExportTo(event.target.value)}
+                onChange={(event) => {
+                  const next = event.target.value;
+                  setExportTo(next);
+                  if (exportFrom && next && next < exportFrom) {
+                    setExportFrom(next);
+                  }
+                }}
                 InputLabelProps={{ shrink: true }}
+                inputProps={{ min: exportFrom || undefined }}
                 disabled={exportBusy}
                 sx={{ flex: 1 }}
               />
@@ -491,7 +612,7 @@ export default function SessionPage() {
         </DialogContent>
         <DialogActions>
           <Button onClick={closeExportDialog} disabled={exportBusy}>
-            {t("common.cancel", { defaultValue: "Cancel" })}
+            {t("common.button.cancel", { defaultValue: "Cancel" })}
           </Button>
           <Button
             onClick={handleExport}
@@ -505,4 +626,3 @@ export default function SessionPage() {
     </SectionCard>
   );
 }
-

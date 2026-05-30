@@ -8,8 +8,8 @@ from app.models.users import Users, RoleSummary
 def build_user_with_roles_stmt():
         return (
             select(Users, Roles)
-            .join(UserRoles, UserRoles.user_code == Users.user_code)
-            .join(Roles, Roles.id == UserRoles.role_id)
+            .outerjoin(UserRoles, UserRoles.user_code == Users.user_code)
+            .outerjoin(Roles, Roles.id == UserRoles.role_id)
         )
 
 def map_users_with_roles(rows):
@@ -22,9 +22,10 @@ def map_users_with_roles(rows):
                 "roles": [],
             }
 
-        users_dict[user.user_code]["roles"].append(
-            RoleSummary(id=role.id, role_code=role.role_code)
-        )
+        if role is not None:
+            users_dict[user.user_code]["roles"].append(
+                RoleSummary(id=role.id, role_code=role.role_code)
+            )
 
     return list(users_dict.values())
 

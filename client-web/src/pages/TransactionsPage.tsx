@@ -22,19 +22,19 @@ import FilterListIcon from "@mui/icons-material/FilterList";
 import SectionCard from "../components/shared/SectionCard";
 import { useMyPaymentTransactionsPaginated } from "../api/payment_transactions";
 import useDebouncedValue from "../hooks/useDebouncedValue";
-import { toEndOfDay, toStartOfDay } from "../ultis/formatters";
+import { formatCurrency, formatDateTime, toEndOfDay, toStartOfDay } from "../ultis/formatters";
 import { getStatusChipColor } from "../ultis/status";
 
 export default function TransactionsPage() {
   const { t } = useTranslation();
 
-  const [invoiceId, setInvoiceId] = useState("");
-  const [transactionCode, setTransactionCode] = useState("");
+  const [transactionType, setTransactionType] = useState("");
+  const [direction, setDirection] = useState("");
   const [fromDate, setFromDate] = useState("");
   const [toDate, setToDate] = useState("");
 
-  const debouncedInvoiceId = useDebouncedValue(invoiceId, 450);
-  const debouncedTransactionCode = useDebouncedValue(transactionCode, 450);
+  const debouncedTransactionType = useDebouncedValue(transactionType, 250);
+  const debouncedDirection = useDebouncedValue(direction, 250);
   const debouncedFromDate = useDebouncedValue(fromDate, 450);
   const debouncedToDate = useDebouncedValue(toDate, 450);
 
@@ -56,8 +56,8 @@ export default function TransactionsPage() {
   } = useMyPaymentTransactionsPaginated({
     page: page + 1,
     limit: rowsPerPage,
-    invoice_id: debouncedInvoiceId.trim() || undefined,
-    transaction_code: debouncedTransactionCode.trim() || undefined,
+    transaction_type: debouncedTransactionType.trim() || undefined,
+    direction: debouncedDirection.trim() || undefined,
     from_time: fromTime,
     to_time: toTime,
   });
@@ -68,8 +68,8 @@ export default function TransactionsPage() {
   useEffect(() => {
     setPage(0);
   }, [
-    debouncedInvoiceId,
-    debouncedTransactionCode,
+    debouncedTransactionType,
+    debouncedDirection,
     debouncedFromDate,
     debouncedToDate,
   ]);
@@ -87,12 +87,60 @@ export default function TransactionsPage() {
   }, [isDateRangeInvalid, t]);
 
   const clearFilters = () => {
-    setInvoiceId("");
-    setTransactionCode("");
+    setTransactionType("");
+    setDirection("");
     setFromDate("");
     setToDate("");
     setPage(0);
   };
+
+  const transactionTypeOptions = useMemo(
+    () => [
+      { value: "", label: t("transactions.filters.all", { defaultValue: "All" }) },
+      {
+        value: "TOP_UP",
+        label: t("transactions.transactionType.top_up", { defaultValue: "Nạp ví" }),
+      },
+      {
+        value: "INVOICE_DIRECT_PAYMENT",
+        label: t("transactions.transactionType.invoice_direct_payment", {
+          defaultValue: "Thanh toán hoá đơn",
+        }),
+      },
+      {
+        value: "MONTHLY_CHARGE",
+        label: t("transactions.transactionType.monthly_charge", {
+          defaultValue: "Phí tháng",
+        }),
+      },
+      {
+        value: "SUBSCRIPTION_FULL_PAYMENT",
+        label: t("transactions.transactionType.subscription_full_payment", {
+          defaultValue: "Thanh toán vé gửi xe",
+        }),
+      },
+      {
+        value: "REFUND",
+        label: t("transactions.transactionType.refund", { defaultValue: "Hoàn tiền" }),
+      },
+      {
+        value: "ADMIN_ADJUSTMENT",
+        label: t("transactions.transactionType.admin_adjustment", {
+          defaultValue: "Điều chỉnh",
+        }),
+      },
+    ],
+    [t],
+  );
+
+  const directionOptions = useMemo(
+    () => [
+      { value: "", label: t("transactions.filters.all", { defaultValue: "All" }) },
+      { value: "IN", label: t("transactions.direction.in", { defaultValue: "Tiền vào" }) },
+      { value: "OUT", label: t("transactions.direction.out", { defaultValue: "Tiền ra" }) },
+    ],
+    [t],
+  );
 
   return (
     <SectionCard>
@@ -133,32 +181,44 @@ export default function TransactionsPage() {
           </Box>
 
           <TextField
-            label={t("transactions.filters.invoiceId", {
-              defaultValue: "Mã hóa đơn",
+            label={t("transactions.filters.transactionType", {
+              defaultValue: "Loại giao dịch",
             })}
-            placeholder={t("transactions.filters.invoiceIdPlaceholder", {
-              defaultValue: "Nhập mã hóa đơn",
-            })}
-            value={invoiceId}
-            onChange={(e) => setInvoiceId(e.target.value)}
+            select
+            SelectProps={{ native: true }}
+            value={transactionType}
+            onChange={(e) => setTransactionType(e.target.value)}
+            InputLabelProps={{ shrink: true }}
             disabled={isLoading}
             size="small"
             sx={{ bgcolor: "#fff", flex: 1, minWidth: { xs: "100%", md: 220 } }}
-          />
+          >
+            {transactionTypeOptions.map((opt) => (
+              <option key={opt.value} value={opt.value}>
+                {opt.label}
+              </option>
+            ))}
+          </TextField>
 
           <TextField
-            label={t("transactions.filters.transactionCode", {
-              defaultValue: "Mã giao dịch",
+            label={t("transactions.filters.direction", {
+              defaultValue: "Dòng tiền",
             })}
-            placeholder={t("transactions.filters.transactionCodePlaceholder", {
-              defaultValue: "Nhập mã giao dịch",
-            })}
-            value={transactionCode}
-            onChange={(e) => setTransactionCode(e.target.value)}
+            InputLabelProps={{ shrink: true }}
+            select
+            SelectProps={{ native: true }}
+            value={direction}
+            onChange={(e) => setDirection(e.target.value)}
             disabled={isLoading}
             size="small"
             sx={{ bgcolor: "#fff", flex: 1, minWidth: { xs: "100%", md: 220 } }}
-          />
+          >
+            {directionOptions.map((opt) => (
+              <option key={opt.value} value={opt.value}>
+                {opt.label}
+              </option>
+            ))}
+          </TextField>
 
           <TextField
             label={t("transactions.filters.from", { defaultValue: "Từ" })}
@@ -226,29 +286,26 @@ export default function TransactionsPage() {
                 },
               }}
             >
-              <TableCell>
+              <TableCell width="220px">
                 {t("transactions.table.invoiceId", {
                   defaultValue: "Mã hóa đơn",
                 })}
               </TableCell>
-              <TableCell>
+              <TableCell width="100px">
                 {t("transactions.table.transactionCode", {
                   defaultValue: "Mã giao dịch",
                 })}
               </TableCell>
-              <TableCell align="right">
+              <TableCell align="right" width="220px">
                 {t("transactions.table.amount", { defaultValue: "Số tiền" })}
               </TableCell>
-              <TableCell align="right">
+              <TableCell align="right" width="220px">
                 {t("transactions.table.status", { defaultValue: "Trạng thái" })}
               </TableCell>
-              <TableCell>
+              <TableCell width="220px">
                 {t("transactions.table.createdAt", {
                   defaultValue: "Thời gian",
                 })}
-              </TableCell>
-              <TableCell>
-                {t("transactions.table.note", { defaultValue: "Ghi chú" })}
               </TableCell>
             </TableRow>
           </TableHead>
@@ -276,9 +333,7 @@ export default function TransactionsPage() {
                   String(tx.transaction_type || "").toUpperCase() === "TOP_UP";
                 const isOutgoing = !isTopUp;
                 const numericAmount = Number(tx.amount || 0);
-                const amountText = `${isTopUp ? "+" : "-"} ${new Intl.NumberFormat(
-                  "vi-VN",
-                ).format(numericAmount)} đ`;
+                const amountText = `${isTopUp ? "+" : "-"} ${formatCurrency(numericAmount)}`;
                 const amountColor = isOutgoing ? "error.main" : "success.main";
                 const statusText = String(tx.status || "").toLowerCase();
                 const chipColor = getStatusChipColor(statusText.toUpperCase());
@@ -313,7 +368,7 @@ export default function TransactionsPage() {
                         size="small"
                         color={chipColor}
                         label={t(
-                          `transactions.status.${String(tx.status || "").toLowerCase()}`,
+                          `common.paymentTransactionStatus.${String(tx.status || "")}`,
                           {
                             defaultValue: tx.status,
                           },
@@ -322,18 +377,7 @@ export default function TransactionsPage() {
                       />
                     </TableCell>
                     <TableCell>
-                      {new Date(tx.created_at).toLocaleString(undefined, {
-                        year: "numeric",
-                        month: "short",
-                        day: "numeric",
-                        hour: "2-digit",
-                        minute: "2-digit",
-                      })}
-                    </TableCell>
-                    <TableCell>
-                      <Typography variant="body2" color="text.secondary">
-                        {tx.description || tx.response_message || "—"}
-                      </Typography>
+                      {formatDateTime(tx.created_at)}
                     </TableCell>
                   </TableRow>
                 );

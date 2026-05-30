@@ -43,3 +43,5 @@ Thumbs.db
 /backend/.venv
 /backend/YOLOv8/
 /backend/app/models/runs/
+/raw_images/
+/datasets/

@@ -70,3 +70,8 @@ async def update_user(user_code: str, user_in: UsersUpdate, db: AsyncSession = D
 @router.delete("/{user_code}", response_model=DeleteResponse)
 async def delete_user(user_code: str, db: AsyncSession = Depends(get_db)):
     return await UserController.delete_user_ctrl(user_code, db)
+
+
+@router.patch("/{user_code}/reactivate", response_model=UsersRead)
+async def reactivate_user(user_code: str, db: AsyncSession = Depends(get_db)):
+    return await UserController.reactivate_user_ctrl(user_code, db)

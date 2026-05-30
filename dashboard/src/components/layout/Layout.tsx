@@ -20,7 +20,7 @@ export const Layout: React.FC = () => {
   const drawerWidth = collapsed ? COLLAPSED_SIDEBAR_WIDTH : EXPANDED_SIDEBAR_WIDTH;
 
   return (
-    <Box sx={{ display: 'flex', minHeight: '100vh', backgroundColor: '#f5f5f5' }}>
+    <Box sx={{ display: 'flex', backgroundColor: '#fffff' }}>
       <Navbar
         onMenuClick={handleDrawerToggle}
         collapsed={collapsed}
@@ -38,11 +38,10 @@ export const Layout: React.FC = () => {
           width: { xs: '100%', md: `calc(100% - ${drawerWidth}px)` },
           ml: { md: `${drawerWidth}px` },
           transition: 'margin 0.3s ease, width 0.3s ease',
-          minHeight: '100vh',
         }}
       >
         <Toolbar />
-        <Box p={4} height='100vh' bgcolor='#fff'>
+        <Box p={4} minHeight='100vh' bgcolor='#fff'>
           <Outlet />
         </Box>
       </Box>

@@ -1,6 +1,6 @@
 from app.models.pricing import PaymentPlanPricingResponse
 from app.service.plan_pricing import planPricingService
-from fastapi import APIRouter, Depends, HTTPException
+from fastapi import APIRouter, Depends
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.api.controller.payment_plans import PaymentPlanController
@@ -11,11 +11,11 @@ from app.models.responses import DeleteResponse
 router = APIRouter(prefix="/payment_plans", tags=["payment_plans"])
 
 
-@router.post("/", response_model=PaymentPlanRead)
+@router.post("", response_model=PaymentPlanRead)
 async def create_payment_plan(payload: PaymentPlanCreate, db: AsyncSession = Depends(get_db)):
     return await PaymentPlanController.create_payment_plan_ctrl(payload, db)
 
-@router.get("/", response_model=list[PaymentPlanRead])
+@router.get("", response_model=list[PaymentPlanRead])
 async def list_payment_plans(db: AsyncSession = Depends(get_db)):
     plans = await PaymentPlanController.get_all_payment_plans_ctrl(db)
     return plans

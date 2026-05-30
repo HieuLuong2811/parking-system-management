@@ -26,6 +26,7 @@ export type InvoicesMeQuery = {
   limit: number;
   from_time?: string;
   to_time?: string;
+  status?: InvoiceStatus;
 };
 
 const fetchInvoicesPaginated = async (params: InvoicesMeQuery): Promise<PaginatedResponse<InvoiceInfo>> => {

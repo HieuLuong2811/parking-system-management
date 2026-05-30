@@ -23,6 +23,10 @@ class NotificationController:
         *,
         limit: int | None = None,
         offset: int | None = None,
+        is_read: bool | None = None,
+        type: str | None = None,
+        created_from=None,
+        created_to=None,
         include_deleted: bool = True,
     ) -> list[NotificationRead]:
         return await notificationService.get_all_notifications(
@@ -30,6 +34,10 @@ class NotificationController:
             receiver_id,
             limit=limit,
             offset=offset,
+            is_read=is_read,
+            type=type,
+            created_from=created_from,
+            created_to=created_to,
             include_deleted=include_deleted,
         )
 
@@ -40,6 +48,10 @@ class NotificationController:
         *,
         limit: int | None = None,
         offset: int | None = None,
+        is_read: bool | None = None,
+        type: str | None = None,
+        created_from=None,
+        created_to=None,
         include_deleted: bool = False,
     ) -> list[NotificationRead]:
         return await notificationService.get_all_notifications(
@@ -47,6 +59,10 @@ class NotificationController:
             user_code,
             limit=limit,
             offset=offset,
+            is_read=is_read,
+            type=type,
+            created_from=created_from,
+            created_to=created_to,
             include_deleted=include_deleted,
         )
 

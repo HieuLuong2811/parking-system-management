@@ -5,9 +5,9 @@ import {
   DialogContent,
   DialogContentText,
   DialogTitle,
-} from "@mui/material";
-import React from "react";
-import { useTranslation } from "react-i18next";
+} from '@mui/material';
+import React from 'react';
+import { useTranslation } from 'react-i18next';
 
 type ConfirmOptions = {
   title: string;
@@ -19,6 +19,7 @@ type ConfirmOptions = {
 
 export function useConfirmDialog() {
   const { t } = useTranslation();
+
   const [options, setOptions] = React.useState<ConfirmOptions | null>(null);
   const resolverRef = React.useRef<((value: boolean) => void) | null>(null);
 
@@ -40,30 +41,65 @@ export function useConfirmDialog() {
     if (!options) return null;
 
     return (
-      <Dialog open onClose={() => handleClose(false)} maxWidth="xs" fullWidth>
-        <DialogTitle sx={{ fontWeight: 600 }}>{options.title}</DialogTitle>
+      <Dialog
+        open
+        onClose={() => handleClose(false)}
+        maxWidth="xs"
+        fullWidth
+        PaperProps={{
+          sx: {
+            borderRadius: '18px',
+          },
+        }}
+      >
+        <DialogTitle
+          sx={{
+            color: '#0f172a',
+            fontSize: 17,
+            fontWeight: 700,
+            pb: 1,
+          }}
+        >
+          {options.title}
+        </DialogTitle>
 
         <DialogContent>
-          <DialogContentText sx={{ color: "#262626cc" }}>
+          <DialogContentText
+            sx={{
+              color: '#475569',
+              fontSize: 14,
+              lineHeight: 1.6,
+            }}
+          >
             {options.message}
           </DialogContentText>
         </DialogContent>
 
-        <DialogActions sx={{ px: 3, pb: 2 }}>
+        <DialogActions sx={{ px: 3, pb: 2.5 }}>
           <Button
             onClick={() => handleClose(false)}
-            sx={{ textTransform: "none", fontWeight: 700 }}
+            sx={{
+              borderRadius: '12px',
+              textTransform: 'none',
+              fontWeight: 700,
+              color: '#475569',
+            }}
           >
-            {t("common.button.cancel")}
+            {options.cancelText || t('common.button.cancel', { defaultValue: 'Hủy' })}
           </Button>
 
           <Button
             variant="contained"
-            color={options.danger ? "error" : "primary"}
+            color={options.danger ? 'error' : 'primary'}
             onClick={() => handleClose(true)}
-            sx={{ textTransform: "none", fontWeight: 600 }}
+            sx={{
+              borderRadius: '12px',
+              textTransform: 'none',
+              fontWeight: 700,
+              boxShadow: 'none',
+            }}
           >
-            {t("common.button.continue")}
+            {options.confirmText || t('common.button.continue', { defaultValue: 'Tiếp tục' })}
           </Button>
         </DialogActions>
       </Dialog>

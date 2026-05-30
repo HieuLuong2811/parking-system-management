@@ -1,32 +1,27 @@
 import React, { useEffect, useMemo, useState } from "react";
 import {
   ActivityIndicator,
-  Platform,
   ScrollView,
   StyleSheet,
   Text,
+  TextInput,
   TouchableOpacity,
   View,
 } from "react-native";
-import DateTimePicker, {
-  DateTimePickerEvent,
-} from "@react-native-community/datetimepicker";
 import { useTranslation } from "react-i18next";
 import Ionicons from "@expo/vector-icons/Ionicons";
 
 import { useParkingSessions } from "../api/parking_sessions";
 import ListScreen from "../component/ListScreen";
 import { getParkingStatusColor } from "../ultis/status";
-import { formatCurrency, formatDate, toDateKey, toEndOfDay, toStartOfDay } from "../ultis/format";
-
-type DatePickerTarget = "from" | "to";
-
-const getVehicleType = (session: any, fallback: string) => {
-  return (
-    session.vehicle_type ||
-    fallback
-  );
-};
+import { VehicleMode } from "../api/clientApi";
+import DateRangeFilter from "../component/DateRangeFilter";
+import {
+  formatCurrency,
+  formatDate,
+  toEndOfDay,
+  toStartOfDay,
+} from "../ultis/format";
 
 const getLicensePlate = (session: any) => {
   return session.license_plate || session.vehicle?.license_plate;
@@ -37,9 +32,9 @@ export default function ParkingSessionsScreen() {
 
   const [fromDate, setFromDate] = useState("");
   const [toDate, setToDate] = useState("");
+  const [vehicleMode, setVehicleMode] = useState<"" | VehicleMode>("");
+  const [licensePlate, setLicensePlate] = useState("");
   const [page, setPage] = useState(1);
-  const [datePickerTarget, setDatePickerTarget] =
-    useState<DatePickerTarget | null>(null);
 
   const limit = 5;
 
@@ -50,13 +45,14 @@ export default function ParkingSessionsScreen() {
   } = useParkingSessions({
     page,
     limit,
-    from_time: toStartOfDay(fromDate),
-    to_time: toEndOfDay(toDate),
+    from_time: fromDate ? toStartOfDay(fromDate) : undefined,
+    to_time: toDate ? toEndOfDay(toDate) : undefined,
+    vehicle_mode: vehicleMode || undefined,
+    license_plate: licensePlate.trim() ? licensePlate.trim() : undefined,
   });
-
   useEffect(() => {
     setPage(1);
-  }, [fromDate, toDate]);
+  }, [fromDate, toDate, vehicleMode, licensePlate]);
 
   const rows = useMemo(() => paginated?.data ?? [], [paginated]);
   const total = paginated?.total ?? 0;
@@ -68,45 +64,13 @@ export default function ParkingSessionsScreen() {
   const startItem = total === 0 ? 0 : (page - 1) * limit + 1;
   const endItem = Math.min(page * limit, total);
 
-  const hasFilter = Boolean(fromDate || toDate);
-
-  const selectedPickerDate = useMemo(() => {
-    if (datePickerTarget === "from" && fromDate) {
-      return new Date(fromDate);
-    }
-
-    if (datePickerTarget === "to" && toDate) {
-      return new Date(toDate);
-    }
-
-    return new Date();
-  }, [datePickerTarget, fromDate, toDate]);
-
-  const handleChangeDate = (
-    event: DateTimePickerEvent,
-    selectedDate?: Date,
-  ) => {
-    if (Platform.OS === "android") {
-      setDatePickerTarget(null);
-    }
-
-    if (event.type === "dismissed" || !selectedDate || !datePickerTarget) {
-      return;
-    }
-
-    const value = toDateKey(selectedDate);
-
-    if (datePickerTarget === "from") {
-      setFromDate(value);
-      return;
-    }
-
-    setToDate(value);
-  };
+  const hasFilter = Boolean(fromDate || toDate || vehicleMode || licensePlate);
 
   const clearFilters = () => {
     setFromDate("");
     setToDate("");
+    setVehicleMode("");
+    setLicensePlate("");
     setPage(1);
   };
 
@@ -115,6 +79,7 @@ export default function ParkingSessionsScreen() {
       title={t("parkingHistory.title")}
       subtitle={t("parkingHistory.subtitle")}
       loading={false}
+      hiddenHeader={false}
       error={isError ? t("parkingHistory.loadError") : null}
     >
       <ScrollView
@@ -142,57 +107,101 @@ export default function ParkingSessionsScreen() {
             )}
           </View>
 
-          <View style={styles.dateRow}>
-            <TouchableOpacity
-              style={styles.dateButton}
-              activeOpacity={0.85}
-              onPress={() => setDatePickerTarget("from")}
-            >
+          <View>
+            <DateRangeFilter
+              fromDate={fromDate}
+              toDate={toDate}
+              fromLabel={t("parkingHistory.fromDate")}
+              toLabel={t("parkingHistory.toDate")}
+              placeholder={t("parkingHistory.selectDate")}
+              invalidMessage={t("common.dateRange.invalidDateRange")}
+              formatDate={formatDate}
+              onChangeFromDate={setFromDate}
+              onChangeToDate={setToDate}
+            />
+          </View>
+          <View style={styles.extraFiltersRow}>
+            <View style={styles.modeBox}>
               <Text style={styles.dateLabel}>
-                {t("parkingHistory.fromDate")}
+                {t("parkingHistory.vehicleMode")}
               </Text>
-              <View style={styles.dateValueRow}>
-                <Text
-                  style={[
-                    styles.dateValue,
-                    !fromDate && styles.datePlaceholder,
-                  ]}
-                >
-                  {fromDate
-                    ? formatDate(fromDate)
-                    : t("parkingHistory.selectDate")}
-                </Text>
-                <Ionicons name="calendar-outline" size={15} color="#64748b" />
-              </View>
-            </TouchableOpacity>
 
-            <TouchableOpacity
-              style={styles.dateButton}
-              activeOpacity={0.85}
-              onPress={() => setDatePickerTarget("to")}
-            >
-              <Text style={styles.dateLabel}>{t("parkingHistory.toDate")}</Text>
-              <View style={styles.dateValueRow}>
-                <Text
-                  style={[styles.dateValue, !toDate && styles.datePlaceholder]}
+              <View style={styles.modeRow}>
+                <TouchableOpacity
+                  style={[
+                    styles.modeChip,
+                    !vehicleMode && styles.modeChipActive,
+                  ]}
+                  activeOpacity={0.85}
+                  onPress={() => setVehicleMode("")}
                 >
-                  {toDate ? formatDate(toDate) : t("parkingHistory.selectDate")}
-                </Text>
-                <Ionicons name="calendar-outline" size={15} color="#64748b" />
+                  <Text
+                    style={[
+                      styles.modeChipText,
+                      !vehicleMode && styles.modeChipTextActive,
+                    ]}
+                  >
+                    {t("parkingHistory.modeAll")}
+                  </Text>
+                </TouchableOpacity>
+
+                <TouchableOpacity
+                  style={[
+                    styles.modeChip,
+                    vehicleMode === "LICENSED" && styles.modeChipActive,
+                  ]}
+                  activeOpacity={0.85}
+                  onPress={() => setVehicleMode("LICENSED")}
+                >
+                  <Text
+                    style={[
+                      styles.modeChipText,
+                      vehicleMode === "LICENSED" && styles.modeChipTextActive,
+                    ]}
+                  >
+                    {t("parkingHistory.modeLicensed")}
+                  </Text>
+                </TouchableOpacity>
+
+                <TouchableOpacity
+                  style={[
+                    styles.modeChip,
+                    vehicleMode === "UNLICENSED" && styles.modeChipActive,
+                  ]}
+                  activeOpacity={0.85}
+                  onPress={() => setVehicleMode("UNLICENSED")}
+                >
+                  <Text
+                    style={[
+                      styles.modeChipText,
+                      vehicleMode === "UNLICENSED" && styles.modeChipTextActive,
+                    ]}
+                  >
+                    {t("parkingHistory.modeUnlicensed")}
+                  </Text>
+                </TouchableOpacity>
               </View>
-            </TouchableOpacity>
+            </View>
+
+            <View style={styles.plateBox}>
+              <Text style={styles.dateLabel}>
+                {t("parkingHistory.licensePlate")}
+              </Text>
+              <View style={styles.plateInputRow}>
+                <TextInput
+                  value={licensePlate}
+                  onChangeText={setLicensePlate}
+                  placeholder={t("parkingHistory.licensePlatePlaceholder")}
+                  placeholderTextColor="#94a3b8"
+                  style={styles.plateInput}
+                  autoCapitalize="characters"
+                  autoCorrect={false}
+                />
+                <Ionicons name="search-outline" size={16} color="#64748b" />
+              </View>
+            </View>
           </View>
         </View>
-
-        {datePickerTarget && (
-          <DateTimePicker
-            value={selectedPickerDate}
-            mode="date"
-            display={Platform.OS === "ios" ? "spinner" : "default"}
-            onChange={handleChangeDate}
-          />
-        )}
-
         {isLoading ? (
           <View style={styles.stateCard}>
             <ActivityIndicator color="#2563eb" />
@@ -208,13 +217,8 @@ export default function ParkingSessionsScreen() {
             {rows.map((session: any) => (
               <ParkingSessionCard
                 key={session.id}
-                vehicleType={getVehicleType(
-                  session,
-                  t("parkingHistory.unknownVehicle"),
-                )}
-                licensePlate={getLicensePlate(
-                  session
-                )}
+                licensePlate={getLicensePlate(session)}
+                vehicle_mode={session.vehicle_mode || "unknown"}
                 status={session.status}
                 checkInTime={formatDate(session.check_in_time)}
                 checkOutTime={
@@ -278,15 +282,15 @@ export default function ParkingSessionsScreen() {
 }
 
 function ParkingSessionCard({
-  vehicleType,
+  vehicle_mode,
   licensePlate,
   status,
   checkInTime,
   checkOutTime,
   amount,
 }: {
-  vehicleType: string;
   licensePlate: string;
+  vehicle_mode?: string;
   status?: string | null;
   checkInTime: string;
   checkOutTime: string;
@@ -294,7 +298,6 @@ function ParkingSessionCard({
 }) {
   const { t } = useTranslation();
   const statusColor = getParkingStatusColor(status);
-  console.log(vehicleType);
   return (
     <View style={styles.sessionCard}>
       <View
@@ -309,7 +312,8 @@ function ParkingSessionCard({
       <View style={styles.sessionHeader}>
         <View style={styles.vehicleBox}>
           <Text numberOfLines={1} style={styles.vehicleTitle}>
-            {t(`common.vehicleType.${vehicleType.toLocaleLowerCase()}`)} {licensePlate == null ? " " : '- ' + licensePlate}
+            {t(`common.vehicleMode.${vehicle_mode?.toLocaleLowerCase()}`)}{" "}
+            {licensePlate == null ? " " : "- " + licensePlate}
           </Text>
         </View>
 
@@ -340,7 +344,7 @@ function ParkingSessionCard({
               },
             ]}
           >
-            {t(`parkingHistory.status.${(status)?.toLocaleLowerCase()}`)}
+            {t(`parkingHistory.status.${status?.toLocaleLowerCase()}`)}
           </Text>
         </View>
       </View>
@@ -436,31 +440,10 @@ const styles = StyleSheet.create({
     color: "#475569",
   },
 
-  dateRow: {
-    flexDirection: "row",
-    gap: 10,
-  },
-  dateButton: {
-    flex: 1,
-    minHeight: 58,
-    borderRadius: 6,
-    borderWidth: 1,
-    borderColor: "#dbeafe",
-    backgroundColor: "#f8fafc",
-    paddingHorizontal: 11,
-    paddingVertical: 9,
-    justifyContent: "center",
-  },
   dateLabel: {
     fontSize: 11,
     fontWeight: "800",
     color: "#64748b",
-  },
-  dateValueRow: {
-    marginTop: 5,
-    flexDirection: "row",
-    alignItems: "center",
-    gap: 6,
   },
   dateValue: {
     flex: 1,
@@ -468,8 +451,68 @@ const styles = StyleSheet.create({
     fontWeight: "900",
     color: "#0f172a",
   },
-  datePlaceholder: {
-    color: "#94a3b8",
+
+  extraFiltersRow: {
+    marginTop: 10,
+    gap: 10,
+  },
+  modeBox: {
+    borderRadius: 6,
+    borderWidth: 1,
+    borderColor: "#dbeafe",
+    backgroundColor: "#f8fafc",
+    paddingHorizontal: 11,
+    paddingVertical: 9,
+  },
+  modeRow: {
+    marginTop: 6,
+    flexDirection: "row",
+    flexWrap: "wrap",
+    gap: 8,
+  },
+  modeChip: {
+    paddingHorizontal: 10,
+    paddingVertical: 6,
+    borderRadius: 999,
+    backgroundColor: "#e2e8f0",
+  },
+  modeChipActive: {
+    backgroundColor: "#2563eb",
+  },
+  modeChipText: {
+    fontSize: 11.5,
+    fontWeight: "900",
+    color: "#334155",
+  },
+  modeChipTextActive: {
+    color: "#ffffff",
+  },
+  plateBox: {
+    borderRadius: 6,
+    borderWidth: 1,
+    borderColor: "#dbeafe",
+    backgroundColor: "#f8fafc",
+    paddingHorizontal: 11,
+    paddingVertical: 9,
+  },
+  plateInputRow: {
+    marginTop: 6,
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 8,
+    borderRadius: 6,
+    borderWidth: 1,
+    borderColor: "#dbeafe",
+    backgroundColor: "#ffffff",
+    paddingHorizontal: 10,
+    height: 38,
+  },
+  plateInput: {
+    flex: 1,
+    fontSize: 12.5,
+    fontWeight: "900",
+    color: "#0f172a",
+    paddingVertical: 0,
   },
 
   sessionList: {

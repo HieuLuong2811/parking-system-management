@@ -2,10 +2,9 @@ from __future__ import annotations
 
 from datetime import datetime
 import math
-import re
 from typing import List
 
-from app.models.roles import Roles, RolesCreate
+from app.models.roles import Roles
 from app.scripts.seeds import DEFAULT_USERS, DEFAULT_ROLES
 from app.utils.pagination import PaginatedResponse
 from app.utils.common import build_user_with_roles_stmt, map_users_with_roles
@@ -18,13 +17,16 @@ from sqlalchemy.ext.asyncio import AsyncSession
 from app.core.security import hash_password
 from app.models.auth import UserImportEntry
 from app.models.user_roles import UserRoles, UserRolesCreate
-from app.models.users import UserWithRoles, Users, UsersCreate, UsersRead, UsersUpdate, RoleSummary
+from app.models.users import UserWithRoles, Users, UsersCreate, UsersRead, UsersUpdate
 from app.service.base import CRUDService
 from app.service.roles import roleService
 from app.service.user_roles import userRolesService
 from app.utils.search import ilike_unaccent
 from app.service.parking_access_cards import parkingAccessCardService
 from app.enums.parking import ParkingAccessCardHolderType, ParkingAccessCardStatus, UserRoleType
+from app.models.parking_access_cards import ParkingAccessCard
+from app.models.subscriptions import UserSubscription
+from app.enums.parking import SubscriptionStatus
 
 class userService:
     crud = CRUDService(Users, pk_field="user_code")
@@ -146,19 +148,22 @@ class userService:
                 
                 role_codes = set(user_def.get("roles", []))
 
-                for role_code in role_codes:
-                    role = role_map.get(role_code)
-                    if not role:
-                        continue
-                    user_role_result = await db.execute(
-                        select(UserRoles).where(
-                            UserRoles.user_code == user.user_code,
-                            UserRoles.role_id == role.id,
-                        )
+                desired_role_ids = [
+                    role.id for code, role in role_map.items() if code in role_codes
+                ]
+
+                if desired_role_ids:
+                    existing_roles_stmt = (
+                        select(UserRoles.role_id)
+                        .where(UserRoles.user_code == user.user_code)
+                        .where(UserRoles.role_id.in_(desired_role_ids))
                     )
-                    if user_role_result.scalar_one_or_none():
-                        continue
-                    db.add(UserRoles(user_code=user.user_code, role_id=role.id))
+                    existing_role_ids = set((await db.execute(existing_roles_stmt)).scalars().all())
+
+                    for role_id in desired_role_ids:
+                        if role_id in existing_role_ids:
+                            continue
+                        db.add(UserRoles(user_code=user.user_code, role_id=role_id))
 
                 if UserRoleType.USER in role_codes:
                     await parkingAccessCardService.ensure_user_access_card(
@@ -258,7 +263,7 @@ class userService:
         }
 
     @staticmethod
-    async def get_users_by_user_codes(
+    async def get_user_by_user_code(
         user_code: str, db: AsyncSession
     ) -> UsersRead | None:
 
@@ -287,6 +292,52 @@ class userService:
             roles=roles,
             deleted_at=user.deleted_at,
         )    
+
+    @staticmethod
+    async def get_users_by_user_codes(
+        user_codes: list[str],
+        db: AsyncSession,
+    ) -> dict[str, Users]:
+        """
+        Bulk lookup users by user_code.
+
+        Returns dict keyed by user_code.
+        """
+        normalized = [c.strip() for c in (user_codes or []) if c and c.strip()]
+        if not normalized:
+            return {}
+
+        statement = select(Users).where(Users.user_code.in_(normalized))
+        result = await db.execute(statement)
+        users = result.scalars().all()
+        return {u.user_code: u for u in users}
+
+    @staticmethod
+    async def get_users_by_emails(
+        emails: list[str],
+        db: AsyncSession,
+    ) -> dict[str, str]:
+        """
+        Bulk lookup users by email.
+
+        Returns dict keyed by lowercased email -> user_code.
+        """
+        normalized = [e.strip().lower() for e in (emails or []) if e and e.strip()]
+        if not normalized:
+            return {}
+
+        statement = select(Users.user_code, Users.email).where(
+            Users.deleted_at.is_(None),
+            func.lower(func.coalesce(Users.email, "")).in_(normalized),
+        )
+        result = await db.execute(statement)
+        rows = result.all()
+        mapping: dict[str, str] = {}
+        for user_code, email in rows:
+            if not email:
+                continue
+            mapping[str(email).strip().lower()] = str(user_code)
+        return mapping
     
     @staticmethod
     async def update_user(user_code: str, user_in: UsersUpdate, db: AsyncSession) -> Users:
@@ -304,7 +355,69 @@ class userService:
     async def delete_user(user_code: str, db: AsyncSession) -> Users:
         user = await userService.crud.get(db, user_code)
         if user.deleted_at is None:
-            user.deleted_at = datetime.utcnow()
+            now = datetime.utcnow()
+            user.deleted_at = now
+
+            # Soft-delete / disable access cards for this user
+            await db.execute(
+                ParkingAccessCard.__table__.update()
+                .where(ParkingAccessCard.user_code == user_code)
+                .values(
+                    deleted_at=now,
+                    status=ParkingAccessCardStatus.DISABLED,
+                )
+            )
+
+            # Mark user subscriptions as INACTIVE
+            await db.execute(
+                UserSubscription.__table__.update()
+                .where(UserSubscription.user_code == user_code)
+                .values(status=SubscriptionStatus.INACTIVE)
+            )
+
+            await db.commit()
+            await db.refresh(user)
+        return user
+
+    @staticmethod
+    async def reactivate_user(user_code: str, db: AsyncSession) -> Users:
+        user = await userService.crud.get(db, user_code)
+        if user.deleted_at is not None:
+            user.deleted_at = None
+
+            # Restore ONLY the most recent soft-deleted access card for this user
+            latest_deleted_card_id = await db.scalar(
+                select(ParkingAccessCard.id)
+                .where(ParkingAccessCard.user_code == user_code)
+                .where(ParkingAccessCard.deleted_at.is_not(None))
+                .order_by(ParkingAccessCard.updated_at.desc(), ParkingAccessCard.created_at.desc())
+                .limit(1)
+            )
+            if latest_deleted_card_id:
+                await db.execute(
+                    ParkingAccessCard.__table__.update()
+                    .where(ParkingAccessCard.id == latest_deleted_card_id)
+                    .values(
+                        deleted_at=None,
+                        status=ParkingAccessCardStatus.ASSIGNED,
+                    )
+                )
+
+            # Reactivate ONLY the most recent INACTIVE subscription for this user
+            latest_inactive_sub_id = await db.scalar(
+                select(UserSubscription.id)
+                .where(UserSubscription.user_code == user_code)
+                .where(UserSubscription.status == SubscriptionStatus.INACTIVE)
+                .order_by(UserSubscription.updated_at.desc(), UserSubscription.created_at.desc())
+                .limit(1)
+            )
+            if latest_inactive_sub_id:
+                await db.execute(
+                    UserSubscription.__table__.update()
+                    .where(UserSubscription.id == latest_inactive_sub_id)
+                    .values(status=SubscriptionStatus.ACTIVE)
+                )
+
             await db.commit()
             await db.refresh(user)
         return user
@@ -317,6 +430,7 @@ class userService:
         user_role_id = user_role.id
         role_id = role.id
         imported: List[Users] = []
+        skipped = 0
 
         if not entries:
             return imported
@@ -344,8 +458,7 @@ class userService:
 
             lower_email = email.lower()
             user = existing_users_by_code.get(user_code)
-            if user is None:
-                conflict_user_code = existing_users_by_email.get(lower_email)
+            conflict_user_code = existing_users_by_email.get(lower_email) if user is None else None
             if conflict_user_code and conflict_user_code != user_code:
                 skipped += 1
                 continue 
@@ -375,3 +488,12 @@ class userService:
                         raise
             imported.append(user)
         return imported
+
+    @staticmethod
+    async def _ensure_user_role(db: AsyncSession) -> Roles:
+        """
+        Ensure the baseline USER role exists.
+
+        Import flow assigns both the requested role (e.g. "student") and the baseline "user" role.
+        """
+        return await roleService.get_or_create("user", db)

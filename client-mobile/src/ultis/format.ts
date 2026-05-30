@@ -65,3 +65,26 @@ export const formatNumber = (value: number | string | null | undefined) => {
   const numberValue = Number(value || 0);
   return new Intl.NumberFormat('vi-VN').format(numberValue);
 };
+
+export const avatarText = (fullname: string | null | undefined) => {
+  return String(fullname || '?')
+    .trim()
+    .split(/\s+/)
+    .pop()
+    ?.slice(0, 1)
+    .toUpperCase() || '?';
+};
+
+export const onlyNumber = (value: string) => {
+  return value.replace(/\D/g, "");
+};
+
+export const formatCurrencyInput = (value?: number | string | null) => {
+  if (value == null || value === "") return "";
+
+  const numberOnly = String(value).replace(/\D/g, "");
+
+  if (!numberOnly) return "";
+
+  return Number(numberOnly).toLocaleString("vi-VN");
+};

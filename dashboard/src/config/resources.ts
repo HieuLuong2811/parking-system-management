@@ -184,7 +184,6 @@ export const resourceConfigs: ResourceConfig[] = [
       makeColumn('id', 'Session ID', 220),
       makeColumn('access_card_id', 'Access Card ID', 220),
       makeColumn('vehicle_mode', 'Vehicle mode', 140),
-      makeColumn('vehicle_type', 'Vehicle type', 160),
       makeColumn('license_plate', 'License plate', 160),
       makeColumn('check_in_time', 'Check in', 180),
       makeColumn('check_out_time', 'Check out', 180),
@@ -194,7 +193,6 @@ export const resourceConfigs: ResourceConfig[] = [
     formFields: [
       makeField('access_card_id', 'Access Card ID', 'text', true),
       makeField('vehicle_mode', 'Vehicle mode', 'text'),
-      makeField('vehicle_type', 'Vehicle type', 'text'),
       makeField('license_plate', 'License plate', 'text'),
       makeField('check_in_time', 'Check-in', 'datetime-local', true),
       makeField('check_out_time', 'Check-out', 'datetime-local'),

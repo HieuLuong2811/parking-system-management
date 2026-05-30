@@ -63,7 +63,7 @@ const paymentMenuLinks = [
 const accountMenuLinks = [
   {
     key: "nav.subscriptions",
-    defaultValue: "Gói đã đăng ký",
+    defaultValue: "Vé gửi xe đã đăng ký",
     to: "/profile/subscriptions",
     icon: <SubscriptionsRoundedIcon fontSize="small" />,
   },

@@ -64,14 +64,6 @@ export const UserProfilePage = () => {
       ),
     },
     {
-      field: "term",
-      headerName: t("subscriptionsPage.columns.term", "Term"),
-      minWidth: 120,
-      renderCell: (params) => (
-        <Typography>{params.row.term?.term_name ?? "—"}</Typography>
-      ),
-    },
-    {
       field: "period",
       headerName: t("subscriptionsPage.columns.period", "Period"),
       minWidth: 220,

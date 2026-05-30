@@ -12,16 +12,16 @@ import {
   TablePagination,
   Typography,
   useTheme,
-} from '@mui/material';
-import ArrowDownwardIcon from '@mui/icons-material/ArrowDownward';
-import ArrowUpwardIcon from '@mui/icons-material/ArrowUpward';
-import SortIcon from '@mui/icons-material/Sort';
-import { useMemo, useState } from 'react';
-import type { GridColDef, GridRenderCellParams } from '@mui/x-data-grid';
+} from "@mui/material";
+import ArrowDownwardIcon from "@mui/icons-material/ArrowDownward";
+import ArrowUpwardIcon from "@mui/icons-material/ArrowUpward";
+import SortIcon from "@mui/icons-material/Sort";
+import { useMemo, useState } from "react";
+import type { GridColDef, GridRenderCellParams } from "@mui/x-data-grid";
 
 type RowIdentifier<RowType> = (row: RowType) => string | number;
 
-type SortDirection = 'asc' | 'desc';
+type SortDirection = "asc" | "desc";
 type SortConfig = {
   field: string;
   direction: SortDirection;
@@ -44,7 +44,9 @@ interface SoftDataGridProps<RowType extends Record<string, unknown>> {
 
 const defaultMaxHeight = 420;
 
-export const SoftDataGrid = <RowType extends Record<string, unknown> = Record<string, unknown>>({
+export const SoftDataGrid = <
+  RowType extends Record<string, unknown> = Record<string, unknown>,
+>({
   rows,
   columns,
   loading,
@@ -53,7 +55,7 @@ export const SoftDataGrid = <RowType extends Record<string, unknown> = Record<st
   maxHeight = defaultMaxHeight,
   onSort,
   sortConfig,
-  emptyMessage = 'No records found',
+  emptyMessage = "No records found",
   pagination = false,
   initialPageSize = 10,
   pageSizeOptions = [10, 25, 50, 100],
@@ -83,7 +85,9 @@ export const SoftDataGrid = <RowType extends Record<string, unknown> = Record<st
   const renderCellContent = (column: GridColDef<RowType>, row: RowType) => {
     if (column.renderCell) {
       const params: GridRenderCellParams<RowType> = {
-        id: getRowId ? getRowId(row) : (row as Record<string, unknown>)[column.field] ?? '',
+        id: getRowId
+          ? getRowId(row)
+          : ((row as Record<string, unknown>)[column.field] ?? ""),
         field: column.field,
         row,
         value: row[column.field as keyof RowType],
@@ -93,8 +97,8 @@ export const SoftDataGrid = <RowType extends Record<string, unknown> = Record<st
     }
 
     const value = row[column.field as keyof RowType];
-    if (value === null || value === undefined || value === '') {
-      return '-';
+    if (value === null || value === undefined || value === "") {
+      return "-";
     }
     return String(value);
   };
@@ -105,10 +109,13 @@ export const SoftDataGrid = <RowType extends Record<string, unknown> = Record<st
     }
     const fallbackKey = columns[0]?.field;
     const fallbackValue =
-      fallbackKey && typeof fallbackKey === 'string'
+      fallbackKey && typeof fallbackKey === "string"
         ? (row as Record<string, unknown>)[fallbackKey]
         : undefined;
-    if (typeof fallbackValue === 'string' || typeof fallbackValue === 'number') {
+    if (
+      typeof fallbackValue === "string" ||
+      typeof fallbackValue === "number"
+    ) {
       return fallbackValue;
     }
     return index;
@@ -119,8 +126,13 @@ export const SoftDataGrid = <RowType extends Record<string, unknown> = Record<st
   const handleHeaderSort = (column: GridColDef<RowType>) => {
     if (!column.sortable) return;
     const nextDirection: SortDirection =
-      activeSort?.field === column.field && activeSort.direction === 'asc' ? 'desc' : 'asc';
-    const config: SortConfig = { field: column.field, direction: nextDirection };
+      activeSort?.field === column.field && activeSort.direction === "asc"
+        ? "desc"
+        : "asc";
+    const config: SortConfig = {
+      field: column.field,
+      direction: nextDirection,
+    };
     if (!sortConfig) {
       setInternalSort(config);
     }
@@ -132,37 +144,53 @@ export const SoftDataGrid = <RowType extends Record<string, unknown> = Record<st
       elevation={0}
       sx={[
         {
-          width: '100%',
+          width: "100%",
           backgroundColor: theme.palette.background.paper,
-          position: 'relative',
-          boxShadow: 'none',
+          position: "relative",
+          boxShadow: "none",
         },
       ]}
     >
-      <TableContainer component={Box} sx={[{ maxHeight, overflowY: 'auto' }]}>
-        <Table stickyHeader sx={{ borderCollapse: 'collapse', border: '1px solid #dcdcdc'}}>
+      <TableContainer component={Box} sx={[{ maxHeight, overflowY: "auto" }]}>
+        <Table
+          stickyHeader
+          sx={{ borderCollapse: "collapse", border: "1px solid #dcdcdc" }}
+        >
           <TableHead>
-            <TableRow sx={{ backgroundColor: "rgba(23, 119, 240, 0.12)"}}>
-              {columns.map((column) => (
+            <TableRow sx={{ backgroundColor: "rgba(23, 119, 240, 0.12)" }}>
+              {columns.map((column, index) => (
                 <TableCell
-                  key={column.field}
-                  align={column.align ?? 'left'}
+                  key={`column-${column.field}-${index}`}
+                  align={column.headerAlign ?? column.align ?? "left"}
                   sx={{
-                    fontSize: '0.9rem',
+                    fontSize: "0.9rem",
                     fontWeight: 600,
                     color: theme.palette.text.primary,
-                    borderBottom: 'none',
-                    minWidth: column.width ?? 120,
+                    borderBottom: "none",
+                    minWidth: column.width ?? column.minWidth ?? 120,
                     maxWidth: column.width ? column.width + 60 : 340,
-                    whiteSpace: 'nowrap',
-                    textOverflow: 'ellipsis',
-                    overflow: 'hidden',
-                    backgroundColor: '#c8ceff',
-                    borderRight: '1px solid #dcdcdc',
+                    whiteSpace: "nowrap",
+                    textOverflow: "ellipsis",
+                    overflow: "hidden",
+                    backgroundColor: "#c8ceff",
+                    borderRight: "1px solid #dcdcdc",
                     px: 2,
                   }}
                 >
-                  <Box sx={{ display: 'flex', alignItems: 'center', gap: 0.75 }}>
+                  <Box
+                    sx={{
+                      display: "flex",
+                      alignItems: "center",
+                      gap: 0.75,
+                      width: "100%",
+                      justifyContent:
+                        column.headerAlign === "center"
+                          ? "center"
+                          : column.headerAlign === "right"
+                            ? "flex-end"
+                            : "flex-start",
+                    }}
+                  >
                     <Typography component="span" sx={{ fontWeight: 600 }}>
                       {column.headerName}
                     </Typography>
@@ -175,14 +203,14 @@ export const SoftDataGrid = <RowType extends Record<string, unknown> = Record<st
                             activeSort?.field === column.field
                               ? theme.palette.primary.main
                               : theme.palette.text.secondary,
-                          '&:hover': {
-                            backgroundColor: 'rgba(94, 79, 216, 0.12)',
+                          "&:hover": {
+                            backgroundColor: "rgba(94, 79, 216, 0.12)",
                           },
                         }}
                         aria-label={`Sort by ${column.headerName}`}
                       >
                         {activeSort?.field === column.field ? (
-                          activeSort.direction === 'asc' ? (
+                          activeSort.direction === "asc" ? (
                             <ArrowUpwardIcon fontSize="small" />
                           ) : (
                             <ArrowDownwardIcon fontSize="small" />
@@ -197,81 +225,90 @@ export const SoftDataGrid = <RowType extends Record<string, unknown> = Record<st
               ))}
             </TableRow>
           </TableHead>
-          <TableBody sx={{ backgroundColor: theme.palette.background.default, borderCollapse: 'collapse' }}>
-            {loading && computedRows.length === 0
-              ? skeletonRows.map((_, index) => (
-                  <TableRow
-                    key={`skeleton-${index}`}
-                    sx={{
-                      borderRadius: 2,
-                      mb: 1,
-                      backgroundColor: '#ffffff',
-                      '&:hover': {
-                        backgroundColor: '#eef0ff',
-                      },
-                    }}
-                  >
-                    {columns.map((column) => (
-                      <TableCell
-                        key={column.field}
-                        align={column.align ?? 'left'}
-                        sx={{
-                          py: 2,
-                          px: 2,
-                          maxWidth: column.width ?? 300,
-                          whiteSpace: 'nowrap',
-                          textOverflow: 'ellipsis',
-                          overflow: 'hidden',
-                          borderRight: '1px solid rgba(15, 23, 42, 0.04)',
-                        }}
-                      >
-                        <Skeleton animation="wave" />
-                      </TableCell>
-                    ))}
-                  </TableRow>
-                ))
-              : computedRows.length === 0
-              ? (
-                  <TableRow>
-                    <TableCell colSpan={columns.length} align="center" sx={{ py: 6 }}>
-                      <Typography variant="body2" color="text.secondary">
-                        {emptyMessage}
-                      </Typography>
+          <TableBody
+            sx={{
+              backgroundColor: theme.palette.background.default,
+              borderCollapse: "collapse",
+            }}
+          >
+            {loading && computedRows.length === 0 ? (
+              skeletonRows.map((_, index) => (
+                <TableRow
+                  key={`skeleton-${index}`}
+                  sx={{
+                    borderRadius: 2,
+                    mb: 1,
+                    backgroundColor: "#ffffff",
+                    "&:hover": {
+                      backgroundColor: "#eef0ff",
+                    },
+                  }}
+                >
+                  {columns.map((column, index) => (
+                    <TableCell
+                      key={`column-${column.field}-${index}`}
+                      align={column.align ?? "left"}
+                      sx={{
+                        py: 2,
+                        px: 2,
+                        maxWidth: column.width ?? 300,
+                        whiteSpace: "nowrap",
+                        textOverflow: "ellipsis",
+                        overflow: "hidden",
+                        borderRight: "1px solid rgba(15, 23, 42, 0.04)",
+                      }}
+                    >
+                      <Skeleton animation="wave" />
                     </TableCell>
-                  </TableRow>
-                )
-              : paginatedRows.map((row, index) => (
-                  <TableRow
-                    key={deriveRowKey(row, index)}
-                    sx={{
-                      borderRadius: 2,
-                      mb: 1,
-                      backgroundColor: '#ffffff',
-                      '&:hover': {
-                        backgroundColor: '#eef0ff',
-                      },
-                    }}
-                  >
-                    {columns.map((column) => (
-                      <TableCell
-                        key={column.field}
-                        align={column.align ?? 'left'}
-                        sx={{
-                          borderBottom: 'none',
-                          py: 2,
-                          px: 2,
-                          maxWidth: column.width ?? 300,
-                          whiteSpace: 'nowrap',
-                          textOverflow: 'ellipsis',
-                          overflow: 'hidden',
-                          borderRight: '1px solid rgba(15, 23, 42, 0.04)',
-                        }}
-                      >
-                        {renderCellContent(column, row)}
-                      </TableCell>
-                    ))}
-                  </TableRow>
-                ))}
+                  ))}
+                </TableRow>
+              ))
+            ) : computedRows.length === 0 ? (
+              <TableRow>
+                <TableCell
+                  colSpan={columns.length}
+                  align="center"
+                  sx={{ py: 6 }}
+                >
+                  <Typography variant="body2" color="text.secondary">
+                    {emptyMessage}
+                  </Typography>
+                </TableCell>
+              </TableRow>
+            ) : (
+              paginatedRows.map((row, index) => (
+                <TableRow
+                  key={deriveRowKey(row, index)}
+                  sx={{
+                    borderRadius: 2,
+                    mb: 1,
+                    backgroundColor: "#ffffff",
+                    "&:hover": {
+                      backgroundColor: "#eef0ff",
+                    },
+                  }}
+                >
+                  {columns.map((column, index) => (
+                    <TableCell
+                      key={`column-${column.field}-${index}`}
+                      align={column.align ?? "left"}
+                      sx={{
+                        borderBottom: "none",
+                        py: 2,
+                        px: 2,
+                        maxWidth: column.width ?? 300,
+                        whiteSpace: "nowrap",
+                        textOverflow: "ellipsis",
+                        overflow: "hidden",
+                        borderRight: "1px solid rgba(15, 23, 42, 0.04)",
+                      }}
+                    >
+                      {renderCellContent(column, row)}
+                    </TableCell>
+                  ))}
+                </TableRow>
+              ))
+            )}
           </TableBody>
         </Table>
       </TableContainer>
@@ -285,7 +322,11 @@ export const SoftDataGrid = <RowType extends Record<string, unknown> = Record<st
           rowsPerPage={rowsPerPage}
           onRowsPerPageChange={(event) => {
             const nextSize = Number(event.target.value);
-            setRowsPerPage(Number.isFinite(nextSize) && nextSize > 0 ? nextSize : initialPageSize);
+            setRowsPerPage(
+              Number.isFinite(nextSize) && nextSize > 0
+                ? nextSize
+                : initialPageSize,
+            );
             setPage(0);
           }}
           rowsPerPageOptions={pageSizeOptions}

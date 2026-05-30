@@ -149,7 +149,7 @@ export default function PaymentModeStep(props: Props) {
                 <Alert severity="warning" sx={{ mt: 1.5 }}>
                   {t("wallet.insufficient", {
                     defaultValue:
-                      "Số dư ví không đủ, vui lòng nạp thêm hoặc chọn MoMo",
+                      "Số dư ví không đủ, vui lòng nạp thêm",
                   })}
                 </Alert>
               )}

@@ -2,20 +2,16 @@ import React, { useEffect, useMemo, useState } from "react";
 import {
   ActivityIndicator,
   Alert,
-  Platform,
   ScrollView,
   StyleSheet,
   Text,
   TouchableOpacity,
   View,
 } from "react-native";
-import DateTimePicker, {
-  DateTimePickerEvent,
-} from "@react-native-community/datetimepicker";
 import * as Linking from "expo-linking";
 import { useTranslation } from "react-i18next";
 import Ionicons from "@expo/vector-icons/Ionicons";
-
+import { useNavigation } from '@react-navigation/native';
 import { useInvoicesPaginated } from "../api/invoices";
 import { useCheckoutPayDebt } from "../api/momo";
 import ListScreen from "../component/ListScreen";
@@ -24,8 +20,7 @@ import { getInvoiceStatus, getInvoiceStatusLabelKey } from "../ultis/status";
 import { InvoiceStatus, PaymentMethod } from "../constant/types";
 import * as Clipboard from "expo-clipboard";
 import { showAppToast } from "../ultis/toast";
-
-type DatePickerTarget = "from" | "to";
+import DateRangeFilter from "../component/DateRangeFilter";
 
 const getPaymentUrl = (response: any) => {
   return (
@@ -42,12 +37,12 @@ const getPaymentUrl = (response: any) => {
 
 export default function InvoicesScreen() {
   const { t } = useTranslation();
+  const navigation = useNavigation<any>();
 
   const [fromDate, setFromDate] = useState("");
   const [toDate, setToDate] = useState("");
+  const [statusFilter, setStatusFilter] = useState<InvoiceStatus | "">("");
   const [page, setPage] = useState(1);
-  const [datePickerTarget, setDatePickerTarget] =
-    useState<DatePickerTarget | null>(null);
   const [payingInvoiceId, setPayingInvoiceId] = useState<string | null>(null);
 
   const limit = 5;
@@ -61,6 +56,7 @@ export default function InvoicesScreen() {
     limit,
     from_time: toStartOfDay(fromDate),
     to_time: toEndOfDay(toDate),
+    status: statusFilter || undefined,
   });
 
   const payDebtMutation = useCheckoutPayDebt();
@@ -79,45 +75,12 @@ export default function InvoicesScreen() {
   const startItem = total === 0 ? 0 : (page - 1) * limit + 1;
   const endItem = Math.min(page * limit, total);
 
-  const hasFilter = Boolean(fromDate || toDate);
-
-  const selectedPickerDate = useMemo(() => {
-    if (datePickerTarget === "from" && fromDate) {
-      return new Date(fromDate);
-    }
-
-    if (datePickerTarget === "to" && toDate) {
-      return new Date(toDate);
-    }
-
-    return new Date();
-  }, [datePickerTarget, fromDate, toDate]);
-
-  const handleChangeDate = (
-    event: DateTimePickerEvent,
-    selectedDate?: Date,
-  ) => {
-    if (Platform.OS === "android") {
-      setDatePickerTarget(null);
-    }
-
-    if (event.type === "dismissed" || !selectedDate || !datePickerTarget) {
-      return;
-    }
-
-    const value = toDateKey(selectedDate);
-
-    if (datePickerTarget === "from") {
-      setFromDate(value);
-      return;
-    }
-
-    setToDate(value);
-  };
+  const hasFilter = Boolean(fromDate || toDate || statusFilter);
 
   const clearFilters = () => {
     setFromDate("");
     setToDate("");
+    setStatusFilter("");
     setPage(1);
   };
 
@@ -161,15 +124,24 @@ export default function InvoicesScreen() {
 
   return (
     <ListScreen
-      title={t("invoices.title")}
-      subtitle={t("invoices.subtitle")}
+      title={undefined as string | undefined}
+      subtitle={undefined}
       loading={false}
+      hiddenHeader={true}
       error={isError ? t("invoices.loadError") : null}
     >
       <ScrollView
         showsVerticalScrollIndicator={false}
         contentContainerStyle={styles.container}
       >
+        <View style={styles.header}>
+          <TouchableOpacity style={styles.backBtn} onPress={() => navigation.goBack()} activeOpacity={0.85}>
+            <Ionicons name="chevron-back" size={22} color="#0f172a" />
+          </TouchableOpacity>
+          <Text style={styles.title}>{t('invoices.title')}</Text>
+          <View style={styles.headerRight} />
+        </View>
+
         <View style={styles.filterCard}>
           <View style={styles.filterHeader}>
             <View style={styles.filterIconBox}>
@@ -193,74 +165,47 @@ export default function InvoicesScreen() {
             )}
           </View>
 
-          <View style={styles.dateRow}>
-            <TouchableOpacity
-              style={styles.dateButton}
-              activeOpacity={0.85}
-              onPress={() => setDatePickerTarget("from")}
-            >
-              <Text style={styles.dateLabel}>{t("invoices.filters.from")}</Text>
-
-              <View style={styles.dateValueRow}>
-                <Text
-                  style={[
-                    styles.dateValue,
-                    !fromDate && styles.datePlaceholder,
-                  ]}
-                >
-                  {fromDate
-                    ? formatDate(fromDate)
-                    : t("invoices.filters.selectDate")}
-                </Text>
-
-                <Ionicons name="calendar-outline" size={15} color="#64748b" />
-              </View>
-            </TouchableOpacity>
-
-            <TouchableOpacity
-              style={styles.dateButton}
-              activeOpacity={0.85}
-              onPress={() => setDatePickerTarget("to")}
-            >
-              <Text style={styles.dateLabel}>{t("invoices.filters.to")}</Text>
-
-              <View style={styles.dateValueRow}>
-                <Text
-                  style={[styles.dateValue, !toDate && styles.datePlaceholder]}
-                >
-                  {toDate
-                    ? formatDate(toDate)
-                    : t("invoices.filters.selectDate")}
-                </Text>
-
-                <Ionicons name="calendar-outline" size={15} color="#64748b" />
-              </View>
-            </TouchableOpacity>
-          </View>
-        </View>
-
-        {datePickerTarget && (
-          <View style={styles.datePickerWrap}>
-            <DateTimePicker
-              value={selectedPickerDate}
-              mode="date"
-              display={Platform.OS === "ios" ? "spinner" : "default"}
-              onChange={handleChangeDate}
+          <View>
+            <DateRangeFilter
+              fromDate={fromDate}
+              toDate={toDate}
+              fromLabel={t("invoices.filters.from")}
+              toLabel={t("invoices.filters.to")}
+              placeholder={t("invoices.filters.selectDate")}
+              invalidMessage={t("common.dateRange.invalidDateRange")}
+              formatDate={formatDate}
+              onChangeFromDate={setFromDate}
+              onChangeToDate={setToDate}
             />
+          </View>
 
-            {Platform.OS === "ios" && (
+          <View style={styles.statusRow}>
+            <Text style={styles.dateLabel}>{t("invoices.filters.status")}</Text>
+            <View style={styles.statusChips}>
               <TouchableOpacity
-                style={styles.datePickerDoneBtn}
-                onPress={() => setDatePickerTarget(null)}
                 activeOpacity={0.85}
+                onPress={() => setStatusFilter("")}
+                style={[styles.statusChip, !statusFilter && styles.statusChipActive]}
               >
-                <Text style={styles.datePickerDoneText}>
-                  {t("common.confirm")}
+                <Text style={[styles.statusChipText, !statusFilter && styles.statusChipTextActive]}>
+                  {t("invoices.filters.statusAll")}
                 </Text>
               </TouchableOpacity>
-            )}
+              {Object.values(InvoiceStatus).map((st) => (
+                <TouchableOpacity
+                  key={st}
+                  activeOpacity={0.85}
+                  onPress={() => setStatusFilter(st)}
+                  style={[styles.statusChip, statusFilter === st && styles.statusChipActive]}
+                >
+                  <Text style={[styles.statusChipText, statusFilter === st && styles.statusChipTextActive]}>
+                    {t(getInvoiceStatusLabelKey(st))}
+                  </Text>
+                </TouchableOpacity>
+              ))}
+            </View>
           </View>
-        )}
+        </View>
 
         {isLoading ? (
           <View style={styles.stateCard}>
@@ -434,7 +379,7 @@ function InvoiceCard({
         <InfoRow
           icon="wallet-outline"
           label={t("invoices.card.paymentMethod")}
-          value={paymentMethod}
+          value={t(`common.paymentMethod.${paymentMethod}`)}
         />
       </View>
 
@@ -523,6 +468,34 @@ const styles = StyleSheet.create({
     paddingBottom: 18,
   },
 
+    header: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    marginBottom: 14,
+  },
+  backBtn: {
+    width: 40,
+    height: 40,
+    borderRadius: 14,
+    backgroundColor: '#ffffff',
+    justifyContent: 'center',
+    alignItems: 'center',
+    elevation: 3,
+  },
+  title: {
+    flex: 1,
+    textAlign: 'center',
+    fontSize: 16,
+    fontWeight: '900',
+    color: '#0f172a',
+  },
+  headerCenter: {
+    flex: 1,
+  },
+  headerRight: {
+    width: 40,
+  },
+
   filterCard: {
     backgroundColor: "#ffffff",
     borderRadius: 6,
@@ -561,60 +534,40 @@ const styles = StyleSheet.create({
     fontWeight: "900",
     color: "#475569",
   },
-  dateRow: {
+  statusRow: {
+    marginTop: 12,
+    gap: 8,
+  },
+  statusChips: {
     flexDirection: "row",
+    flexWrap: "wrap",
     gap: 10,
   },
-  dateButton: {
-    flex: 1,
-    minHeight: 58,
-    borderRadius: 6,
+  statusChip: {
+    paddingHorizontal: 12,
+    paddingVertical: 8,
+    borderRadius: 999,
+    backgroundColor: "#ffffff",
     borderWidth: 1,
-    borderColor: "#dbeafe",
-    backgroundColor: "#f8fafc",
-    paddingHorizontal: 11,
-    paddingVertical: 9,
-    justifyContent: "center",
+    borderColor: "#e2e8f0",
+  },
+  statusChipActive: {
+    backgroundColor: "#eff6ff",
+    borderColor: "#2563eb",
+  },
+  statusChipText: {
+    fontSize: 12,
+    fontWeight: "800",
+    color: "#334155",
+  },
+  statusChipTextActive: {
+    color: "#2563eb",
   },
   dateLabel: {
     fontSize: 11,
     fontWeight: "800",
     color: "#64748b",
   },
-  dateValueRow: {
-    marginTop: 5,
-    flexDirection: "row",
-    alignItems: "center",
-    gap: 6,
-  },
-  dateValue: {
-    flex: 1,
-    fontSize: 12.5,
-    fontWeight: "900",
-    color: "#0f172a",
-  },
-  datePlaceholder: {
-    color: "#94a3b8",
-  },
-  datePickerWrap: {
-    borderRadius: 6,
-    backgroundColor: "#ffffff",
-    borderWidth: 1,
-    borderColor: "#e2e8f0",
-    overflow: "hidden",
-  },
-  datePickerDoneBtn: {
-    height: 44,
-    alignItems: "center",
-    justifyContent: "center",
-    backgroundColor: "#2563eb",
-  },
-  datePickerDoneText: {
-    fontSize: 14,
-    fontWeight: "900",
-    color: "#ffffff",
-  },
-
   invoiceList: {
     gap: 12,
   },

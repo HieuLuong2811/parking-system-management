@@ -9,7 +9,6 @@ export const getPlanMeta = (type: string) => {
     return {
       labelKey: "plans.basic",
       icon: "shield-star-outline" as const,
-      dark: true,
       borderColor: "#facc15",
     };
   }
@@ -18,7 +17,6 @@ export const getPlanMeta = (type: string) => {
     return {
       labelKey: "plans.startup",
       icon: "rocket-launch-outline" as const,
-      dark: false,
       borderColor: "#dbeafe",
     };
   }
@@ -27,7 +25,6 @@ export const getPlanMeta = (type: string) => {
     return {
       labelKey: "plans.enterprise",
       icon: "diamond-stone" as const,
-      dark: false,
       borderColor: "#dbeafe",
     };
   }
@@ -35,7 +32,6 @@ export const getPlanMeta = (type: string) => {
   return {
     labelKey: "",
     icon: "parking" as const,
-    dark: false,
     borderColor: "#dbeafe",
   };
 };
@@ -48,22 +44,6 @@ export const getPlanNameKey = (plansType?: string | null) => {
   if (normalized.includes(SubscriptionPlanType.ENTERPRISE)) return "plans.enterprise";
   return "";
 };
-
-export const getVehicleDisplayName = (
-  vehicle?: UserSubscriptionDetail["vehicle"] | null,
-  fallback?: string,
-) => {
-  if (!vehicle) return fallback || "—";
-
-  const licensePlate = vehicle.license_plate?.trim();
-
-  if (licensePlate) {
-    return licensePlate;
-  }
-
-  return fallback || vehicle.id || "—";
-};
-
 
 export const getParkingStatusColor = (status?: string | null) => {
   const normalized = normalizeText(status);

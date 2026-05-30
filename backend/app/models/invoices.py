@@ -56,3 +56,8 @@ class InvoiceUpdate(SQLModel):
     status: Optional[InvoiceStatus] = None
     payment_order_id: Optional[str] = None
     paid_at: datetime | None = None
+
+class SubscriptionInvoicesRead(SQLModel):
+    user_code: str | None = None
+    full_name: str | None = None
+    data: list[InvoiceRead] = []

@@ -36,13 +36,13 @@ _BILLING_FAILED_SUBJECTS: dict[str, str] = {
 
 _ADMIN_BILLING_REPORT_SUBJECTS: dict[str, str] = {
     "en": "[{project_name}] Overdue subscription billing report - {report_date}",
-    "vi": "[{project_name}] Báo cáo gói gửi xe chưa thanh toán đúng hạn - {report_date}",
+    "vi": "[{project_name}] Báo cáo vé gửi xe chưa thanh toán đúng hạn - {report_date}",
     "th": "[{project_name}] รายงานแพ็กเกจที่จอดรถค้างชำระ - {report_date}",
 }
 
 _ADMIN_BILLING_FAILURE_ALERT_SUBJECTS: dict[str, str] = {
     "en": "[{project_name}] Subscription suspended - Invoice {invoice_id}",
-    "vi": "[{project_name}] Gói gửi xe bị tạm ngưng - Invoice {invoice_id}",
+    "vi": "[{project_name}] vé gửi xe bị tạm ngưng - Invoice {invoice_id}",
     "th": "[{project_name}] แพ็กเกจถูกระงับ - Invoice {invoice_id}",
 }
 
@@ -341,7 +341,7 @@ def send_admin_billing_report_email(
     )
 
     body = (
-        f"Báo cáo gói gửi xe chưa thanh toán đúng hạn.\n"
+        f"Báo cáo vé gửi xe chưa thanh toán đúng hạn.\n"
         f"Ngày báo cáo: {now.strftime('%d/%m/%Y')}.\n"
         f"Số bản ghi: {report_rows_count}.\n"
         f"Vui lòng xem file Excel đính kèm."

@@ -9,7 +9,7 @@ from app.api.controller.invoices import (
     InvoiceController,
 )
 from app.db.session import get_db
-from app.models.invoices import InvoiceCreate, InvoiceRead, InvoiceUpdate
+from app.models.invoices import InvoiceRead, InvoiceUpdate, SubscriptionInvoicesRead
 from app.utils.pagination import PaginatedResponse
 
 router = APIRouter(prefix="/invoices", tags=["invoices"])
@@ -26,6 +26,7 @@ async def list_user_invoices_paginated(
     limit: int = Query(5, ge=1, le=100, description="Number of items per page"),
     from_time: datetime | None = Query(None, description="Filter by created_at (from)"),
     to_time: datetime | None = Query(None, description="Filter by created_at (to)"),
+    status: str | None = Query(None, description="Filter by invoice status"),
 ):
     return await InvoiceController.get_invoices_by_user_paginated_ctrl(
         current_user.user_code,
@@ -34,8 +35,22 @@ async def list_user_invoices_paginated(
         limit=limit,
         from_time=from_time,
         to_time=to_time,
+        status=status,
     )
 
+@router.get(
+    "/by-subscription/{subscription_id}",
+    response_model=SubscriptionInvoicesRead,
+)
+async def get_invoices_by_subscription_id(
+    subscription_id: str,
+    db: AsyncSession = Depends(get_db),
+    current_user: AuthUser = Depends(required_roles("ADMIN")),
+):
+    return await InvoiceController.get_invoices_by_subscription_id_ctrl(
+        subscription_id,
+        db,
+    )
 
 @router.get("/{user_code}", response_model=InvoiceRead)
 async def get_invoice(user_code: str, db: AsyncSession = Depends(get_db), current_user: AuthUser = Depends(required_roles("USER", "SECURITY"))):

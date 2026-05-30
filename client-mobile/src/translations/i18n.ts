@@ -5,10 +5,11 @@ import * as Localization from 'expo-localization';
 import vi from './vi';
 import en from './en';
 import th from './th';
+import lo from './lo';
 
 const deviceLanguage = Localization.getLocales?.()[0]?.languageCode ?? 'vi';
 
-const supportedLanguages = ['vi', 'en', 'th'];
+const supportedLanguages = ['vi', 'en', 'th', 'lo'];
 const fallbackLng = supportedLanguages.includes(deviceLanguage) ? deviceLanguage : 'vi';
 
 i18n.use(initReactI18next).init({
@@ -22,6 +23,7 @@ i18n.use(initReactI18next).init({
     vi: { translation: vi },
     en: { translation: en },
     th: { translation: th },
+    lo: { translation: lo },
   },
 });
 

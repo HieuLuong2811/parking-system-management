@@ -117,7 +117,7 @@ export const SubscriptionPlansPage: React.FC = () => {
       value === true ? <CheckIcon fontSize="small" color="success" /> : <CloseIcon fontSize="small" color="error" />;
 
     const baseColumns: GridColDef<SubscriptionPlanRecord>[] = [
-      { field: 'plans_type', headerName: t('subscriptionPlansPage.columns.planType', { defaultValue: 'Plan type' }), width: 180, sortable: true,
+      { field: 'plans_type', headerName: t('subscriptionPlansPage.columns.planType', { defaultValue: 'Plan type' }), width: 100, sortable: true,
         renderCell: (params) => {
           const value = params.value;
           return t(`common.subscriptionPlans.${value}`, { defaultValue: value });
@@ -273,7 +273,7 @@ export const SubscriptionPlansPage: React.FC = () => {
             </Button>
           </Stack>
           <Stack direction="row" spacing={1}>
-            <Button variant="contained" size="small" onClick={handleOpenNew}>
+            <Button variant="contained" onClick={handleOpenNew}>
               {t('subscriptionPlansPage.button.add', { defaultValue: 'Add new plan' })}
             </Button>
           </Stack>

@@ -1,37 +1,59 @@
 const en = {
   translation: {
-    "sideBar": {
-      "title": "Parking System",
-      "subMenu": {
-        "General": "General",
-        "Operations": "Operations",
-        "Billing": "Billing",
-        "Management": "Management",
-        "settings": "Settings"
+    sideBar: {
+      title: "Parking System",
+      collapse: "Collapse sidebar",
+      expand: "Expand sidebar",
+      subMenu: {
+        General: "General",
+        Operations: "Operations",
+        Billing: "Billing",
+        Management: "Management",
+        settings: "Settings",
       },
-      "parents": {
-        "billing": "Billing",
-        "userManagement": "User Management"
+      parents: {
+        billing: "Billing",
+        userManagement: "User Management",
       },
-      "children": {
-        "dashboard": "Dashboard",
-        "parkingSessions": "Parking Sessions",
-        "subscriptions": "Subscriptions",
-        "paymentTransactions": "Payment Transactions",
-        "users": "Users",
-        "roles": "Roles",
-        "paymentPlans": "Payment Plans",
-        "plans": "Plans",
-        "terms": "Terms",
-        "notifications": "Notifications",
-        "profile": "Profile",
-        "logout": "Logout"
-      }
+      children: {
+        dashboard: "Dashboard",
+        parkingSessions: "Parking Sessions",
+        parkingAccessCards: "Access cards",
+        subscriptions: "Subscriptions",
+        paymentTransactions: "Payment Transactions",
+        users: "Users",
+        roles: "Roles",
+        paymentPlans: "Payment Plans",
+        plans: "Plans",
+        terms: "Terms",
+        notifications: "Notifications",
+        profile: "Profile settings",
+        logout: "Logout",
+      },
     },
     common: {
       filters: {
+        all: "All",
         search: "Search by :",
         reset: "Clear filters",
+      },
+      pagination: {
+        rowsPerPage: "Rows per page:",
+        displayedRows: "{{from}}-{{to}} of {{count}}",
+      },
+      menu: "Menu",
+      home: "Home",
+      yes: "Yes",
+      no: "No",
+      changeLanguage: "Change language",
+      selected: "Selected",
+      loading: "Loading...",
+      button: {
+        next: "Next",
+        back: "Back",
+        submit: "Submit",
+        cancel: "Cancel",
+        continue: "Continue",
       },
       tooltips: {
         user_code: "User code",
@@ -69,15 +91,22 @@ const en = {
         after18Waived: "After 18:00 fee waived",
       },
       vehicleTypeOptions: {
-        ALL: "All",
-        MOTORBIKE: "Motorbike",
-        BICYCLE: "Bicycle",
-        ELECTRIC_BICYCLE: "Electric bicycle",
+        LICENSED: "Licensed vehicle",
+        UNLICENSED: "Unlicensed vehicle",
       },
+      licensePlateLabel: 'Plate: {{license}}',
       roleTypes: {
         admin: "Administrator",
         user: "User",
         security: "Security Guard",
+        guest: "Guest",
+      },
+      table: {
+        actions: "Actions",
+      },
+      validation: {
+        required: "Required",
+        invalidDateRange: "Start date must come before end date.",
       },
     },
     pageTitle: {
@@ -111,6 +140,7 @@ const en = {
     validation: {
       requiredField: "{{field}} is required.",
       fieldFallback: "Field",
+      valueMustBeBetween: "Value must be between {{min}} and {{max}}.",
     },
     placeHolder: {
       search: "Search",
@@ -156,12 +186,65 @@ const en = {
         sessionDescription: "Last 6 weeks",
         revenueTitle: "Revenue overview",
         revenueDescription: "Subscription revenue breakdown",
+        invoiceStatusTitle: "Invoice status",
+        subscriptionStatusTitle: "Subscription status",
+        invoiceCount: "Invoices",
+        subscriptionCount: "Subscriptions",
         revenueMetric: {
           weekly: "Weekly snapshot",
           monthly: "Monthly average",
           yearly: "Yearly target",
         },
         revenueFooter: "Conversion rate improved over the last quarter.",
+      },
+      status: {
+        invoice: {
+          PAID: "Paid",
+          PENDING: "Pending",
+          FAILED: "Failed",
+        },
+        subscription: {
+          ACTIVE: "Active",
+          PAYMENT_DUE: "Payment due",
+          OVERDUE: "Overdue",
+          SUSPENDED: "Suspended",
+          CANCELED: "Canceled",
+          CANCELLED: "Canceled",
+          EXPIRED: "Expired",
+          INACTIVE: "Inactive",
+        },
+      },
+    },
+    profilePage: {
+      title: "Profile settings",
+      description: "Manage your profile and password.",
+      loadError: "Unable to load your profile.",
+      saveSuccess: "Profile updated.",
+      saveError: "Unable to save profile.",
+      validation: {
+        emailRequired: "Email is required.",
+        emailInvalid: "Invalid email format.",
+        phoneRequired: "Phone number is required.",
+        phoneInvalid: "Phone number must contain only 10 digits.",
+      },
+      section: {
+        profile: "Profile",
+        password: "Change password",
+      },
+      fields: {
+        email: "Email",
+        phone: "Phone number",
+      },
+      password: {
+        current: "Current password",
+        new: "New password",
+        confirm: "Confirm password",
+        submit: "Update password",
+        success: "Password updated.",
+        error: "Unable to change password.",
+        currentRequired: "Current password is required.",
+        newRequired: "New password is required.",
+        mismatch: "Passwords do not match.",
       },
     },
     parkingEventsPage: {
@@ -173,11 +256,26 @@ const en = {
       tableHeaders: {
         sessionId: "Session ID",
         vehicleId: "Vehicle",
-        checkIn: "Check-in",
-        checkOut: "Check-out",
-        totalDays: "Days",
-        amount: "Amount",
+        user: "User",
+        licensePlate: "License plate",
+        checkIn: "Check-in time",
+        checkOut: "Check-out time",
+        totalDays: "Total parking days",
+        status: "Status",
+        amount: "Parking fee",
         paymentMethod: "Payment method",
+        actions: "Actions",
+      },
+
+      actions: {
+        viewPlateImages: "View plate images",
+      },
+
+      plateImages: {
+        title: "License plate images",
+        checkIn: "Check-in plate image",
+        checkOut: "Check-out plate image",
+        noImage: "No license plate image",
       },
       exportButton: "Export sessions",
       exportModal: {
@@ -196,7 +294,81 @@ const en = {
       search: {
         label: "Session, vehicle, plate",
         userCode: "User code",
-        vehicleType: "Vehicle type",
+        status: "Status",
+        statusOptions: {
+          all: "All",
+          active: "Active",
+          done: "Done",
+        },
+        timeRangeLabel: "Time range",
+        timePresets: {
+          custom: "Custom",
+          today: "Today",
+          yesterday: "Yesterday",
+          last7Days: "Last 7 days",
+        },
+        from: "From",
+        to: "To",
+      },
+      status: {
+        ACTIVE: "Active",
+        DONE: "Done",
+      },
+      guest: "GUEST",
+      empty: "No parking sessions yet.",
+    },
+    parkingAccessCardsPage: {
+      title: "Parking access cards",
+      description:
+        "Manage the list of parking cards, track card types, statuses, and the users currently using them.",
+      empty: "No access cards found.",
+      error: "Could not load access cards.",
+      inUseStatus: {
+        using: "In use",
+        notUsing: "Not in use",
+      },
+      filters: {
+        barcode: "Card code",
+        holderType: "Holder type",
+        status: "Status",
+        userQuery: "User",
+        userQueryPlaceholder: "Full name or user code",
+        inUse: "In use",
+      },
+      columns: {
+        barcode: "Card code",
+        holderType: "Holder type",
+        user: "User",
+        status: "Status",
+        inUse: "In use",
+      },
+      holderType: {
+        student: "Student",
+        teacher: "Teacher",
+        guest: "Guest",
+      },
+      status: {
+        available: "Available",
+        assigned: "Assigned",
+        active: "Active",
+        disabled: "Disabled",
+        lost: "Lost",
+      },
+      actions: {
+        create: "Create card",
+        createTitle: "Create parking access card",
+        createSuccess: "Created parking access card.",
+        createError: "Create card failed.",
+        disable: "Disable",
+        confirmDisable: "Disable this card and notify the user by email?",
+        disableSuccess: "Card disabled. Email notification sent (if configured).",
+        disableError: "Disable card failed.",
+      },
+      form: {
+        holderType: "Holder type",
+        barcode: "Card code (optional)",
+        user: "User",
+        userPlaceholder: "Search by name, user code, or email",
       },
     },
     usersPage: {
@@ -393,12 +565,19 @@ const en = {
       tooltips: {
         edit: "Edit term",
         delete: "Delete term",
-        inUse: "Term is in use and cannot be deleted",
       },
       dialog: {
         addTitle: "Create new academic term",
         editTitle: "Edit academic term",
         saving: "Saving...",
+      },
+      delete: {
+        title: "Delete academic term",
+        message: "Are you sure you want to delete the academic term \"{{name}}\"? This action cannot be undone.",
+        cancel: "Cancel",
+        confirm: "Delete",
+        success: "Academic term deleted.",
+        error: "Unable to delete academic term.",
       },
     },
     plansPage: {
@@ -428,7 +607,6 @@ const en = {
         user: "User",
         plan: "Plan",
         paymentPlan: "Payment plan",
-        term: "Term",
         period: "Period",
         amount: "Amount",
         paid: "Paid",
@@ -476,6 +654,10 @@ const en = {
       },
       button: {
         add: "Add new Plan",
+      },
+      warnings: {
+        typeChange:
+          "If you change the plan type, the system will notify (and email) all users who are currently using this plan.",
       },
     },
     subscriptionInvoicesPage: {
@@ -537,6 +719,8 @@ const en = {
     },
     notifications: {
       sendBy: "Sent by {{sender}}",
+      title: "Notifications",
+      unread: "new",
       empty: "No new notifications",
       senders: {
         system: "System",
@@ -545,16 +729,8 @@ const en = {
         twoHours: "2 hours ago",
         yesterday: "Yesterday",
       },
-      items: {
-        permissions: {
-          title: "Permission update",
-          detail:
-            "The Student role has been adjusted to reflect the new structure.",
-        },
-        vehicles: {
-          title: "Vehicle data synced",
-          detail: "10 vehicles were just imported from Excel.",
-        },
+      titleType: {
+        PARKING_ACCESS_CARD_REPORTED_LOST: "Parking access card reported lost",
       },
     },
     resources: {
@@ -573,8 +749,6 @@ const en = {
     },
     paymentTransactionsPage: {
       description: "History of payment transactions.",
-      searchLabel: "Search",
-      searchPlaceholder: "Search by invoice, code, or user",
       empty: "No transactions yet.",
       columns: {
         user: "User",
@@ -590,6 +764,31 @@ const en = {
       tooltips: {
         invoice_id: "Invoice ID",
         invoice_createdAt: "Invoice created at",
+      },
+      filters: {
+        userCode: {
+          label: "User code",
+          placeholder: "Enter user code",
+        },
+        invoiceId: {
+          label: "Invoice",
+          placeholder: "Invoice id",
+        },
+        transactionCode: {
+          label: "Transaction code",
+          placeholder: "Transaction code",
+        },
+        timePreset: {
+          label: "Time range",
+          options: {
+            custom: "Custom",
+            today: "Today",
+            yesterday: "Yesterday",
+            last7Days: "Last 7 days",
+          },
+        },
+        from: { label: "From" },
+        to: { label: "To" },
       },
     },
     invoicesPage: {
@@ -622,6 +821,7 @@ const en = {
       tooltips: {
         edit: "Edit",
         delete: "Delete",
+        inUse: "Payment method is in use",
       },
       toast: {
         created: "Created payment plan.",
@@ -630,6 +830,9 @@ const en = {
         saveError: "Unable to save payment plan.",
         deleteError: "Unable to delete payment plan.",
         deleteConfirm: "Delete this payment plan?",
+        payment_plan_already_exists: "Payment plan already exists.",
+        discount_percent_invalid: "Discount percent must be between 0 and 100.",
+        payment_plan_in_use: "Payment method is in use and cannot be deleted.",
       },
       dialog: {
         addTitle: "Add payment plan",

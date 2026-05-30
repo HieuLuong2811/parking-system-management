@@ -1,3 +1,5 @@
+from datetime import datetime
+
 from fastapi import APIRouter, Depends, Query
 from sqlalchemy.ext.asyncio import AsyncSession
 
@@ -21,6 +23,10 @@ async def list_notifications(
     receiver_id: str | None = None,
     limit: int | None = Query(default=None, ge=1, le=100),
     offset: int | None = Query(default=None, ge=0),
+    is_read: bool | None = None,
+    type: str | None = None,
+    created_from: datetime | None = None,
+    created_to: datetime | None = None,
     include_deleted: bool = True,
     db: AsyncSession = Depends(get_db),
     current_user: AuthUser = Depends(required_roles("ADMIN")),
@@ -30,6 +36,10 @@ async def list_notifications(
         receiver_id,
         limit=limit,
         offset=offset,
+        is_read=is_read,
+        type=type,
+        created_from=created_from,
+        created_to=created_to,
         include_deleted=include_deleted,
     )
 
@@ -38,6 +48,10 @@ async def list_notifications(
 async def list_my_notifications(
     limit: int | None = Query(default=None, ge=1, le=100),
     offset: int | None = Query(default=None, ge=0),
+    is_read: bool | None = None,
+    type: str | None = None,
+    created_from: datetime | None = None,
+    created_to: datetime | None = None,
     db: AsyncSession = Depends(get_db),
     current_user: AuthUser = Depends(required_roles("USER", "ADMIN", "SECURITY")),
 ):
@@ -46,6 +60,10 @@ async def list_my_notifications(
         db,
         limit=limit,
         offset=offset,
+        is_read=is_read,
+        type=type,
+        created_from=created_from,
+        created_to=created_to,
     )
 
 

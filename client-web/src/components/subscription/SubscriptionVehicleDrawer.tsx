@@ -8,7 +8,7 @@ import {
 import PaymentsIcon from "@mui/icons-material/Payments";
 import EventIcon from "@mui/icons-material/Event";
 import { useTranslation } from "react-i18next";
-import { formatCurrency, formatDate } from "../../ultis/formatters";
+import { formatCurrency, formatDateTime } from "../../ultis/formatters";
 
 type Props = {
   open: boolean;
@@ -62,14 +62,14 @@ export default function SubscriptionVehicleDrawer({
         >
           <Typography variant="h6" fontWeight={700}>
             {t("profile.subscriptions.drawer.title", {
-              defaultValue: "Chi tiết gói đăng ký",
+              defaultValue: "Chi tiết vé gửi xe đã đăng ký",
             })}
           </Typography>
 
           <Typography variant="body2" color="text.secondary" sx={{ mt: 0.5 }}>
             {t("profile.subscriptions.drawer.subtitle", {
               id: subscription?.id ?? "—",
-              defaultValue: "Mã gói: {{id}}",
+              defaultValue: "Mã vé gửi xe: {{id}}",
             })}
           </Typography>
         </Box>
@@ -94,11 +94,6 @@ export default function SubscriptionVehicleDrawer({
               </Stack>
 
               <Stack spacing={1.15}>
-                <InfoLine
-                  label={t("profile.subscriptions.term")}
-                  value={subscription?.term?.term_name ?? "—"}
-                />
-
                 <InfoLine
                   label={t("profile.subscriptions.paymentPlan")}
                   value={paymentTypeLabel}
@@ -125,7 +120,7 @@ export default function SubscriptionVehicleDrawer({
                   label={t("profile.subscriptions.drawer.periodLabel", {
                     defaultValue: "Thời gian",
                   })}
-                  value={`${formatDate(subscription?.start_date)} – ${formatDate(
+                  value={`${formatDateTime(subscription?.start_date)} – ${formatDateTime(
                     subscription?.end_date,
                   )}`}
                 />
@@ -134,7 +129,7 @@ export default function SubscriptionVehicleDrawer({
                   label={t("profile.subscriptions.drawer.createdAtLabel", {
                     defaultValue: "Ngày đăng ký",
                   })}
-                  value={formatDate(String(subscription?.created_at ?? ""))}
+                  value={formatDateTime(String(subscription?.created_at ?? ""))}
                 />
               </Stack>
             </Box>

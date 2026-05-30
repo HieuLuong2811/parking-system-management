@@ -1,11 +1,13 @@
 from datetime import date, datetime
-from typing import Any, Optional
-from uuid import UUID
+from fastapi import HTTPException
 
-from app.models.invoices import Invoice, InvoiceCreate, InvoiceUpdate
+from app.models.invoices import Invoice, InvoiceCreate, InvoiceUpdate, SubscriptionInvoicesRead
+from app.enums.parking import InvoiceStatus
 from app.service.base import CRUDService
 from app.utils.pagination_db import paginate_scalars
-from sqlalchemy import select, extract
+from app.models.subscriptions import UserSubscription
+from app.models.users import Users
+from sqlalchemy import select, extract, desc
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.utils.pagination import PaginatedResponse
@@ -16,38 +18,6 @@ class invoiceService:
     @staticmethod
     async def create_invoice(payload: InvoiceCreate, db: AsyncSession) -> Invoice:
         return await invoiceService.crud.create(db, payload)
-
-    @staticmethod
-    def _parse_subscription_metadata(metadata: dict[str, Any]) -> Optional[tuple[UUID, UUID, UUID, date, date, int]]:
-        try:
-            sub_plan_id = UUID(str(metadata.get("sub_plan_id")))
-            term_id = UUID(str(metadata.get("term_id")))
-            payment_plan_id = UUID(str(metadata.get("payment_plan_id")))
-        except (TypeError, ValueError):
-            return None
-
-        start_date_value = metadata.get("start_date")
-        end_date_value = metadata.get("end_date")
-        start_date = None
-        end_date = None
-        if isinstance(start_date_value, str):
-            start_date = date.fromisoformat(start_date_value)
-        if isinstance(end_date_value, str):
-            end_date = date.fromisoformat(end_date_value)
-
-        if not all((start_date, end_date)):
-            return None
-
-        total_amount = metadata.get("total_amount")
-        if total_amount is None:
-            total_amount_value = metadata.get("amount") or 0
-        else:
-            try:
-                total_amount_value = int(total_amount)
-            except (TypeError, ValueError):
-                return None
-
-        return sub_plan_id, term_id, payment_plan_id, start_date, end_date, total_amount_value
 
     @staticmethod
     async def get_invoice_by_user_code(user_code: str, db: AsyncSession) -> Invoice:
@@ -70,6 +40,7 @@ class invoiceService:
         limit: int = 5,
         from_time: datetime | None = None,
         to_time: datetime | None = None,
+        status: str | None = None,
     ) -> PaginatedResponse[Invoice]:
         statement = select(Invoice).where(Invoice.user_code == user_code).order_by(Invoice.created_at.desc())
 
@@ -77,6 +48,12 @@ class invoiceService:
             statement = statement.where(Invoice.created_at >= from_time)
         if to_time is not None:
             statement = statement.where(Invoice.created_at <= to_time)
+        if status and status.strip():
+            try:
+                parsed = InvoiceStatus(status.strip())
+            except ValueError:
+                return {"data": [], "total": 0, "page": page, "limit": limit, "total_pages": 0}
+            statement = statement.where(Invoice.status == parsed)
 
         items, total, total_pages = await paginate_scalars(db, statement, page=page, limit=limit)
         return {
@@ -105,3 +82,40 @@ class invoiceService:
 
         result = await db.execute(stmt)
         return result.scalar_one_or_none()
+
+    @staticmethod
+    async def get_invoices_by_subscription_id(
+        subscription_id: str,
+        db: AsyncSession,
+    ) -> SubscriptionInvoicesRead:
+        subscription_stmt = (
+            select(UserSubscription, Users)
+            .outerjoin(Users, Users.user_code == UserSubscription.user_code)
+            .where(UserSubscription.id == subscription_id)
+        )
+
+        subscription_result = await db.execute(subscription_stmt)
+        subscription_row = subscription_result.first()
+
+        if not subscription_row:
+            raise HTTPException(
+                status_code=404,
+                detail="SUBSCRIPTION_NOT_FOUND",
+            )
+
+        subscription, user = subscription_row
+
+        invoice_stmt = (
+            select(Invoice)
+            .where(Invoice.subscription_id == subscription_id)
+            .order_by(desc(Invoice.created_at))
+        )
+
+        invoice_result = await db.execute(invoice_stmt)
+        invoices = invoice_result.scalars().all()
+
+        return SubscriptionInvoicesRead(
+            user_code=subscription.user_code,
+            full_name=user.full_name if user else None,
+            data=invoices,
+        )

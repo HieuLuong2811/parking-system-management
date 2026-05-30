@@ -169,8 +169,8 @@ export default function PlansScreen() {
             {activePlans.map((plan) => {
               const meta = getPlanMeta(plan.plans_type);
               const isInUse = Boolean((plan as any).is_in_use);
-              const isDark = meta.dark;
               const priceText = formatCurrency(plan.price_per_day);
+              const priceSurcharge = formatCurrency(plan.after_18_fee);
               const priceValue = Number(plan.price_per_day || 0);
               const planName = meta.labelKey
                 ? t(meta.labelKey)
@@ -181,7 +181,6 @@ export default function PlansScreen() {
                   key={plan.id}
                   style={[
                     styles.planCard,
-                    isDark && styles.planCardDark,
                     isInUse && styles.planCardInUse,
                     {
                       borderColor: isInUse ? "#86efac" : meta.borderColor,
@@ -204,20 +203,19 @@ export default function PlansScreen() {
                   <View style={styles.planHeader}>
                     <View
                       style={[
-                        styles.planIconBox,
-                        isDark && styles.planIconBoxDark,
+                        styles.planIconBox
                       ]}
                     >
                       <MaterialCommunityIcons
                         name={meta.icon}
                         size={28}
-                        color={isDark ? "#ffffff" : "#0f172a"}
+                        color={"#0f172a"}
                       />
                     </View>
 
                     <View style={styles.planTitleBox}>
                       <Text
-                        style={[styles.planName, isDark && styles.textWhite]}
+                        style={[styles.planName]}
                       >
                         {planName}
                       </Text>
@@ -225,7 +223,6 @@ export default function PlansScreen() {
                       <Text
                         style={[
                           styles.planCode,
-                          isDark && styles.textWhiteMuted,
                         ]}
                       >
                         {normalizeText(plan.plans_type)}
@@ -234,18 +231,13 @@ export default function PlansScreen() {
                   </View>
 
                   <View style={styles.priceRow}>
-                    <Text style={[styles.currency, isDark && styles.textWhite]}>
-                      đ
-                    </Text>
-
-                    <Text style={[styles.price, isDark && styles.textWhite]}>
+                    <Text style={[styles.price]}>
                       {priceText}
                     </Text>
 
                     <Text
                       style={[
                         styles.priceUnit,
-                        isDark && styles.textWhiteMuted,
                       ]}
                     >
                       {t("plans.perDay")}
@@ -257,7 +249,6 @@ export default function PlansScreen() {
                   <View style={styles.features}>
                     <FeatureRow
                       text={t("plans.monthlyPayment")}
-                      dark={isDark}
                     />
 
                     <FeatureRow
@@ -267,24 +258,12 @@ export default function PlansScreen() {
                           : t("plans.noFullPayment")
                       }
                       available={priceValue >= 4000}
-                      dark={isDark}
-                    />
-
-                    <FeatureRow
-                      text={t("plans.maxLicensedVehicle")}
-                      dark={isDark}
-                    />
-
-                    <FeatureRow
-                      text={t("plans.maxUnlicensedVehicle")}
-                      dark={isDark}
                     />
 
                     <FeatureRow
                       text={t("plans.dailyFee", {
                         price: priceText,
                       })}
-                      dark={isDark}
                     />
 
                     <FeatureRow
@@ -292,10 +271,9 @@ export default function PlansScreen() {
                         priceValue >= 4000
                           ? t("plans.after18Free")
                           : t("plans.after18Fee", {
-                              price: priceText,
+                              price: priceSurcharge,
                             })
                       }
-                      dark={isDark}
                     />
                   </View>
 
@@ -353,9 +331,6 @@ const styles = StyleSheet.create({
     shadowRadius: 18,
     elevation: 3,
   },
-  planCardDark: {
-    backgroundColor: "#111827",
-  },
 
   currentBadge: {
     position: "absolute",
@@ -391,9 +366,6 @@ const styles = StyleSheet.create({
     alignItems: "center",
     justifyContent: "center",
   },
-  planIconBoxDark: {
-    backgroundColor: "rgba(255,255,255,0.1)",
-  },
   planTitleBox: {
     flex: 1,
   },
@@ -413,14 +385,6 @@ const styles = StyleSheet.create({
     marginTop: 20,
     flexDirection: "row",
     alignItems: "flex-end",
-  },
-  currency: {
-    marginRight: 5,
-    marginBottom: 5,
-    fontSize: 15,
-    fontWeight: "900",
-    color: "#0f172a",
-    textDecorationLine: "underline",
   },
   price: {
     fontSize: 34,
@@ -461,7 +425,7 @@ const styles = StyleSheet.create({
     color: "#f8fafc",
   },
   featureTextMuted: {
-    color: "#94a3b8",
+    color: "#334155",
   },
 
   actionBtnViewCurrent: {

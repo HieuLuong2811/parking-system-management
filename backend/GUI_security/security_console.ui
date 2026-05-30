@@ -2,421 +2,152 @@
 <ui version="4.0">
  <class>SecurityConsoleWindow</class>
  <widget class="QMainWindow" name="SecurityConsoleWindow">
-  <property name="geometry">
-   <rect>
-    <x>0</x>
-    <y>0</y>
-    <width>1124</width>
-    <height>730</height>
-   </rect>
-  </property>
-  <property name="minimumSize">
-   <size>
-    <width>1000</width>
-    <height>0</height>
-   </size>
-  </property>
-  <property name="maximumSize">
-   <size>
-    <width>2000</width>
-    <height>1000</height>
-   </size>
-  </property>
-  <property name="windowTitle">
-   <string>Security Console Barcode</string>
-  </property>
+  <property name="geometry"><rect><x>0</x><y>0</y><width>1200</width><height>760</height></rect></property>
+  <property name="minimumSize"><size><width>1200</width><height>760</height></size></property>
+  <property name="maximumSize"><size><width>1200</width><height>760</height></size></property>
+  <property name="windowTitle"><string>Security Console</string></property>
   <widget class="QWidget" name="centralwidget">
-   <widget class="QWidget" name="verticalLayoutWidget">
-    <property name="geometry">
-     <rect>
-      <x>0</x>
-      <y>0</y>
-      <width>1121</width>
-      <height>181</height>
-     </rect>
-    </property>
-    <layout class="QVBoxLayout" name="verticalLayout">
-     <item>
-      <layout class="QHBoxLayout" name="Card_Information" stretch="1,1,1">
-       <property name="spacing">
-        <number>6</number>
-       </property>
-       <property name="sizeConstraint">
-        <enum>QLayout::SetDefaultConstraint</enum>
-       </property>
-       <property name="bottomMargin">
-        <number>0</number>
-       </property>
-       <item>
-        <widget class="QFrame" name="frm_time_info">
-         <property name="frameShape">
-          <enum>QFrame::StyledPanel</enum>
-         </property>
-         <property name="frameShadow">
-          <enum>QFrame::Raised</enum>
-         </property>
-         <widget class="QWidget" name="formLayoutWidget">
-          <property name="geometry">
-           <rect>
-            <x>9</x>
-            <y>9</y>
-            <width>351</width>
-            <height>161</height>
-           </rect>
-          </property>
-          <layout class="QFormLayout" name="formLayout">
-           <item row="0" column="0">
-            <widget class="QLabel" name="lbl_checkin_time_value">
-             <property name="font">
-              <font>
-               <pointsize>10</pointsize>
-              </font>
-             </property>
-             <property name="text">
-              <string>Thời điểm vào</string>
-             </property>
-             <property name="margin">
-              <number>5</number>
-             </property>
-            </widget>
-           </item>
-           <item row="1" column="0">
-            <widget class="QLabel" name="lbl_checkout_time_value">
-             <property name="font">
-              <font>
-               <pointsize>10</pointsize>
-              </font>
-             </property>
-             <property name="text">
-              <string>Thời điểm ra</string>
-             </property>
-             <property name="margin">
-              <number>5</number>
-             </property>
-            </widget>
-           </item>
-           <item row="2" column="0">
-            <widget class="QLabel" name="lbl_total_time_value">
-             <property name="font">
-              <font>
-               <pointsize>10</pointsize>
-              </font>
-             </property>
-             <property name="text">
-              <string>Tổng thời gian</string>
-             </property>
-             <property name="margin">
-              <number>5</number>
-             </property>
-            </widget>
-           </item>
-          </layout>
-         </widget>
-        </widget>
-       </item>
-       <item>
-        <widget class="QFrame" name="frm_user_info">
-         <property name="frameShape">
-          <enum>QFrame::StyledPanel</enum>
-         </property>
-         <property name="frameShadow">
-          <enum>QFrame::Raised</enum>
-         </property>
-         <widget class="QWidget" name="formLayoutWidget_3">
-          <property name="geometry">
-           <rect>
-            <x>10</x>
-            <y>10</y>
-            <width>351</width>
-            <height>161</height>
-           </rect>
-          </property>
-          <layout class="QFormLayout" name="formLayout_3">
-           <property name="sizeConstraint">
-            <enum>QLayout::SetMaximumSize</enum>
-           </property>
-           <item row="0" column="0">
-            <widget class="QLabel" name="lbl_user_name_value">
-             <property name="font">
-              <font>
-               <pointsize>10</pointsize>
-              </font>
-             </property>
-             <property name="text">
-              <string>Tên người dùng</string>
-             </property>
-             <property name="margin">
-              <number>5</number>
-             </property>
-            </widget>
-           </item>
-           <item row="1" column="0">
-            <widget class="QLabel" name="lbl_user_code_value">
-             <property name="font">
-              <font>
-               <pointsize>10</pointsize>
-              </font>
-             </property>
-             <property name="text">
-              <string>Mã người dùng</string>
-             </property>
-             <property name="margin">
-              <number>5</number>
-             </property>
-            </widget>
-           </item>
-           <item row="2" column="0">
-            <widget class="QLabel" name="lbl_subscription_value">
-             <property name="font">
-              <font>
-               <pointsize>10</pointsize>
-              </font>
-             </property>
-             <property name="text">
-              <string>Gói gửi xe</string>
-             </property>
-             <property name="margin">
-              <number>5</number>
-             </property>
-            </widget>
-           </item>
-          </layout>
-         </widget>
-        </widget>
-       </item>
-       <item>
-        <widget class="QFrame" name="frm_session_info">
-         <property name="enabled">
-          <bool>true</bool>
-         </property>
-         <property name="frameShape">
-          <enum>QFrame::StyledPanel</enum>
-         </property>
-         <property name="frameShadow">
-          <enum>QFrame::Raised</enum>
-         </property>
-         <widget class="QWidget" name="formLayoutWidget_2">
-          <property name="geometry">
-           <rect>
-            <x>10</x>
-            <y>10</y>
-            <width>361</width>
-            <height>161</height>
-           </rect>
-          </property>
-          <layout class="QFormLayout" name="formLayout_2">
-           <item row="0" column="0">
-            <widget class="QLabel" name="lbl_payment_value">
-             <property name="font">
-              <font>
-               <pointsize>10</pointsize>
-              </font>
-             </property>
-             <property name="text">
-              <string>Tổng tiền</string>
-             </property>
-             <property name="margin">
-              <number>5</number>
-             </property>
-            </widget>
-           </item>
-           <item row="1" column="0">
-            <widget class="QLabel" name="lbl_vehicle_type_value">
-             <property name="font">
-              <font>
-               <pointsize>10</pointsize>
-              </font>
-             </property>
-             <property name="text">
-              <string>Loại phương tiện</string>
-             </property>
-             <property name="margin">
-              <number>5</number>
-             </property>
-            </widget>
-           </item>
-           <item row="2" column="0">
-            <widget class="QLabel" name="lbl_session_status_value">
-             <property name="font">
-              <font>
-               <pointsize>10</pointsize>
-              </font>
-             </property>
-             <property name="text">
-              <string>Trạng thái</string>
-             </property>
-             <property name="margin">
-              <number>5</number>
-             </property>
-            </widget>
-           </item>
-          </layout>
-         </widget>
-        </widget>
-       </item>
-      </layout>
-     </item>
-    </layout>
+   <property name="styleSheet"><string notr="true">background:#ffffff;</string></property>
+
+   <widget class="QLabel" name="lbl_left_header">
+    <property name="geometry"><rect><x>10</x><y>10</y><width>310</width><height>45</height></rect></property>
+    <property name="text"><string>Thông tin</string></property>
+    <property name="alignment"><set>Qt::AlignCenter</set></property>
    </widget>
-   <widget class="QWidget" name="verticalLayoutWidget_3">
-    <property name="geometry">
-     <rect>
-      <x>-1</x>
-      <y>179</y>
-      <width>1121</width>
-      <height>511</height>
-     </rect>
-    </property>
-    <layout class="QVBoxLayout" name="verticalLayout_3">
-     <item>
-      <layout class="QHBoxLayout" name="lyt_camera_log_row" stretch="2,1">
-       <item>
-        <widget class="QFrame" name="frm_camera">
-         <property name="frameShape">
-          <enum>QFrame::StyledPanel</enum>
-         </property>
-         <property name="frameShadow">
-          <enum>QFrame::Raised</enum>
-         </property>
-         <widget class="QLabel" name="lbl_camera_view">
-          <property name="geometry">
-           <rect>
-            <x>10</x>
-            <y>10</y>
-            <width>711</width>
-            <height>441</height>
-           </rect>
-          </property>
-          <property name="text">
-           <string>TextLabel</string>
-          </property>
-          <property name="scaledContents">
-           <bool>true</bool>
-          </property>
-         </widget>
-        </widget>
-       </item>
-       <item>
-        <widget class="QFrame" name="frm_log_panel">
-         <property name="frameShape">
-          <enum>QFrame::StyledPanel</enum>
-         </property>
-         <property name="frameShadow">
-          <enum>QFrame::Raised</enum>
-         </property>
-         <widget class="QWidget" name="verticalLayoutWidget_2">
-          <property name="geometry">
-           <rect>
-            <x>9</x>
-            <y>-1</y>
-            <width>551</width>
-            <height>451</height>
-           </rect>
-          </property>
-          <layout class="QVBoxLayout" name="verticalLayout_2" stretch="0,0,0,0">
-           <item>
-            <widget class="QListWidget" name="lst_detection_history">
-             <property name="minimumSize">
-              <size>
-               <width>555</width>
-               <height>300</height>
-              </size>
-             </property>
-             <property name="maximumSize">
-              <size>
-               <width>555</width>
-               <height>300</height>
-              </size>
-             </property>
-            </widget>
-           </item>
-           <item>
-            <widget class="QLabel" name="lbl_status">
-             <property name="font">
-              <font>
-               <pointsize>10</pointsize>
-              </font>
-             </property>
-             <property name="text">
-              <string>Trạng thái quét </string>
-             </property>
-             <property name="margin">
-              <number>15</number>
-             </property>
-            </widget>
-           </item>
-           <item>
-            <widget class="QLabel" name="lbl_last_payload">
-             <property name="font">
-              <font>
-               <pointsize>10</pointsize>
-              </font>
-             </property>
-             <property name="text">
-              <string>Lần quét gần nhất</string>
-             </property>
-             <property name="margin">
-              <number>15</number>
-             </property>
-            </widget>
-           </item>
-           <item>
-            <widget class="QLabel" name="lbl_last_time">
-             <property name="font">
-              <font>
-               <pointsize>10</pointsize>
-              </font>
-             </property>
-             <property name="text">
-              <string>Thời gian quét gần nhất</string>
-             </property>
-             <property name="margin">
-              <number>15</number>
-             </property>
-            </widget>
-           </item>
-          </layout>
-         </widget>
-         <widget class="QPushButton" name="btn_checkin">
-          <property name="geometry">
-           <rect>
-            <x>180</x>
-            <y>460</y>
-            <width>181</width>
-            <height>41</height>
-           </rect>
-          </property>
-          <property name="font">
-           <font>
-            <pointsize>10</pointsize>
-           </font>
-          </property>
-          <property name="text">
-           <string>Xác nhận</string>
-          </property>
-         </widget>
-        </widget>
-       </item>
-      </layout>
-     </item>
-    </layout>
+   <widget class="QLabel" name="lbl_screen_header">
+    <property name="geometry"><rect><x>320</x><y>10</y><width>870</width><height>45</height></rect></property>
+    <property name="text"><string>Màn hình</string></property>
+    <property name="alignment"><set>Qt::AlignCenter</set></property>
    </widget>
-  </widget>
-  <widget class="QMenuBar" name="menubar">
-   <property name="geometry">
-    <rect>
-     <x>0</x>
-     <y>0</y>
-     <width>1124</width>
-     <height>21</height>
-    </rect>
-   </property>
-   <widget class="QMenu" name="menuSecurity_screen_detect_QR_code">
-    <property name="title">
-     <string>Security screen detect barcode</string>
-    </property>
+   <widget class="QLabel" name="lbl_plate_in_title">
+    <property name="geometry"><rect><x>10</x><y>55</y><width>310</width><height>42</height></rect></property>
+    <property name="text"><string>BIỂN SỐ VÀO</string></property>
+    <property name="alignment"><set>Qt::AlignCenter</set></property>
    </widget>
-   <addaction name="menuSecurity_screen_detect_QR_code"/>
+   <widget class="QLabel" name="lbl_plate_in_image">
+    <property name="geometry"><rect><x>10</x><y>97</y><width>310</width><height>150</height></rect></property>
+    <property name="text"><string/></property>
+    <property name="alignment"><set>Qt::AlignCenter</set></property>
+    <property name="scaledContents"><bool>false</bool></property>
+   </widget>
+   <widget class="QLabel" name="lbl_plate_out_title">
+    <property name="geometry"><rect><x>10</x><y>247</y><width>310</width><height>42</height></rect></property>
+    <property name="text"><string>BIỂN SỐ RA</string></property>
+    <property name="alignment"><set>Qt::AlignCenter</set></property>
+   </widget>
+   <widget class="QLabel" name="lbl_plate_out_image">
+    <property name="geometry"><rect><x>10</x><y>289</y><width>310</width><height>150</height></rect></property>
+    <property name="text"><string/></property>
+    <property name="alignment"><set>Qt::AlignCenter</set></property>
+    <property name="scaledContents"><bool>false</bool></property>
+   </widget>
+   <widget class="QLabel" name="lbl_fee_title">
+    <property name="geometry"><rect><x>10</x><y>439</y><width>155</width><height>58</height></rect></property>
+    <property name="text"><string>PHÍ GỬI XE:</string></property>
+    <property name="alignment"><set>Qt::AlignCenter</set></property>
+   </widget>
+   <widget class="QLabel" name="lbl_payment_value">
+    <property name="geometry"><rect><x>165</x><y>439</y><width>155</width><height>58</height></rect></property>
+    <property name="text"><string>-</string></property>
+    <property name="alignment"><set>Qt::AlignCenter</set></property>
+   </widget>
+   <widget class="QLabel" name="lbl_space_hint">
+    <property name="geometry"><rect><x>10</x><y>497</y><width>310</width><height>45</height></rect></property>
+    <property name="text"><string>Nhấn Space để cho phép xe ra</string></property>
+    <property name="alignment"><set>Qt::AlignCenter</set></property>
+   </widget>
+   <widget class="QLabel" name="lbl_last_payload">
+    <property name="geometry"><rect><x>10</x><y>542</y><width>310</width><height>208</height></rect></property>
+    <property name="text"><string>Biển số gần nhất:</string></property>
+    <property name="alignment"><set>Qt::AlignLeft|Qt::AlignTop</set></property>
+    <property name="wordWrap"><bool>true</bool></property>
+    <property name="margin"><number>10</number></property>
+   </widget>
+   <widget class="QLabel" name="lbl_gate_status_banner">
+    <property name="geometry"><rect><x>320</x><y>55</y><width>870</width><height>50</height></rect></property>
+    <property name="text"><string>SẴN SÀNG - QUÉT THẺ</string></property>
+    <property name="alignment"><set>Qt::AlignCenter</set></property>
+    <property name="wordWrap"><bool>false</bool></property>
+   </widget>
+   <widget class="QFrame" name="frm_time_info">
+    <property name="geometry"><rect><x>320</x><y>105</y><width>435</width><height>155</height></rect></property>
+    <property name="frameShape"><enum>QFrame::StyledPanel</enum></property>
+    <widget class="QLabel" name="lbl_checkin_time_value">
+     <property name="geometry"><rect><x>18</x><y>18</y><width>395</width><height>34</height></rect></property>
+     <property name="text"><string>Thời điểm vào:</string></property>
+     <property name="alignment"><set>Qt::AlignLeft|Qt::AlignVCenter</set></property>
+    </widget>
+    <widget class="QLabel" name="lbl_checkout_time_value">
+     <property name="geometry"><rect><x>18</x><y>60</y><width>395</width><height>34</height></rect></property>
+     <property name="text"><string>Thời điểm ra:</string></property>
+     <property name="alignment"><set>Qt::AlignLeft|Qt::AlignVCenter</set></property>
+    </widget>
+    <widget class="QLabel" name="lbl_total_time_value">
+     <property name="geometry"><rect><x>18</x><y>102</y><width>395</width><height>34</height></rect></property>
+     <property name="text"><string>Thời gian gửi:</string></property>
+     <property name="alignment"><set>Qt::AlignLeft|Qt::AlignVCenter</set></property>
+    </widget>
+   </widget>
+   <widget class="QFrame" name="frm_user_info">
+    <property name="geometry"><rect><x>755</x><y>105</y><width>435</width><height>155</height></rect></property>
+    <property name="frameShape"><enum>QFrame::StyledPanel</enum></property>
+    <widget class="QLabel" name="lbl_user_name_value">
+     <property name="geometry"><rect><x>18</x><y>18</y><width>395</width><height>34</height></rect></property>
+     <property name="text"><string>Người dùng:</string></property>
+     <property name="alignment"><set>Qt::AlignLeft|Qt::AlignVCenter</set></property>
+    </widget>
+    <widget class="QLabel" name="lbl_user_code_value">
+     <property name="geometry"><rect><x>18</x><y>60</y><width>395</width><height>34</height></rect></property>
+     <property name="text"><string>Mã người dùng:</string></property>
+     <property name="alignment"><set>Qt::AlignLeft|Qt::AlignVCenter</set></property>
+    </widget>
+    <widget class="QLabel" name="lbl_subscription_value">
+     <property name="geometry"><rect><x>18</x><y>102</y><width>395</width><height>34</height></rect></property>
+     <property name="text"><string>vé gửi xe hiện tại:</string></property>
+     <property name="alignment"><set>Qt::AlignLeft|Qt::AlignVCenter</set></property>
+    </widget>
+   </widget>
+   <widget class="QFrame" name="frm_input_info">
+    <property name="geometry"><rect><x>320</x><y>260</y><width>870</width><height>55</height></rect></property>
+    <property name="frameShape"><enum>QFrame::StyledPanel</enum></property>
+    <widget class="QLabel" name="lbl_barcode_title">
+     <property name="geometry"><rect><x>18</x><y>10</y><width>110</width><height>35</height></rect></property>
+     <property name="text"><string>Mã thẻ gửi xe:</string></property>
+     <property name="alignment"><set>Qt::AlignLeft|Qt::AlignVCenter</set></property>
+    </widget>
+    <widget class="QLineEdit" name="txt_barcode">
+     <property name="geometry"><rect><x>130</x><y>10</y><width>280</width><height>35</height></rect></property>
+     <property name="placeholderText"><string>Quét mã thẻ...</string></property>
+    </widget>
+    <widget class="QLabel" name="lbl_license_plate_title">
+     <property name="geometry"><rect><x>455</x><y>10</y><width>90</width><height>35</height></rect></property>
+     <property name="text"><string>Biển số xe:</string></property>
+     <property name="alignment"><set>Qt::AlignLeft|Qt::AlignVCenter</set></property>
+    </widget>
+    <widget class="QLineEdit" name="txt_license_plate">
+     <property name="geometry"><rect><x>550</x><y>10</y><width>300</width><height>35</height></rect></property>
+     <property name="placeholderText"><string>Biển số detect...</string></property>
+     <property name="readOnly"><bool>true</bool></property>
+    </widget>
+   </widget>
+   <widget class="QLabel" name="lbl_camera_view">
+    <property name="geometry"><rect><x>320</x><y>315</y><width>645</width><height>435</height></rect></property>
+    <property name="text"><string>Camera đang kết nối...</string></property>
+    <property name="alignment"><set>Qt::AlignCenter</set></property>
+    <property name="scaledContents"><bool>false</bool></property>
+   </widget>
+   <widget class="QLabel" name="lbl_camera_status">
+    <property name="geometry"><rect><x>965</x><y>315</y><width>225</width><height>435</height></rect></property>
+    <property name="text"><string>Trạng thái camera</string></property>
+    <property name="alignment"><set>Qt::AlignCenter</set></property>
+    <property name="wordWrap"><bool>true</bool></property>
+   </widget>
+   <widget class="QLabel" name="lbl_status"><property name="geometry"><rect><x>1210</x><y>10</y><width>10</width><height>10</height></rect></property><property name="text"><string/></property></widget>
+   <widget class="QLabel" name="lbl_last_time"><property name="geometry"><rect><x>1210</x><y>24</y><width>10</width><height>10</height></rect></property><property name="text"><string/></property></widget>
+   <widget class="QLabel" name="lbl_session_status_value"><property name="geometry"><rect><x>1210</x><y>38</y><width>10</width><height>10</height></rect></property><property name="text"><string/></property></widget>
+   <widget class="QLabel" name="lbl_vehicle_type_value"><property name="geometry"><rect><x>1210</x><y>52</y><width>10</width><height>10</height></rect></property><property name="text"><string/></property></widget>
+   <widget class="QListWidget" name="lst_detection_history"><property name="geometry"><rect><x>1210</x><y>66</y><width>10</width><height>10</height></rect></property></widget>
+   <widget class="QPushButton" name="btn_checkin"><property name="geometry"><rect><x>1210</x><y>80</y><width>10</width><height>10</height></rect></property><property name="text"><string>Check</string></property></widget>
   </widget>
   <widget class="QStatusBar" name="statusbar"/>
  </widget>

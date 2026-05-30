@@ -20,3 +20,20 @@ export const Role = {
   USER: 'user',
   SECURITY: 'security',
 } as const;
+
+export const VehicleMode = {
+  LICENSED: 'LICENSED',
+  UNLICENSED: 'UNLICENSED',
+} as const;
+
+export const paymentPlan = {
+  FULL: 'FULL',
+  MONTHLY: 'MONTHLY',
+  FULL_PAYMENT: 'FULL_PAYMENT',
+} as const;
+
+export const paymentType = {
+  CASH: 'CASH',
+  WALLET: 'WALLET',
+  MOMO: 'MOMO',
+} as const;

@@ -4,6 +4,7 @@ import {
   Box,
   Button,
   Chip,
+  CircularProgress,
   Dialog,
   DialogActions,
   DialogContent,
@@ -312,6 +313,7 @@ export const ImportUsersDialog: React.FC<ImportUsersDialogProps> = ({
                 setSearchUserCode(event.target.value);
                 setPage(0);
               }}
+              disabled={isImporting}
               size="small"
               variant="outlined"
               sx={{ minWidth: 180 }}
@@ -324,6 +326,7 @@ export const ImportUsersDialog: React.FC<ImportUsersDialogProps> = ({
                 setPage(0);
               }}
               size="small"
+              disabled={isImporting}
               variant="outlined"
               sx={{ minWidth: 220 }}
             />
@@ -334,6 +337,7 @@ export const ImportUsersDialog: React.FC<ImportUsersDialogProps> = ({
                 label={t('usersPage.importModal.statusLabel')}
                 value={statusFilter}
                 onChange={handleStatusChange}
+                disabled={isImporting}
               >
                 <MenuItem value="all">{t('usersPage.importModal.statusOptions.all')}</MenuItem>
                 <MenuItem value="valid">{t('usersPage.importModal.statusOptions.valid')}</MenuItem>
@@ -350,7 +354,7 @@ export const ImportUsersDialog: React.FC<ImportUsersDialogProps> = ({
               style={{ display: 'none' }}
               onChange={handleFileChange}
             />
-            <Button variant="contained" onClick={handleFileClick}>
+            <Button variant="contained" onClick={handleFileClick} disabled={isImporting}>
               {t('usersPage.importModal.selectFile')}
             </Button>
             {fileName && (
@@ -481,7 +485,7 @@ export const ImportUsersDialog: React.FC<ImportUsersDialogProps> = ({
           {t('usersPage.importModal.footer.cancel')}
         </Button>
         <Button variant="contained" onClick={handleImport} disabled={isImporting || !validRows.length}>
-          {t('usersPage.importModal.footer.import')}
+          {isImporting ? <CircularProgress size={24} sx={{ ml: 2 }} /> : t('usersPage.importModal.footer.import')}
         </Button>
       </DialogActions>
     </Dialog>

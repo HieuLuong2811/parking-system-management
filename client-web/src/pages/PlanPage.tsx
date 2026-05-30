@@ -37,7 +37,7 @@ export default function PlanPage() {
       const planLabel = t(
         `plan.cards.${String(current.subscription_plan?.plans_type || '').toLowerCase()}`,
         {
-          defaultValue: current.subscription_plan?.plans_type || 'gói hiện tại',
+          defaultValue: current.subscription_plan?.plans_type || 'Vé gửi xe hiện tại',
         },
       );
 
@@ -47,15 +47,15 @@ export default function PlanPage() {
 
       return await confirm({
         title: t('plan.overrideActivePlanDialog.title', {
-          defaultValue: 'Bạn đang có gói gửi xe cần xử lý',
+          defaultValue: 'Bạn đang có vé gửi xe cần xử lý',
         }),
         message: t('plan.overrideActivePlanDialog.message', {
           plan: planLabel,
           status: statusLabel,
           debt: formatCurrency(debtAmount),
           defaultValue:
-            `Bạn đang có gói ${planLabel} với trạng thái ${statusLabel}. ` +
-            `Nếu đăng ký gói mới, gói cũ sẽ được chuyển sang trạng thái đã hủy nhưng vẫn tiếp tục được theo dõi công nợ nếu còn thiếu. ` +
+            `Bạn đang có Vé gửi xe ${planLabel} với trạng thái ${statusLabel}. ` +
+            `Nếu đăng ký Vé gửi xe mới, Vé gửi xe cũ sẽ được chuyển sang trạng thái đã hủy nhưng vẫn tiếp tục được theo dõi công nợ nếu còn thiếu. ` +
             `Số tiền còn thiếu: ${formatCurrency(debtAmount)}. Bạn có muốn tiếp tục?`,
         }),
         cancelText: t('common.cancel', { defaultValue: 'Huỷ' }),
@@ -160,8 +160,8 @@ export default function PlanPage() {
                   defaultValue: plan.plans_type,
                 });
 
-                const dailyFee = plan.price_per_day ?? plan.price_per_day;
-                const after18Fee = plan.after_18_fee;
+                const dailyFee = plan.price_per_day ? plan.price_per_day : 0;
+                const after18Fee = plan.after_18_fee ? plan.after_18_fee : 0;
                 const waiveAfter18 = Boolean(plan.waive_after_18_fee);
 
                 const features = [

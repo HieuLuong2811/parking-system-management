@@ -7,6 +7,7 @@ class CheckoutMomoRequest(BaseModel):
     sub_plan_id: UUID
     term_id: UUID
     payment_plan_id: UUID
+    payment_type: str
     start_date: datetime
     end_date: datetime
     # Amount is validated/recalculated by backend; keep for backward compatibility.

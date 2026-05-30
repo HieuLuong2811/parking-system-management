@@ -1,4 +1,4 @@
-import { useQuery } from '@tanstack/react-query';
+import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 
 import { clientHttp, requestWithContext } from './clientApi';
 
@@ -12,8 +12,6 @@ export type ParkingAccessCard = {
   user_code?: string | null;
   user_subscription_id?: string | null;
   status: ParkingAccessCardStatus;
-  issued_at?: string | null;
-  returned_at?: string | null;
   created_at: string;
   updated_at: string;
 };
@@ -29,3 +27,22 @@ export const useMyParkingAccessCard = () => {
   });
 };
 
+const reportLostParkingAccessCard = async (
+  cardId: string,
+): Promise<ParkingAccessCard> => {
+  return requestWithContext(
+    clientHttp.patch(`/parking_access_cards/${cardId}/report_lost`),
+    `Report parking access card ${cardId} lost`,
+  );
+};
+
+export const useReportMyParkingAccessCardLost = () => {
+  const queryClient = useQueryClient();
+
+  return useMutation({
+    mutationFn: (cardId: string) => reportLostParkingAccessCard(cardId),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['parkingAccessCard', 'me'] });
+    },
+  });
+};

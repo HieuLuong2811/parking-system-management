@@ -24,7 +24,7 @@ import { useInvoicesPaginated } from "../api/invoices";
 import { invoices_status } from "../constant/config";
 import { useCheckoutPayDebt } from "../api/momo";
 import FilterListIcon from "@mui/icons-material/FilterList";
-import { toEndOfDay, toStartOfDay } from "../ultis/formatters";
+import { formatDateTime, toEndOfDay, toStartOfDay } from "../ultis/formatters";
 import useDebouncedValue from "../hooks/useDebouncedValue";
 import ReceiptLongIcon from "@mui/icons-material/ReceiptLong";
 
@@ -32,8 +32,10 @@ export default function InvoicesPage() {
   const { t } = useTranslation();
   const [fromDate, setFromDate] = useState("");
   const [toDate, setToDate] = useState("");
+  const [status, setStatus] = useState("");
   const debouncedFromDate = useDebouncedValue(fromDate, 500);
   const debouncedToDate = useDebouncedValue(toDate, 500);
+  const debouncedStatus = useDebouncedValue(status, 250);
   const [page, setPage] = useState(0);
   const [rowsPerPage, setRowsPerPage] = useState(5);
   const {
@@ -45,6 +47,7 @@ export default function InvoicesPage() {
     limit: rowsPerPage,
     from_time: toStartOfDay(debouncedFromDate) || undefined,
     to_time: toEndOfDay(debouncedToDate) || undefined,
+    status: debouncedStatus.trim() || undefined,
   });
   const invoices = useMemo(() => paginated?.data ?? [], [paginated]);
   const total = paginated?.total ?? 0;
@@ -55,7 +58,7 @@ export default function InvoicesPage() {
 
   useEffect(() => {
     setPage(0);
-  }, [debouncedFromDate, debouncedToDate]);
+  }, [debouncedFromDate, debouncedToDate, debouncedStatus]);
 
   const handlePayInvoice = async (invoice_id: string) => {
     setPayError(null);
@@ -83,6 +86,7 @@ export default function InvoicesPage() {
   const clearFilters = () => {
     setFromDate("");
     setToDate("");
+    setStatus("");
     setPage(0);
   };
 
@@ -100,7 +104,7 @@ export default function InvoicesPage() {
           {t("invoices.sectionTitle")}
         </Typography>
 
-        <Typography variant="body2" fontSize='medium' color="text.secondary">
+        <Typography variant="body2" fontSize="medium" color="text.secondary">
           {t("invoices.subtitle")}
         </Typography>
       </Box>
@@ -129,7 +133,7 @@ export default function InvoicesPage() {
           >
             <FilterListIcon color="primary" fontSize="small" />
             <Typography variant="body2" fontWeight={600}>
-              {t('common.filters.search')}
+              {t("common.filters.search")}
             </Typography>
           </Box>
 
@@ -137,8 +141,15 @@ export default function InvoicesPage() {
             label={t("invoices.filters.from")}
             type="date"
             value={fromDate}
-            onChange={(event) => setFromDate(event.target.value)}
+            onChange={(event) => {
+              const next = event.target.value;
+              setFromDate(next);
+              if (toDate && next && next > toDate) {
+                setToDate(next);
+              }
+            }}
             InputLabelProps={{ shrink: true }}
+            inputProps={{ max: toDate || undefined }}
             disabled={isLoading || isError}
             size="small"
             sx={{
@@ -154,8 +165,15 @@ export default function InvoicesPage() {
             label={t("invoices.filters.to")}
             type="date"
             value={toDate}
-            onChange={(event) => setToDate(event.target.value)}
+            onChange={(event) => {
+              const next = event.target.value;
+              setToDate(next);
+              if (fromDate && next && next < fromDate) {
+                setFromDate(next);
+              }
+            }}
             InputLabelProps={{ shrink: true }}
+            inputProps={{ min: fromDate || undefined }}
             disabled={isLoading || isError}
             size="small"
             sx={{
@@ -167,9 +185,41 @@ export default function InvoicesPage() {
             }}
           />
 
+          <TextField
+            select
+            SelectProps={{ native: true }}
+            label={t("invoices.filters.status", { defaultValue: "Status" })}
+            value={status}
+            onChange={(event) => setStatus(event.target.value)}
+            disabled={isLoading || isError}
+            size="small"
+            InputLabelProps={{ shrink: true }}
+            sx={{
+              minWidth: { xs: "100%", sm: 180 },
+              bgcolor: "#FFFFFF",
+              "& .MuiOutlinedInput-root": {
+                borderRadius: 2,
+              },
+            }}
+          >
+            <option value="">{t("common.all", { defaultValue: "All" })}</option>
+            <option value="PENDING">
+              {t("invoices.status.pending", { defaultValue: "Pending" })}
+            </option>
+            <option value="PAID">
+              {t("invoices.status.paid", { defaultValue: "Paid" })}
+            </option>
+            <option value="FAILED">
+              {t("invoices.status.failed", { defaultValue: "Failed" })}
+            </option>
+            <option value="OVERDUE">
+              {t("invoices.status.overdue", { defaultValue: "Overdue" })}
+            </option>
+          </TextField>
+
           <Button
             onClick={clearFilters}
-            disabled={!fromDate && !toDate}
+            disabled={!fromDate && !toDate && !status}
             variant="outlined"
             sx={{
               borderRadius: 2,
@@ -209,7 +259,7 @@ export default function InvoicesPage() {
                 }}
               >
                 <TableCell>{t("invoices.table.invoiceId")}</TableCell>
-                <TableCell>{t("invoices.table.created_at")}</TableCell>
+                <TableCell>{t("invoices.table.paid_at")}</TableCell>
                 <TableCell align="right">
                   {t("invoices.table.amount")}
                 </TableCell>
@@ -227,7 +277,7 @@ export default function InvoicesPage() {
                   <TableCell colSpan={5} align="center" sx={{ py: 6 }}>
                     <CircularProgress size={26} />
                     <Typography color="text.secondary" mt={1}>
-                      {t('invoices.loading')}
+                      {t("invoices.loading")}
                     </Typography>
                   </TableCell>
                 </TableRow>
@@ -235,7 +285,7 @@ export default function InvoicesPage() {
                 <TableRow>
                   <TableCell colSpan={5} align="center" sx={{ py: 6 }}>
                     <Typography color="error" fontWeight={600}>
-                      {t('common.error')}
+                      {t("common.error")}
                     </Typography>
                   </TableCell>
                 </TableRow>
@@ -285,18 +335,7 @@ export default function InvoicesPage() {
                       <TableCell sx={{ fontWeight: 600 }}>
                         {invoice.id}
                       </TableCell>
-                      <TableCell>
-                        {new Date(invoice.created_at).toLocaleString(
-                          undefined,
-                          {
-                            year: "numeric",
-                            month: "short",
-                            day: "numeric",
-                            hour: "2-digit",
-                            minute: "2-digit",
-                          },
-                        )}
-                      </TableCell>
+                      <TableCell>{formatDateTime(invoice.paid_at)}</TableCell>
                       <TableCell align="right" sx={{ fontWeight: 600 }}>
                         {new Intl.NumberFormat("vi-VN", {
                           style: "currency",
@@ -305,7 +344,9 @@ export default function InvoicesPage() {
                       </TableCell>
                       <TableCell align="right">
                         <Chip
-                          label={t(`invoices.status.${invoice.status.toLowerCase()}`)}
+                          label={t(
+                            `invoices.status.${invoice.status.toLowerCase()}`,
+                          )}
                           color={chipColor}
                           size="small"
                           sx={{ textTransform: "capitalize" }}
@@ -316,7 +357,7 @@ export default function InvoicesPage() {
                           <Button
                             variant="contained"
                             size="small"
-                            sx={{ backgroundColor: '#43B14B'}}
+                            sx={{ backgroundColor: "#43B14B" }}
                             onClick={() => handlePayInvoice(invoice.id)}
                             disabled={momoPaymentMutation.isPending}
                             startIcon={
@@ -358,6 +399,17 @@ export default function InvoicesPage() {
                 color: theme.palette.text.secondary,
               },
           }}
+          labelRowsPerPage={t("common.pagination.rowsPerPage", {
+            defaultValue: "Rows per page:",
+          })}
+          labelDisplayedRows={({ from, to, count }) =>
+            t("common.pagination.displayedRows", {
+              from,
+              to,
+              count,
+              defaultValue: `${from}-${to} of ${count !== -1 ? count : `more than ${to}`}`,
+            })
+          }
         />
       </Stack>
       <Snackbar

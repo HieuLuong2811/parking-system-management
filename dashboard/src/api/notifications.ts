@@ -11,6 +11,7 @@ export type NotificationRecord = {
   is_read: boolean;
   created_at: string;
   deleted_at?: string | null;
+  link?: string | null;
 };
 
 const fetchNotifications = () => httpGet<NotificationRecord[]>('/notifications/me');

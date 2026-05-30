@@ -14,6 +14,7 @@ export type InvoicesMeQuery = {
   limit: number;
   from_time?: string;
   to_time?: string;
+  status?: string;
 };
 
 const fetchInvoicesPaginated = async (

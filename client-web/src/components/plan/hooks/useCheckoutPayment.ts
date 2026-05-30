@@ -1,15 +1,7 @@
 import { useCallback } from "react";
 import { useCheckoutMomo, useCheckoutRecurring } from "../../../api/momo";
-import { clientHttp } from "../../../api/clientApi";
 import { useCheckoutWalletFull } from "../../../api/checkout";
-
-const getActivePlanLabel = (sub: any): string => {
-  return (
-    sub?.subscription_plan?.plans_type ??
-    sub?.plan ??
-    "gói hiện tại"
-  );
-};
+import { paymentType, paymentMethod } from "../../../constant/config";
 
 type UseCheckoutPaymentProps = {
   plan: any;
@@ -44,24 +36,6 @@ export const useCheckoutPayment = (props: UseCheckoutPaymentProps) => {
     setProcessingError,
   } = props;
 
-  const confirmOverrideActivePlan = useCallback(async () => {
-    try {
-      const res = await clientHttp.get<any[]>("/subscriptions/me", {
-        params: { status: "ACTIVE" },
-      });
-      const active = Array.isArray(res.data) ? res.data[0] : null;
-      if (!active) return true;
-
-      const activeLabel = getActivePlanLabel(active);
-      return window.confirm(
-        `Hiện tại bạn đang sử dụng gói ${activeLabel}. Nếu đăng ký gói mới thì gói cũ sẽ bị huỷ. Bạn có muốn tiếp tục?`
-      );
-    } catch {
-      // If we can't check, don't block checkout.
-      return true;
-    }
-  }, []);
-
   const handleRecurringSetup = useCallback(async () => {
     if (
       !currentUser ||
@@ -69,11 +43,6 @@ export const useCheckoutPayment = (props: UseCheckoutPaymentProps) => {
       !recurringPlanId
     ) {
       setProcessingError(t("plan.checkoutStepper.setupError"));
-      return;
-    }
-
-    const confirmed = await confirmOverrideActivePlan();
-    if (!confirmed) {
       return;
     }
 
@@ -114,7 +83,7 @@ export const useCheckoutPayment = (props: UseCheckoutPaymentProps) => {
     } finally {
       setProcessing(false);
     }
-  }, [currentUser, selectedTermRecord, recurringPlanId, recurringModePricing, plan, t, setProcessing, setProcessingError, checkoutRecurring, confirmOverrideActivePlan]);
+  }, [currentUser, selectedTermRecord, recurringPlanId, recurringModePricing, plan, t, setProcessing, setProcessingError, checkoutRecurring,]);
 
   const handleFullPayment = useCallback(async () => {
     if (
@@ -123,11 +92,6 @@ export const useCheckoutPayment = (props: UseCheckoutPaymentProps) => {
       !fullPlanId
     ) {
       setProcessingError(t("plan.checkoutStepper.momoSetupError"));
-      return;
-    }
-
-    const confirmed = await confirmOverrideActivePlan();
-    if (!confirmed) {
       return;
     }
 
@@ -140,7 +104,7 @@ export const useCheckoutPayment = (props: UseCheckoutPaymentProps) => {
         throw new Error(t("plan.checkoutStepper.momoSetupError"));
       }
 
-      if (selectedFullPaymentMethod === "WALLET") {
+      if (selectedFullPaymentMethod === paymentMethod.WALLET) {
         await checkoutWalletFull({
           sub_plan_id: plan.id,
           term_id: selectedTermRecord.id,
@@ -156,6 +120,7 @@ export const useCheckoutPayment = (props: UseCheckoutPaymentProps) => {
           sub_plan_id: plan.id,
           term_id: selectedTermRecord.id,
           payment_plan_id: fullPlanId,
+          payment_type: paymentType.FULL_PAYMENT,
           start_date: selectedTermRecord.start_date,
           end_date: selectedTermRecord.end_date,
           amount,
@@ -190,7 +155,7 @@ export const useCheckoutPayment = (props: UseCheckoutPaymentProps) => {
     } finally {
       setProcessing(false);
     }
-  }, [currentUser, selectedTermRecord, fullPlanId, confirmOverrideActivePlan, setProcessing, setProcessingError, t, fullModePricing?.amount, checkoutMomo, plan.id, selectedFullPaymentMethod, checkoutWalletFull]);
+  }, [currentUser, selectedTermRecord, fullPlanId, setProcessing, setProcessingError, t, fullModePricing?.amount, checkoutMomo, plan.id, selectedFullPaymentMethod, checkoutWalletFull]);
 
   return {
     handleRecurringSetup,

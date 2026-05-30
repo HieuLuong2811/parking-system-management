@@ -66,8 +66,8 @@ class PlanController:
                     NotificationCreate(
                         actor_id=current_user.user_code,
                         receiver_id=user.user_code,
-                        title="Cập nhật gói đăng ký",
-                        content=f"Gói đã được đổi loại từ '{old_type}' thành '{new_type}'.",
+                        title="Cập nhật vé xe đã đăng ký",
+                        content=f"Vé gửi xe đã được đổi loại từ '{old_type}' thành '{new_type}'.",
                         is_read=False,
                     ),
                     db,
@@ -91,8 +91,8 @@ class PlanController:
                 NotificationCreate(
                     actor_id=current_user.user_code,
                     receiver_id=current_user.user_code,
-                    title="Cập nhật gói đăng ký",
-                    content=f"Đã cập nhật giá/ngày của gói '{existing.plans_type}'.",
+                    title="Cập nhật vé gửi xe đăng ký",
+                    content=f"Đã cập nhật giá/ngày của vé gửi xe '{existing.plans_type}'.",
                     is_read=False,
                 ),
                 db,

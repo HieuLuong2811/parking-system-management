@@ -115,6 +115,7 @@ class Settings(BaseSettings):
     QR_CAMERA_SOURCE: str | None = None
     APP_NAME: str
     DEFAULT_EMAIL_LANG: str = "vi"
+    GUEST_USER_CODE: str
 
     @computed_field  
     @property

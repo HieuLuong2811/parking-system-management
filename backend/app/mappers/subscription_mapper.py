@@ -4,7 +4,6 @@ from app.models.subscriptions import (
     UserSummary,
     PaymentPlanSummary,
     SubscriptionPlanSummary,
-    AcademicTermSummary,
 )
 
 
@@ -15,7 +14,6 @@ class SubscriptionMapper:
         subscription,
         payment_plan,
         subscription_plan,
-        term,
     ):
         return UserSubscriptionClientView(
             id=subscription.id,
@@ -31,11 +29,6 @@ class SubscriptionMapper:
                 if payment_plan
                 else None
             ),
-            term=(
-                AcademicTermSummary(term_name=term.term_name)
-                if term
-                else None
-            ),
         )
 
     @staticmethod
@@ -43,7 +36,6 @@ class SubscriptionMapper:
         subscription,
         user,
         payment_plan,
-        term,
         subscription_plan,
     ):
         return UserSubscriptionAdminView(
@@ -76,11 +68,6 @@ class SubscriptionMapper:
             payment_plan=(
                 PaymentPlanSummary(payment_type=payment_plan.payment_type)
                 if payment_plan
-                else None
-            ),
-            term=(
-                AcademicTermSummary(term_name=term.term_name)
-                if term
                 else None
             ),
         )

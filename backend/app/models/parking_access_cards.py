@@ -83,6 +83,11 @@ class ParkingAccessCardRead(ParkingAccessCardBase):
     deleted_at: Optional[datetime] = None
 
 
+class ParkingAccessCardAdminRead(ParkingAccessCardRead):
+    user_full_name: Optional[str] = None
+    is_in_use: bool = False
+
+
 class ParkingAccessCardUpdate(SQLModel):
     barcode_token: Optional[str] = None
     holder_type: Optional[ParkingAccessCardHolderType] = None

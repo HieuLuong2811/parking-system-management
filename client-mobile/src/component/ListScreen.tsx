@@ -11,13 +11,14 @@ import Ionicons from "react-native-vector-icons/Ionicons";
 import ScreenShell from "./ScreenShell";
 
 type ListScreenProps = {
-  title: string;
+  title?: string;
   subtitle?: string;
   loading?: boolean;
   error?: string | null;
   children: React.ReactNode;
   showBack?: boolean;
   onBack?: () => void;
+  hiddenHeader?: boolean;
 };
 
 export default function ListScreen({
@@ -28,36 +29,35 @@ export default function ListScreen({
   children,
   showBack,
   onBack,
+  hiddenHeader,
 }: ListScreenProps) {
+  const shouldShowHeader = Boolean(title || subtitle || showBack);
   return (
-    <ScreenShell>
+    <ScreenShell hiddenHeader={hiddenHeader}>
       <View style={styles.container}>
-        <View style={styles.header}>
-          <View style={styles.titleRow}>
-            {showBack ? (
-              <TouchableOpacity
-                style={styles.backButton}
-                onPress={onBack}
-                activeOpacity={0.85}
-              >
-                <Ionicons name="chevron-back" size={21} color="#0f172a" />
-              </TouchableOpacity>
-            ) : null}
+        {shouldShowHeader ? (
+          <View style={styles.header}>
+            <View style={styles.titleRow}>
+              {showBack ? (
+                <TouchableOpacity style={styles.backButton} onPress={onBack} activeOpacity={0.85}>
+                  <Ionicons name="chevron-back" size={21} color="#0f172a" />
+                </TouchableOpacity>
+              ) : null}
 
-            <Text style={styles.title} numberOfLines={2}>
-              {title}
-            </Text>
+              {!!title && (
+                <Text style={styles.title} numberOfLines={2}>
+                  {title}
+                </Text>
+              )}
+            </View>
+
+            {!!subtitle && (
+              <Text style={[styles.subtitle]} numberOfLines={3}>
+                {subtitle}
+              </Text>
+            )}
           </View>
-
-          {!!subtitle && (
-            <Text
-              style={[styles.subtitle]}
-              numberOfLines={3}
-            >
-              {subtitle}
-            </Text>
-          )}
-        </View>
+        ) : null}
 
         {loading ? (
           <View style={styles.center}>

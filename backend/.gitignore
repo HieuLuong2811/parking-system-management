@@ -44,3 +44,8 @@ Thumbs.db
 TongHop/
 YOLOv8/
 /models/runs/
+debug_detect/
+/download_char_model.py
+/test_char_batch.py
+/test_char_model_load.py
+/test_char_predict.py

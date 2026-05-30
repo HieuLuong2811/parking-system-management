@@ -30,8 +30,8 @@ export type PaymentTransactionDetail = {
 export type PaymentTransactionsMeQuery = {
   page: number;
   limit: number;
-  invoice_id?: string;
-  transaction_code?: string;
+  transaction_type?: string;
+  direction?: string;
   from_time?: string;
   to_time?: string;
 };

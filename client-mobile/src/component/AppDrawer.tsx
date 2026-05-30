@@ -19,6 +19,7 @@ import { useAuth } from "../auth/AuthContext";
 import { languageOptions } from "../constant/languageOptions";
 import { useUi } from "../ui/UiContext";
 import type { AppStackParamList } from "../navigation/AppStack";
+import { avatarText } from "../ultis/format";
 
 const DRAWER_WIDTH = 320;
 
@@ -72,11 +73,6 @@ export default function AppDrawer() {
     void signOut();
   };
 
-  const avatarText = String(user?.full_name || user?.user_code || "?")
-    .trim()
-    .slice(0, 1)
-    .toUpperCase();
-
   return (
     <Modal
       visible={drawerOpen}
@@ -118,7 +114,7 @@ export default function AppDrawer() {
               {user ? (
                 <View style={styles.userRow}>
                   <View style={styles.avatar}>
-                    <Text style={styles.avatarText}>{avatarText}</Text>
+                    <Text style={styles.avatarText}>{avatarText(user?.full_name)}</Text>
                   </View>
 
                   <View style={styles.userInfo}>
@@ -126,20 +122,9 @@ export default function AppDrawer() {
                       {user.full_name}
                     </Text>
 
-                    <View style={styles.userCodePill}>
-                      <Ionicons
-                        name="id-card-outline"
-                        size={13}
-                        color="#2563eb"
-                      />
                       <Text numberOfLines={1} style={styles.userCodeText}>
                         {user.user_code}
                       </Text>
-                    </View>
-
-                    <Text numberOfLines={1} style={styles.userMeta}>
-                      {user.email}
-                    </Text>
                   </View>
                 </View>
               ) : (
@@ -409,28 +394,12 @@ const styles = StyleSheet.create({
     fontWeight: "900",
     color: "#0f172a",
   },
-  userCodePill: {
-    marginTop: 5,
-    alignSelf: "flex-start",
-    flexDirection: "row",
-    alignItems: "center",
-    gap: 5,
-    paddingHorizontal: 8,
-    paddingVertical: 4,
-    borderRadius: 999,
-    backgroundColor: "#eff6ff",
-  },
   userCodeText: {
-    fontSize: 11,
-    fontWeight: "800",
-    color: "#2563eb",
-    maxWidth: 160,
-  },
-  userMeta: {
     marginTop: 5,
-    fontSize: 12,
-    fontWeight: "600",
+    fontSize: 13,
+    fontWeight: "800",
     color: "#64748b",
+    lineHeight: 19,
   },
   emptyUserBox: {
     alignItems: "center",

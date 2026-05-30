@@ -35,6 +35,25 @@ export default function LoginScreen({ navigation }: Props) {
   const [submitting, setSubmitting] = useState(false);
   const [languageOpen, setLanguageOpen] = useState(false);
 
+  const toI18nLoginErrorMessage = (detail: unknown) => {
+    const raw = typeof detail === 'string' ? detail : '';
+    const normalized = raw.trim().toLowerCase();
+    if (!normalized) return '';
+    if (normalized.includes('user code') && normalized.includes('password') && normalized.includes('incorrect')) {
+      return t('auth.userOrPasswordInvalid', { defaultValue: 'User code or password is incorrect' });
+    }
+    if (normalized === 'invalid username or password' || normalized === 'invalid credentials') {
+      return t('auth.userOrPasswordInvalid', { defaultValue: 'User code or password is incorrect' });
+    }
+    if (normalized.includes('network')) {
+      return t('auth.networkError', {
+        defaultValue:
+          "Network error: can't reach API. If running on phone/Android emulator, don't use localhost; use your PC IP or 10.0.2.2.",
+      });
+    }
+    return raw;
+  };
+
   const currentLanguage = useMemo(
     () => languageOptions.find((item) => item.code === i18n.language) ?? languageOptions[0],
     [i18n.language]
@@ -79,13 +98,11 @@ export default function LoginScreen({ navigation }: Props) {
         'Login failed';
 
       if (String(rawMessage).toLowerCase().includes('network')) {
-        setSubmitError(
-          'Network error: không gọi được API. Nếu chạy trên điện thoại/Android emulator, đừng dùng localhost; hãy dùng IP máy hoặc 10.0.2.2.'
-        );
+        setSubmitError(toI18nLoginErrorMessage(rawMessage));
         return;
       }
 
-      setSubmitError(String(rawMessage));
+      setSubmitError(toI18nLoginErrorMessage(rawMessage) || t('auth.loginFailed', { defaultValue: 'Login failed' }));
     } finally {
       setSubmitting(false);
     }

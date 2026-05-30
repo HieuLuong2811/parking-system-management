@@ -32,6 +32,7 @@ class PaymentPlanRead(PaymentPlanBase):
     id: uuid.UUID
     created_at: datetime
     updated_at: datetime
+    is_in_use: bool = False
 
 
 class PaymentPlanUpdate(SQLModel):

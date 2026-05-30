@@ -5,6 +5,7 @@ export interface CheckoutMomoRequest {
   sub_plan_id: string;
   term_id: string;
   payment_plan_id: string;
+  payment_type: string;
   start_date: string;
   end_date: string;
   amount: number;

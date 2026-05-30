@@ -52,7 +52,7 @@ export const UserFormDialog: React.FC<UserFormDialogProps> = ({
   const toDigitsOnly = (value: string) => value.replace(/\D+/g, '');
 
   return (
-    <Dialog open={open} fullWidth maxWidth="md" onClose={onClose}>
+    <Dialog open={open} fullWidth maxWidth="md">
       <DialogTitle>
         {isCreate
           ? t('usersPage.actions.createDialogTitle')

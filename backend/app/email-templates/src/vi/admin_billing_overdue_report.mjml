@@ -1,7 +1,7 @@
 <mjml>
   <mj-head>
-    <mj-title>Báo cáo gói gửi xe chưa thanh toán đúng hạn</mj-title>
-    <mj-preview>Báo cáo danh sách người dùng còn công nợ gói gửi xe</mj-preview>
+    <mj-title>Báo cáo vé gửi xe chưa thanh toán đúng hạn</mj-title>
+    <mj-preview>Báo cáo danh sách người dùng còn công nợ vé gửi xe</mj-preview>
 
     <mj-attributes>
       <mj-all font-family="Arial, Helvetica, sans-serif" />
@@ -22,11 +22,11 @@
         />
 
         <mj-text font-size="20px" font-weight="700" color="#0f172a" padding="0">
-          Báo cáo gói gửi xe chưa thanh toán đúng hạn
+          Báo cáo vé gửi xe chưa thanh toán đúng hạn
         </mj-text>
 
         <mj-text color="#64748b" padding="8px 0 0">
-          Hệ thống {{project_name}} gửi báo cáo tổng hợp các gói gửi xe còn công nợ hoặc chưa thanh toán đúng hạn.
+          Hệ thống {{project_name}} gửi báo cáo tổng hợp các vé gửi xe còn công nợ hoặc chưa thanh toán đúng hạn.
         </mj-text>
       </mj-column>
     </mj-section>
@@ -57,8 +57,8 @@
         </mj-text>
 
         <mj-text color="#475569" padding="0">
-          Mã người dùng, họ tên, email, số điện thoại, mã gói đăng ký gửi xe,
-          loại gói, học kỳ, ngày đăng ký, trạng thái, tổng tiền, số tiền đã thanh toán và số tiền nợ.
+          Mã người dùng, họ tên, email, số điện thoại, mã vé gửi xe,
+          loại vé gửi xe, học kỳ, ngày đăng ký, trạng thái, tổng tiền, số tiền đã thanh toán và số tiền nợ.
         </mj-text>
       </mj-column>
     </mj-section>
@@ -71,7 +71,7 @@
 
         <mj-text color="#9a3412" padding="0">
           Vui lòng kiểm tra file đính kèm và liên hệ các người dùng còn công nợ để xử lý thanh toán.
-          Các gói có trạng thái đã hủy nhưng còn công nợ vẫn cần được theo dõi cho đến khi tất toán.
+          Các vé gửi xe có trạng thái đã hủy nhưng còn công nợ vẫn cần được theo dõi cho đến khi tất toán.
         </mj-text>
       </mj-column>
     </mj-section>

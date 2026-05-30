@@ -89,7 +89,7 @@ export const requestWithContext = async <T>(
 export type PaymentMethod = 'MOMO' | 'CASH' | 'WALLET' | 'SYSTEM';
 export type PaymentStatus = 'PENDING' | 'PAID' | 'FAILED';
 export type InvoiceStatus = 'PENDING' | 'PAID' | 'FAILED';
-export type VehicleType = 'MOTORBIKE' | 'BICYCLE' | 'ELECTRIC_BICYCLE';
+export type VehicleMode = 'LICENSED' | 'UNLICENSED';
 export type SubscriptionStatus =
   | 'ACTIVE'
   | 'PAYMENT_DUE'
@@ -98,7 +98,7 @@ export type SubscriptionStatus =
   | 'CANCELED'
   | 'INACTIVE';
 export type UserType = 'GUEST' | 'STUDENT' | 'STAFF' | 'VISITOR';
-export type PaymentPlanType = 'FULL' | 'MONTHLY';
+export type PaymentPlanType = 'FULL' | 'MONTHLY' | 'FULL_PAYMENT' | 'MONTHLY_PAYMENT';
 export type SubscriptionPlanType = 'BASIC' | 'STARTUP' | 'ENTERPRISE';
 export type ParkingSessionStatus = 'ACTIVE' | 'DONE';
 export type SubscriptionPlanStatus = 'ACTIVE' | 'INACTIVE';
@@ -249,15 +249,8 @@ export interface UserSubscriptionPayload {
   end_date: string;
 }
 
-export interface VehicleSummary {
-  id?: string;
-  vehicle_type: VehicleType;
-  license_plate?: string | null;
-  qr_code?: string | null;
-}
-
 export interface SubscriptionPlanSummary {
-  plans_type: SubscriptionPlanType;
+  plan: SubscriptionPlanType;
 }
 
 export interface PaymentPlanSummary {
@@ -270,19 +263,14 @@ export interface AcademicTermSummary {
 
 export interface UserSubscriptionDetail {
   id: string;
-  user_code: string;
   status: SubscriptionStatus;
   start_date: string;
   end_date: string;
   total_amount: number;
   paid_amount: number;
   created_at: string;
-  updated_at: string;
-  subscription_plan?: SubscriptionPlanSummary | null;
-  payment_plan?: PaymentPlanSummary | null;
-  term?: AcademicTermSummary | null;
-  vehicle?: VehicleSummary | null;
-  covered_vehicles?: VehicleSummary[] | null;
+  plan : string;
+  payment?: PaymentPlanSummary | null;
 }
 
 export interface InvoiceInfo {

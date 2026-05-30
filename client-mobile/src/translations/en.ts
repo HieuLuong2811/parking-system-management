@@ -10,20 +10,100 @@ const en = {
     cancel: 'Cancel',
     resetChanges: 'Reset changes',
     continue: 'Continue',
-    vehicleType: {
-      motorbike: 'Motorbike',
-      bicycle: 'Bicycle',
-      electricBicycle: 'Electric bicycle',
-
-    }
+    vehicleMode: {
+      licensed: 'Licensed',
+      unlicensed: 'Unlicensed',
+    },
+    parkingAccessCardStatus: {
+      available: 'Available',
+      assigned: 'Assigned',
+      active: 'Active',
+      disable: 'Disabled',
+      lost: 'Lost',
+    },
+    userWalletStatus: {
+      active: 'Active',
+      locked: 'Locked',
+    },
+    paymentMethod: {
+      CASH: "Cash",
+      MOMO: "MoMo",
+      WALLET: "Wallet",
+      SYSTEM: "System",
+    },
+    dateRange: {
+      invalidDateRange: "End date cannot be earlier than start date.",
+    },
   },
 
   tabs: {
     home: 'Home',
     plan: 'Plans',
     sessions: 'Sessions',
-    invoices: 'Invoices',
+    plans: 'Plans',
     profile: 'Profile',
+  },
+
+  notifications: {
+    title: 'Notifications',
+    viewAll: 'View all',
+    empty: 'No notifications yet.',
+    payment: {
+      title: 'Payment',
+      success: 'Payment successful{{invoicePart}}.',
+      failed: 'Payment failed{{invoicePart}}.',
+    },
+    topUp: {
+      title: 'Top up',
+      success: 'Top up successful{{amountPart}}{{invoicePart}}.',
+      failed: 'Top up failed{{invoicePart}}.',
+    },
+    subscription: {
+      title: 'Subscription',
+      success: 'Subscription payment successful{{invoicePart}}.',
+      pending: 'Subscription payment pending{{invoicePart}}.',
+      failed: 'Subscription payment failed{{invoicePart}}.',
+    },
+    filter: {
+      all: 'All',
+      system: 'System',
+      payment: 'Payment',
+      timeAll: 'All time',
+      last7d: 'Last 7 days',
+      last30d: 'Last 30 days',
+    },
+  },
+
+  transactions: {
+    empty: 'No transactions found.',
+    invoice: 'Invoice',
+    tx: 'Transaction',
+    filters: {
+      title: 'Filters',
+      fromDate: 'From date',
+      toDate: 'To date',
+      invoiceId: 'Invoice code',
+      invoiceIdPlaceholder: 'Invoice id/code',
+      transactionCode: 'Transaction code',
+      transactionCodePlaceholder: 'Transaction code',
+      direction: 'Direction',
+      type: 'Type',
+      clear: 'Clear',
+    },
+    direction: {
+      all: 'All',
+      in: 'Money in',
+      out: 'Money out',
+    },
+    type: {
+      all: 'All',
+      TOP_UP: 'Top up',
+      SUBSCRIPTION_FULL_PAYMENT: 'Subscription payment',
+      MONTHLY_CHARGE: 'Monthly charge',
+      INVOICE_DIRECT_PAYMENT: 'Invoice payment',
+      REFUND: 'Refund',
+      ADMIN_ADJUSTMENT: 'Admin adjustment',
+    },
   },
 
   drawer: {
@@ -47,18 +127,15 @@ const en = {
     current: 'Current plan',
     register: 'Register',
 
-    basic: 'Basic',
-    startup: 'Startup',
-    enterprise: 'Enterprise',
+    basic: 'Basic ticket',
+    startup: 'Startup ticket',
+    enterprise: 'Enterprise ticket',
 
     perDay: '/ day',
 
     monthlyPayment: 'Monthly payment supported',
     fullPayment: 'Full payment supported',
     noFullPayment: 'Full payment not supported',
-
-    maxLicensedVehicle: 'Maximum 1 vehicle with license plate',
-    maxUnlicensedVehicle: 'Maximum 1 vehicle without license plate',
 
     dailyFee: 'Daily fee: {{price}} VND',
     after18Free: 'Free after 18:00',
@@ -105,6 +182,7 @@ const en = {
     fullPaymentDesc:
       'Pay once for the entire registration period.',
     recommended: 'Recommended',
+    discount: '{{discount}}% discount',
 
     summary: 'Payment summary',
     plan: 'Plan',
@@ -147,27 +225,59 @@ const en = {
   },
 
   wallet: {
-    title: 'Wallet',
+    title: 'E-Wallet',
+    screenTitle: 'E-Wallet',
+    atmCardTitle: 'ATM Card',
     balance: 'Balance',
+    availableBalance: 'Available Balance',
     status: 'Status',
-    topupAmount: 'Top-up amount',
+    topupAmount: 'Top-up Amount',
     topupAmountPlaceholder: 'Enter amount',
     topup: 'Top up',
+    confirmTopup: 'Confirm Top-up',
+    topupWarning:
+      'Only top up the amount needed for payment. The system does not support withdrawals yet. If you need help, please contact the Student Affairs Office.',
     invalidAmount: 'Invalid amount',
-    noPaymentUrl: 'No MoMo payment URL was returned.',
+    noPaymentUrl: 'MoMo payment URL was not received.',
     cannotOpenPaymentUrl: 'This device cannot open the MoMo payment URL.',
     redirectingMomo: 'Redirecting to MoMo...',
-    topupFailed: 'Top up failed.',
-    unavailable: 'Wallet is unavailable.',
+    topupFailed: 'Top-up failed.',
+    unavailable: 'Unable to load wallet information.',
+
+    transactionsHistory: 'Transactions History',
+    recentTransactions: 'Recent Transactions',
+    seeAll: 'See all',
+    all: 'All',
+    income: 'Income',
+    expense: 'Expense',
+    history: 'History',
+    card: 'Card',
+    loadTransactionsFailed: 'Unable to load transactions.',
+    noRecentTransactions: 'No recent transactions.',
   },
 
   presentCard: {
+    title: 'Present parking access card',
+    subtitle:
+      'Use the digital card code to identify yourself when entering/exiting the school parking lot.',
     schoolName: 'TRƯỜNG ĐẠI HỌC SPKT HƯNG YÊN',
+    cardType: 'Student parking access card',
+    loading: 'Loading card information...',
+    loadError: 'Unable to load card information.',
     fullName: 'Student name:',
     userCode: 'Student code:',
     noUser: 'User information is not available.',
     noCard: 'No parking access card found.',
     noBarcode: 'No barcode available.',
+    warning: {
+      title: 'Notes on using the parking card',
+      rule1: 'Student parking cards are valid for the entire duration of the student\'s enrollment.',
+      rule2: 'Student parking cards are used to identify students when parking on campus.',
+      rule3: 'Students are not permitted to borrow, delete, or modify card information without authorization.',
+      rule4: 'In case of loss or damage to your student ID card, please contact the Student Affairs Office immediately (via the One-Stop Service Department) to have it reissued.',
+    },
+    reportLostSuccess: 'Card reported as lost successfully.',
+    reportLostFailed: 'Failed to report lost card. Please try again.',
   },
 
   paymentReturn: {
@@ -191,6 +301,12 @@ const en = {
     toDate: 'To date',
     selectDate: 'Select date',
     clearFilters: 'Clear',
+    vehicleMode: 'Vehicle mode',
+    modeAll: 'All',
+    modeLicensed: 'Licensed',
+    modeUnlicensed: 'Unlicensed',
+    licensePlate: 'License plate',
+    licensePlatePlaceholder: 'Search by license plate',
 
     unknownVehicle: 'Vehicle',
     noLicensePlate: 'No license plate',
@@ -226,6 +342,8 @@ const en = {
       from: 'From date',
       to: 'To date',
       selectDate: 'Select date',
+      status: 'Status',
+      statusAll: 'All statuses',
       clear: 'Clear',
     },
 
@@ -287,15 +405,25 @@ const en = {
     subscriptions: 'Registered plans',
     subscriptionsDesc: 'View your current parking plan and registration history.',
 
+    personalInfo: "Personal information",
+    changePassword: "Change password",
+    transactionHistory: "Transaction history",
+    invoice: "Invoices",
+    currentPassword: "Current password",
+    currentPasswordPlaceholder: "Enter current password",
+    currentPasswordRequired: "Please enter your current password.",
+    changePasswordSuccess: "Password changed successfully.",
+    changePasswordFailed: "Failed to change password.",
+
     account: 'Account',
     logout: 'Logout',
-    logoutDesc: 'Sign out of the current account.',
 
     logoutConfirmTitle: 'Confirm logout',
     logoutConfirmMessage: 'Are you sure you want to log out of this account?',
   },
 
   userSubscriptions: {
+    subscriptionCode: 'Subscription code',
     title: 'Registered plans',
     subtitle: 'Track your parking plans, academic terms, and usage status.',
     loadError: 'Unable to load registered plans.',
@@ -303,7 +431,6 @@ const en = {
     empty: 'No registered plans yet.',
     emptyDesc: 'Your registered parking plans will appear here.',
     subscriptionId: 'ID: {{id}}',
-    term: 'Academic term',
     period: 'Period',
     totalAmount: 'Total amount',
     paidAmount: 'Paid amount',
@@ -347,6 +474,12 @@ const en = {
     requestFailed: 'Request failed',
     verifyFailed: 'Verification failed',
     resetFailed: 'Reset failed',
+    loginFailed: 'Login failed',
+    networkError: "Network error: can't reach API. If running on phone/Android emulator, don't use localhost; use your PC IP or 10.0.2.2.",
+    userOrPasswordInvalid: 'User code or password is incorrect',
+    userNotFound: 'User not found',
+    emailMismatch: 'Email does not match user code',
+    userOrEmailInvalid: 'User code or email is incorrect',
     newPassword: 'New password',
     newPasswordPlaceholder: 'Enter new password',
     confirmPassword: 'Confirm password',

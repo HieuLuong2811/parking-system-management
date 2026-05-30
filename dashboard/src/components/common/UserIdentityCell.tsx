@@ -12,12 +12,12 @@ export const UserIdentityCell: React.FC<UserIdentityCellProps> = ({ fullName, us
   return (
     <Stack spacing={0.25} sx={{ lineHeight: 1.1 }}>
       <Tooltip title={t("common.tooltips.full_name", { defaultValue: "Full name" })} placement="top" arrow>
-        <Typography variant="subtitle2">
+        <Typography variant="subtitle2" width="max-content" noWrap>
           {fullName || userCode}
         </Typography>
       </Tooltip>
       <Tooltip title={t("common.tooltips.user_code", { defaultValue: "User code" })} placement="top" arrow>
-        <Typography variant="caption" color="text.secondary">
+        <Typography variant="caption" color="text.secondary" width="max-content" noWrap>
           {userCode}
         </Typography>
       </Tooltip>

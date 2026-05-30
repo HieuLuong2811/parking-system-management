@@ -106,17 +106,11 @@ class AuthController:
             raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail="User code is required")
 
         user = await userService.crud.get(db, user_code)
-        # Don't leak account existence; return 200 to allow UI to proceed uniformly.
         if not user or user.deleted_at is not None:
-            # Return policy info so UI can still show countdown.
-            return ForgotPasswordRequestResponse(
-                expires_at=datetime.utcnow(),
-                ttl_seconds=authVerificationRequestService.policy.ttl_seconds,
-                throttle_seconds=authVerificationRequestService.policy.throttle_seconds,
-            )
+            raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail="User code or email is incorrect")
 
         if not user.email or user.email.strip().lower() != payload.email.strip().lower():
-            raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail="Email does not match this user code")
+            raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail="User code or email is incorrect")
 
         raw_code = f"{secrets.randbelow(1_000_000):06d}"
         created = await authVerificationRequestService.request_code(

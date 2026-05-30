@@ -69,7 +69,25 @@ const th = {
       cancel: "ยกเลิก",
       continue: "ดำเนินการต่อ",
     },
+    pagination: {
+      rowsPerPage: "จํานวนแถวต่อหน้า:",
+      displayedRows: "{{from}}-{{to}} ใน {{count}}",
+    },
     filters: { search: "ค้นหาตาม:", reset: "ล้างตัวกรอง" },
+    vehicleType: {
+      LICENSED: 'รถที่มีป้ายทะเบียน',
+      UNLICENSED: 'รถที่ไม่มีป้ายทะเบียน',
+    },
+    licensePlateLabel: 'ป้ายทะเบียน: {{license}}',
+    sessionStatus: {
+      ACTIVE: "กำลังดำเนินการ",
+      DONE: "เสร็จสิ้น",
+    },
+    paymentTransactionStatus: {
+      PENDING: "กำลังดำเนินการ",
+      SUCCESS: "สําเร็จ",
+      FAILED: "ไม่สําเร็จ",
+    }
   },
   validation: {
     requiredField: "กรุณากรอก{{field}}",
@@ -82,89 +100,6 @@ const th = {
       allowedSpecial: "อักขระที่อนุญาต: {{chars}}",
       min: "อย่างน้อย {{min}} ตัวอักษร",
       max: "ไม่เกิน {{max}} ตัวอักษร",
-    },
-  },
-  vehicle: {
-    title: "จัดการยานพาหนะส่วนบุคคล",
-    subtitle: "จัดการยานพาหนะส่วนตัวของคุณและจองที่จอดรถได้อย่างรวดเร็ว.",
-    registerPlanButton: "ลงทะเบียนที่จอดรถ",
-    registerVehicleButton: "ลงทะเบียนยานพาหนะ",
-    alerts: {
-      noPlateAlreadyRegistered:
-        "ยานพาหนะที่ไม่มีป้ายทะเบียนต้องลงทะเบียนเพียงครั้งเดียว",
-    },
-    search: { userCode: "รหัสผู้ใช้", license: "ป้ายทะเบียน" },
-    clearFilter: "ล้าง",
-    table: {
-      vehicle_type: "ประเภทรถ",
-      license_plate: "หมายเลขทะเบียนรถ",
-      barcode_token: "รหัสบัตรจอดรถ",
-      created_at: "สร้างเมื่อ",
-      actions: "การดำเนินการ",
-      actionsMenu: {
-        edit: "แก้ไข",
-        download: "ดาวน์โหลดรหัสบัตรจอดรถ",
-        delete: "ลบ",
-      },
-    },
-    empty: "ไม่พบยานพาหนะ",
-    error: { load: "ไม่สามารถโหลดข้อมูลยานพาหนะได้ กรุณาลองใหม่ภายหลัง" },
-    tabs: { withPlate: "มีป้ายทะเบียน", withoutPlate: "ไม่มีป้ายทะเบียน" },
-    modal: {
-      title: "เพิ่มยานพาหนะ",
-      editTitle: "อัปเดตยานพาหนะ",
-      subtitle: "เลือกประเภทยานพาหนะและกรอกข้อมูลที่จำเป็น",
-
-      cancel: "ยกเลิก",
-      submit: "บันทึกยานพาหนะ",
-      save: "บันทึกการเปลี่ยนแปลง",
-
-      tabs: {
-        withPlate: "มีป้ายทะเบียน",
-        withoutPlate: "ไม่มีป้ายทะเบียน",
-      },
-
-      fields: {
-        userCode: "รหัสผู้ใช้",
-        vehicleType: "ประเภทยานพาหนะ",
-        vehicleTypePlaceholder: "เลือกประเภทยานพาหนะ",
-        licensePlate: "ป้ายทะเบียน",
-        licensePlatePlaceholder: "เช่น 30K12345",
-      },
-
-      types: {
-        motorbike: "รถจักรยานยนต์",
-        bicycle: "จักรยาน",
-        electricBicycle: "จักรยานไฟฟ้า",
-      },
-
-      barcodeNote:
-        "ยานพาหนะที่ไม่มีป้ายทะเบียน ระบบจะสร้างบาร์โค้ดให้อัตโนมัติหลังจากบันทึก",
-
-      errors: {
-        generic: "ไม่สามารถบันทึกยานพาหนะได้ กรุณาลองอีกครั้ง",
-      },
-    },
-    form: {
-      plateLabel: "ป้ายทะเบียน",
-      platePlaceholder: "เช่น 51A-123.45",
-      brandLabel: "ชื่อยานพาหนะ",
-      brandPlaceholder: "Toyota Vios 2023",
-      colorLabel: "สี",
-      colorPlaceholder: "ขาวมุก",
-      purposeLabel: "วัตถุประสงค์",
-      purposeOptions: {
-        personal: "รถส่วนตัว",
-        family: "รถครอบครัว",
-        work: "เดินทางไปทำงาน/เรียน",
-      },
-      saveButton: "บันทึกยานพาหนะ",
-    },
-    toast: {
-      createSuccess: "เพิ่มยานพาหนะสำเร็จ",
-      updateSuccess: "อัปเดตยานพาหนะสำเร็จ",
-      deleteSuccess: "ลบยานพาหนะสำเร็จ",
-      deleteError: "ไม่สามารถลบยานพาหนะได้",
     },
   },
   invoices: {
@@ -183,6 +118,8 @@ const th = {
       amount: "จำนวนเงิน",
       status: "สถานะ",
       actions: "การดำเนินการ",
+      paid_at: "วันที่ชำระเงิน",
+      paymentMethod: "วิธีชำระเงิน",
     },
     issuedOn: "ออกเมื่อ",
     dueOn: "ครบกำหนด",
@@ -274,7 +211,7 @@ const th = {
     subscriptions: {
       heading: "รายการสมัครใช้งาน",
       subtitle:
-        "ตรวจสอบข้อมูลแพ็กเกจที่จอดรถ ภาคการศึกษาที่เกี่ยวข้อง ยานพาหนะที่เชื่อมโยง และสถานะการใช้งานของคุณ",
+        "ตรวจสอบใบสั่งจอดรถ ระยะเวลาที่ใช้งานได้ และสถานะการใช้งานของคุณ",
       empty: "ยังไม่มีรายการสมัครใช้งาน",
       vehicleUpdated: "อัปเดตยานพาหนะสำเร็จ",
       plan: "แพ็กเกจ",
@@ -324,6 +261,32 @@ const th = {
       },
     },
   },
+  parkingCards: {
+    title: "บัตรจอดรถ",
+    subtitle: "ใช้รหัสบัตรอิเล็กทรอนิกส์เพื่อยืนยันตัวตนเมื่อเข้า และออกจากรถที่จอดของโรงเรียน.",
+    empty: "ไม่มีบัตรจอดรถ.",
+    statusLabel: "สถานะ",
+    actions: {
+      activate: "เปิดใช้งานบัตร",
+      reportLost: "รายงานบัตรหาย",
+      lostReported: "รายงานบัตรหายแล้ว",
+    },
+    toast: {
+      activated: "เปิดใช้งานบัตรแล้ว",
+      lostReported: "รายงานบัตรหายแล้ว",
+      loadError: "โหลดบัตรจอดรถไม่สำเร็จ",
+    },
+  },
+  presentCard: {
+    warning: {
+      title: "กฎการใช้บัตรจอดรถนักศึกษา",
+      rule1: "บัตรจอดรถนักศึกษาใช้ได้ในช่วงเวลาที่กำลังศึกษาอยู่ในมหาวิทยาลัย.",
+      rule2: "บัตรจอดรถนักศึกษาใช้เพื่อยืนยันตัวตนของนักศึกษาเมื่อจอดรถในวิทยาเขต.",
+      rule3: "นักศึกษาห้ามให้ผู้อื่นยืม ลบ หรือแก้ไขข้อมูลบัตร.",
+      rule4:
+        "ในกรณีบัตรหายหรือถูกยกเลิก โปรดติดต่อห้องบริการนักศึกษา (บริการจุดเดียว) เพื่อออกบัตรใหม่.",
+    },
+  },
   transactions: {
     sectionTitle: "ประวัติธุรกรรม",
     subtitle: "ติดตามการชำระเงินและสถานะใบแจ้งหนี้ที่เกี่ยวข้อง",
@@ -359,8 +322,8 @@ const th = {
       noMonthlyPayment: "ไม่รองรับการชำระรายเดือน",
       fullPayment: "รองรับการชำระเต็มจำนวน",
       noFullPayment: "ไม่รองรับการชำระเต็มจำนวน",
-      dailyFee: "ค่าธรรมเนียมรายวัน: {{amount}}đ",
-      after18Fee: "หลัง 18:00: {{amount}}đ",
+      dailyFee: "ค่าธรรมเนียมรายวัน: {{amount}}",
+      after18Fee: "หลัง 18:00: {{amount}}",
       after18Waived: "ฟรีหลัง 18:00",
     },
     cards: { basic: "พื้นฐาน", startup: "เริ่มต้น", enterprise: "องค์กร" },

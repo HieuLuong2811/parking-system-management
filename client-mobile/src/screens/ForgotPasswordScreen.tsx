@@ -1,5 +1,5 @@
 import React, { useEffect, useMemo, useRef, useState } from 'react';
-import { Alert, ScrollView, StyleSheet, Text, TextInput, TouchableOpacity, View } from 'react-native';
+import { Alert, ScrollView, StyleSheet, Text, TouchableOpacity, View } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { useTranslation } from 'react-i18next';
 import type { NativeStackScreenProps } from '@react-navigation/native-stack';
@@ -8,11 +8,13 @@ import { useMutation } from '@tanstack/react-query';
 
 import type { AuthStackParamList } from '../navigation/AuthStack';
 import { emailRegex, isPasswordComplex } from '../ultis/passwordRegex';
+import FormInput from '../component/FormInput';
 import {
   requestForgotPassword,
   resetForgotPassword,
   verifyForgotPasswordCode,
 } from '../api/forgotpassword';
+import { showAppToast } from '../ultis/toast';
 
 type Props = NativeStackScreenProps<AuthStackParamList, 'ForgotPassword'>;
 
@@ -24,6 +26,24 @@ export default function ForgotPasswordScreen({ navigation }: Props) {
   const [otp, setOtp] = useState('');
   const [newPassword, setNewPassword] = useState('');
   const [confirmPassword, setConfirmPassword] = useState('');
+  const [submitError, setSubmitError] = useState('');
+  const [hasRequestedCode, setHasRequestedCode] = useState(false);
+
+  const toI18nErrorMessage = (detail: unknown) => {
+    const raw = typeof detail === 'string' ? detail : '';
+    const normalized = raw.trim().toLowerCase();
+    if (!normalized) return '';
+    if (
+      normalized === 'user code or email is incorrect' ||
+      normalized === 'user code not found' ||
+      normalized === 'users not found' ||
+      normalized === 'user not found' ||
+      normalized === 'email does not match this user code'
+    ) {
+      return t('auth.userOrEmailInvalid', { defaultValue: 'User code or email is incorrect' });
+    }
+    return raw;
+  };
 
   const [cooldownSeconds, setCooldownSeconds] = useState(0);
   const cooldownTimer = useRef<ReturnType<typeof setInterval> | null>(null);
@@ -33,6 +53,8 @@ export default function ForgotPasswordScreen({ navigation }: Props) {
   const requestMutation = useMutation({
     mutationFn: requestForgotPassword,
     onSuccess: (data) => {
+      setSubmitError('');
+      setHasRequestedCode(true);
       const seconds = Math.max(0, Math.min(59, Math.floor((data.throttle_seconds || 60) - 1)));
       setCooldownSeconds(seconds > 0 ? seconds : 59);
       Alert.alert(
@@ -41,19 +63,26 @@ export default function ForgotPasswordScreen({ navigation }: Props) {
       );
     },
     onError: (err: any) => {
+      const message =
+        toI18nErrorMessage(err?.response?.data?.detail) || t('auth.requestFailed', { defaultValue: 'Request failed' });
+      setSubmitError(message);
       Alert.alert(
         t('common.error', { defaultValue: 'Error' }),
-        err?.response?.data?.detail ?? t('auth.requestFailed', { defaultValue: 'Request failed' })
+        message
       );
     },
   });
 
   const verifyMutation = useMutation({
     mutationFn: verifyForgotPasswordCode,
+    onSuccess: () => setSubmitError(''),
     onError: (err: any) => {
+      const message =
+        toI18nErrorMessage(err?.response?.data?.detail) || t('auth.verifyFailed', { defaultValue: 'Verification failed' });
+      setSubmitError(message);
       Alert.alert(
         t('common.error', { defaultValue: 'Error' }),
-        err?.response?.data?.detail ?? t('auth.verifyFailed', { defaultValue: 'Verification failed' })
+        message
       );
     },
   });
@@ -61,14 +90,17 @@ export default function ForgotPasswordScreen({ navigation }: Props) {
   const resetMutation = useMutation({
     mutationFn: resetForgotPassword,
     onSuccess: () => {
-      Alert.alert(t('common.success', { defaultValue: 'Success' }), t('auth.passwordUpdated', { defaultValue: 'Password updated.' }), [
-        { text: 'OK', onPress: () => navigation.navigate('Login') },
-      ]);
+      setSubmitError('');
+      showAppToast(t('auth.passwordUpdated', { defaultValue: 'Password updated.' }), 'success');
+      navigation.reset({ index: 0, routes: [{ name: 'Login' }] });
     },
     onError: (err: any) => {
+      const message =
+        toI18nErrorMessage(err?.response?.data?.detail) || t('auth.resetFailed', { defaultValue: 'Reset failed' });
+      setSubmitError(message);
       Alert.alert(
         t('common.error', { defaultValue: 'Error' }),
-        err?.response?.data?.detail ?? t('auth.resetFailed', { defaultValue: 'Reset failed' })
+        message
       );
     },
   });
@@ -120,26 +152,31 @@ export default function ForgotPasswordScreen({ navigation }: Props) {
     const cleanedOtp = (otp || '').trim();
     if (!cleanedUserCode) {
       Alert.alert(t('common.error', { defaultValue: 'Error' }), t('auth.userCodeRequired', { defaultValue: 'User code is required' }));
-      return;
+      return false;
     }
     if (!isOtpValid) {
       Alert.alert(t('common.error', { defaultValue: 'Error' }), t('auth.invalidCode', { defaultValue: 'Invalid code' }));
-      return;
+      return false;
     }
     const res = await verifyMutation.mutateAsync({ user_code: cleanedUserCode, code: cleanedOtp });
     if (!res.valid) {
       Alert.alert(t('common.error', { defaultValue: 'Error' }), t('auth.invalidCode', { defaultValue: 'Invalid code' }));
       throw new Error('invalid_code');
     }
+    return true;
   };
 
   const doReset = async () => {
     if (!isPasswordValid) {
-      Alert.alert(t('common.error', { defaultValue: 'Error' }), t('auth.passwordRules', { defaultValue: 'Password does not meet requirements' }));
+      const message = t('auth.passwordRules', { defaultValue: 'Password does not meet requirements' });
+      setSubmitError(message);
+      Alert.alert(t('common.error', { defaultValue: 'Error' }), message);
       return;
     }
     if (!isConfirmValid) {
-      Alert.alert(t('common.error', { defaultValue: 'Error' }), t('auth.passwordMismatch', { defaultValue: 'Passwords do not match' }));
+      const message = t('auth.passwordMismatch', { defaultValue: 'Passwords do not match' });
+      setSubmitError(message);
+      Alert.alert(t('common.error', { defaultValue: 'Error' }), message);
       return;
     }
     await resetMutation.mutateAsync({ user_code: (userCode || '').trim(), code: (otp || '').trim(), new_password: newPassword });
@@ -151,6 +188,7 @@ export default function ForgotPasswordScreen({ navigation }: Props) {
         <View style={styles.card}>
           <Text style={styles.title}>{t('auth.forgotTitle')}</Text>
           <Text style={styles.subtitle}>{t('auth.forgotSubtitle')}</Text>
+          {!!submitError && <Text style={styles.submitError}>{submitError}</Text>}
 
           <ProgressSteps
             activeStep={stepIndex}
@@ -169,42 +207,42 @@ export default function ForgotPasswordScreen({ navigation }: Props) {
             >
               <View style={styles.stepBody}>
                 <View style={styles.formGroup}>
-                  <Text style={styles.label}>{t('auth.userCode')}</Text>
-                  <TextInput
+                  <FormInput
+                    label={t('auth.userCode')}
+                    required
                     value={userCode}
                     onChangeText={setUserCode}
                     placeholder={t('auth.userCodePlaceholder')}
-                    placeholderTextColor="#94a3b8"
-                    style={styles.input}
                     autoCapitalize="none"
                   />
                 </View>
 
                 <View style={styles.formGroup}>
-                  <Text style={styles.label}>{t('auth.email', { defaultValue: 'Email' })}</Text>
-                  <TextInput
+                  <FormInput
+                    label={t('auth.email', { defaultValue: 'Email' })}
+                    required
                     value={email}
                     onChangeText={setEmail}
                     placeholder={t('auth.emailPlaceholder', { defaultValue: 'Enter your email' })}
-                    placeholderTextColor="#94a3b8"
-                    style={styles.input}
                     autoCapitalize="none"
                     keyboardType="email-address"
                   />
                 </View>
 
-                <TouchableOpacity
-                  style={[styles.secondaryButton, !canResend && styles.secondaryButtonDisabled]}
-                  onPress={doRequest}
-                  activeOpacity={0.85}
-                  disabled={!canResend || requestMutation.isPending}
-                >
-                  <Text style={styles.secondaryButtonText}>
-                    {canResend
-                      ? t('auth.resend', { defaultValue: 'Resend code' })
-                      : `${t('auth.resendIn', { defaultValue: 'Resend in' })} ${cooldownSeconds}s`}
-                  </Text>
-                </TouchableOpacity>
+                {hasRequestedCode && (
+                  <TouchableOpacity
+                    style={[styles.secondaryButton, !canResend && styles.secondaryButtonDisabled]}
+                    onPress={doRequest}
+                    activeOpacity={0.85}
+                    disabled={!canResend || requestMutation.isPending}
+                  >
+                    <Text style={styles.secondaryButtonText}>
+                      {canResend
+                        ? t('auth.resend', { defaultValue: 'Resend code' })
+                        : `${t('auth.resendIn', { defaultValue: 'Resend in' })} ${cooldownSeconds}s`}
+                    </Text>
+                  </TouchableOpacity>
+                )}
 
                 <TouchableOpacity
                   style={[styles.primaryButton, requestMutation.isPending && styles.primaryButtonDisabled]}
@@ -231,13 +269,12 @@ export default function ForgotPasswordScreen({ navigation }: Props) {
             >
               <View style={styles.stepBody}>
                 <View style={styles.formGroup}>
-                  <Text style={styles.label}>{t('auth.verificationCode', { defaultValue: 'Verification code' })}</Text>
-                  <TextInput
+                  <FormInput
+                    label={t('auth.verificationCode', { defaultValue: 'Verification code' })}
+                    required
                     value={otp}
                     onChangeText={(v) => setOtp(v.replace(/[^\d]/g, '').slice(0, 6))}
                     placeholder={t('auth.codePlaceholder', { defaultValue: '6 digits' })}
-                    placeholderTextColor="#94a3b8"
-                    style={styles.input}
                     keyboardType="number-pad"
                   />
                 </View>
@@ -268,11 +305,11 @@ export default function ForgotPasswordScreen({ navigation }: Props) {
                   <TouchableOpacity
                     style={[styles.primaryButton, styles.primaryButtonInline, verifyMutation.isPending && styles.primaryButtonDisabled]}
                     onPress={async () => {
-                      await doVerify();
-                      setStepIndex(2);
+                      const ok = await doVerify();
+                      if (ok) setStepIndex(2);
                     }}
                     activeOpacity={0.85}
-                    disabled={verifyMutation.isPending}
+                    disabled={verifyMutation.isPending || !isOtpValid}
                   >
                     <Text style={styles.primaryButtonText}>
                       {verifyMutation.isPending
@@ -291,14 +328,13 @@ export default function ForgotPasswordScreen({ navigation }: Props) {
             >
               <View style={styles.stepBody}>
                 <View style={styles.formGroup}>
-                  <Text style={styles.label}>{t('auth.newPassword', { defaultValue: 'New password' })}</Text>
-                  <TextInput
+                  <FormInput
+                    label={t('auth.newPassword', { defaultValue: 'New password' })}
+                    required
+                    type="password"
                     value={newPassword}
                     onChangeText={setNewPassword}
                     placeholder={t('auth.newPasswordPlaceholder', { defaultValue: 'Enter new password' })}
-                    placeholderTextColor="#94a3b8"
-                    style={styles.input}
-                    secureTextEntry
                     autoCapitalize="none"
                   />
                   <Text style={styles.helpText}>
@@ -310,14 +346,13 @@ export default function ForgotPasswordScreen({ navigation }: Props) {
                 </View>
 
                 <View style={styles.formGroup}>
-                  <Text style={styles.label}>{t('auth.confirmPassword', { defaultValue: 'Confirm password' })}</Text>
-                  <TextInput
+                  <FormInput
+                    label={t('auth.confirmPassword', { defaultValue: 'Confirm password' })}
+                    required
+                    type="password"
                     value={confirmPassword}
                     onChangeText={setConfirmPassword}
                     placeholder={t('auth.confirmPasswordPlaceholder', { defaultValue: 'Re-enter new password' })}
-                    placeholderTextColor="#94a3b8"
-                    style={styles.input}
-                    secureTextEntry
                     autoCapitalize="none"
                   />
                 </View>
@@ -336,7 +371,7 @@ export default function ForgotPasswordScreen({ navigation }: Props) {
                     style={[styles.primaryButton, styles.primaryButtonInline, resetMutation.isPending && styles.primaryButtonDisabled]}
                     onPress={doReset}
                     activeOpacity={0.85}
-                    disabled={resetMutation.isPending}
+                    disabled={resetMutation.isPending || !isPasswordValid || !isConfirmValid}
                   >
                     <Text style={styles.primaryButtonText}>
                       {resetMutation.isPending
@@ -392,21 +427,14 @@ const styles = StyleSheet.create({
   formGroup: {
     marginBottom: 16,
   },
-  label: {
-    fontSize: 14,
+  submitError: {
+    marginTop: 12,
+    marginBottom: 6,
+    color: '#DC2626',
+    fontSize: 13,
     fontWeight: '700',
-    color: '#334155',
-    marginBottom: 8,
-  },
-  input: {
-    height: 48,
-    borderRadius: 14,
-    borderWidth: 1,
-    borderColor: '#dbe2ea',
-    backgroundColor: '#ffffff',
-    paddingHorizontal: 14,
-    fontSize: 15,
-    color: '#0f172a',
+    lineHeight: 19,
+    textAlign: 'center',
   },
   primaryButton: {
     height: 50,

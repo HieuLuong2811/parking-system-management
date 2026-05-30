@@ -24,7 +24,7 @@ export default function HomePage() {
   const introCards = [
     {
       title: 'Đăng ký nhanh',
-      desc: 'Chọn gói gửi xe theo học kỳ hoặc năm học chỉ với vài bước.',
+      desc: 'Chọn vé gửi xe theo học kỳ hoặc năm học chỉ với vài bước.',
       icon: <DirectionsCarFilledRoundedIcon />,
     },
     {
@@ -72,7 +72,7 @@ export default function HomePage() {
     {
       id: 'web',
       title: 'Quản lý phương tiện trên website',
-      description: 'Đăng ký gói gửi xe, quản lý phương tiện và theo dõi phiên gửi xe ngay trên web.',
+      description: 'Đăng ký vé gửi xe, quản lý phương tiện và theo dõi phiên gửi xe ngay trên web.',
       bullets: ['Quản lý danh sách phương tiện', 'Theo dõi phiên gửi xe', 'Tra cứu thông tin nhanh'],
       imageSrc: heroImages[0],
       imageAlt: 'Quản lý phương tiện trên website',
@@ -115,7 +115,7 @@ export default function HomePage() {
               Parking UTEHY
             </Typography>
             <Typography variant="body1" className="home-hero-description">
-              Giải pháp quản lý bãi đỗ xe hiện đại dành cho sinh viên, giảng viên và khách đến trường. Hỗ trợ đăng ký gói
+              Giải pháp quản lý bãi đỗ xe hiện đại dành cho sinh viên, giảng viên và khách đến trường. Hỗ trợ đăng ký vé
               gửi xe, thanh toán, nhận diện phương tiện và kiểm soát ra vào hiệu quả.
             </Typography>
             <Stack direction={{ xs: 'column', sm: 'row' }} spacing={2} className="home-hero-actions">

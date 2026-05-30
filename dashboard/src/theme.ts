@@ -1,35 +1,36 @@
-import { createTheme } from '@mui/material/styles';
+import { createTheme } from "@mui/material/styles";
+import type {} from "@mui/x-data-grid/themeAugmentation";
 
 const theme = createTheme({
   typography: {
     h1: {
-      fontSize: '2rem',
+      fontSize: "2rem",
       fontWeight: 600,
       lineHeight: 1.2,
-      letterSpacing: '0.2px',
+      letterSpacing: "0.2px",
     },
     h2: {
-      fontSize: '1.75rem',
+      fontSize: "1.75rem",
       fontWeight: 500,
       lineHeight: 1.3,
     },
     h3: {
-      fontSize: '1.5rem',
+      fontSize: "1.5rem",
       fontWeight: 500,
       lineHeight: 1.4,
     },
     body1: {
-      fontSize: '1rem',
+      fontSize: "1rem",
       fontWeight: 400,
       lineHeight: 1.6,
     },
     body2: {
-      fontSize: '0.875rem',
+      fontSize: "0.875rem",
       fontWeight: 400,
       lineHeight: 1.6,
     },
     button: {
-      fontSize: '0.875rem',
+      fontSize: "0.875rem",
       fontWeight: 600,
     },
   },
@@ -44,67 +45,101 @@ const theme = createTheme({
     },
   },
   palette: {
-    mode: 'light',
+    mode: "light",
     primary: {
-      main: '#5e4fd8',
-      light: '#7b6df0',
-      dark: '#3430a5',
-      contrastText: '#ffffff',
+      main: "#5e4fd8",
+      light: "#7b6df0",
+      dark: "#3430a5",
+      contrastText: "#ffffff",
     },
     secondary: {
-      main: '#f94a8a',
-      contrastText: '#ffffff',
+      main: "#f94a8a",
+      contrastText: "#ffffff",
     },
     text: {
-      primary: '#0f172a',
-      secondary: '#475569',
+      primary: "#0f172a",
+      secondary: "#475569",
     },
     background: {
-      default: '#f4f6fb',
-      paper: '#ffffff',
+      default: "#f4f6fb",
+      paper: "#ffffff",
     },
-    divider: '#e0e3ec',
+    divider: "#e0e3ec",
   },
   components: {
     MuiAppBar: {
       styleOverrides: {
         root: {
-          backgroundColor: '#ffffff',
-          boxShadow: '0 10px 35px rgba(15, 23, 42, 0.08)',
-          borderBottom: '1px solid #e0e3ec',
+          backgroundColor: "#ffffff",
+          boxShadow: "0 10px 35px rgba(15, 23, 42, 0.08)",
+          borderBottom: "1px solid #e0e3ec",
         },
       },
     },
     MuiPaper: {
       styleOverrides: {
         root: {
-          backgroundColor: '#ffffff',
+          backgroundColor: "#ffffff",
         },
       },
     },
     MuiTableRow: {
       styleOverrides: {
         root: {
-          borderBottom: '1px solid #e0e3ec',
-          '&:last-of-type': {
-            borderBottom: 'none',
+          borderBottom: "1px solid #e0e3ec",
+          "&:last-of-type": {
+            borderBottom: "none",
           },
-          borderCollapse: 'collapse',
+          borderCollapse: "collapse",
         },
       },
     },
     MuiButton: {
       styleOverrides: {
         root: {
-          textTransform: 'none',
-          boxShadow: 'none',
+          textTransform: "none",
+          boxShadow: "none",
           fontWeight: 600,
         },
         contained: {
-          backgroundColor: '#6b4fd0',
-          color: '#ffffff',
-          '&:hover': {
-            backgroundColor: '#5440b5',
+          backgroundColor: "#6b4fd0",
+          color: "#ffffff",
+          "&:hover": {
+            backgroundColor: "#5440b5",
+          },
+        },
+      },
+    },
+    MuiSnackbar: {
+      styleOverrides: {
+        root: {
+          "&.MuiSnackbar-anchorOriginTopRight": {
+            top: "60px",
+          },
+          "&.MuiSnackbar-anchorOriginTopLeft": {
+            top: "60px",
+          },
+          "&.MuiSnackbar-anchorOriginTopCenter": {
+            top: "60px",
+          },
+        },
+      },
+    },
+    MuiDataGrid: {
+      styleOverrides: {
+        root: {
+          "& .MuiDataGrid-columnHeader--alignCenter .MuiDataGrid-columnHeaderTitleContainer":
+            {
+              justifyContent: "center",
+            },
+          "& .MuiDataGrid-columnHeader--alignCenter .MuiDataGrid-columnHeaderTitle":
+            {
+              textAlign: "center",
+              width: "100%",
+            },
+          "& .MuiDataGrid-cell--textCenter": {
+            justifyContent: "center",
+            textAlign: "center",
           },
         },
       },

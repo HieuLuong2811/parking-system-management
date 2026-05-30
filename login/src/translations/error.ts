@@ -13,4 +13,7 @@ export const ErrorTranslations: Record<Language, TranslationMap> = {
   th: {
     'login.error.invalid': 'ชื่อผู้ใช้หรือรหัสผ่านไม่ถูกต้อง',
   },
+  lo: {
+    'login.error.invalid': 'ຊື່ຜູ້ໃຊ້ຂອງບັນຊີນີ້ບໍ່ຖືກຕ້ອງ',
+  }
 };

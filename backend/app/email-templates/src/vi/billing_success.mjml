@@ -16,7 +16,7 @@
           <strong>Số tiền:</strong> {{ amount_text }} VND
         </mj-text>
         <mj-text font-size="14px" color="#0f172a">
-          <strong>Thời hạn gói:</strong> {{ start_date }} – {{ end_date }}
+          <strong>Thời hạn vé gửi xe:</strong> {{ start_date }} – {{ end_date }}
         </mj-text>
         <mj-divider border-color="#e2e8f0" />
         <mj-text font-size="13px" color="#64748b">

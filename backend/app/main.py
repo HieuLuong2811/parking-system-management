@@ -20,7 +20,6 @@ app = FastAPI(
     title=settings.PROJECT_NAME,
     openapi_url="/openapi.json",
     docs_url="/docs",
-    root_path=settings.API_V1_STR,
 )
 
 # CORS
@@ -34,7 +33,7 @@ if settings.all_cors_origins:
     )
 
 # Import router
-app.include_router(router)
+app.include_router(router, prefix=settings.API_V1_STR)
 
 @app.on_event("startup")
 async def initialize_auth_code_store():

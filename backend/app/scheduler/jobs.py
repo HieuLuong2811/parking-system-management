@@ -313,7 +313,7 @@ async def _notify_user_failed(
     attempt: int,
     suspended: bool,
 ) -> None:
-    message = "Số dư ví không đủ để thanh toán gói hàng tháng"
+    message = "Số dư ví không đủ để thanh toán vé gửi xe hàng tháng"
     await notificationService.create_notification(
         NotificationCreate(
             receiver_id=sub.user_code,

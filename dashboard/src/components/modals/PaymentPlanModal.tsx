@@ -1,4 +1,4 @@
-import React, { useEffect, useMemo, useState } from 'react';
+import React, { useCallback, useEffect, useMemo, useState } from 'react';
 import {
   Alert,
   Button,
@@ -52,14 +52,43 @@ export const PaymentPlanModal: React.FC<Props> = ({
   const [formError, setFormError] = useState('');
   const [fieldErrors, setFieldErrors] = useState<{ payment_type?: string; discount_percent?: string }>({});
 
+  const handleFormError = useCallback((error: string) => {
+    setFormError(error);
+    setFieldErrors({});
+  }, []);
+
+  const handleOpenChange = useCallback(() => {
+    if (!open) {
+      handleFormError('');
+    }
+  }, [open, handleFormError]);
+
   useEffect(() => {
     if (!open) return;
-    setPaymentType(initialValue?.payment_type ?? 'FULL');
-    setDiscountInput(initialValue?.discount_percent != null ? String(initialValue.discount_percent) : '');
-    setIsActive(Boolean(initialValue?.is_active ?? true));
-    setFormError('');
-    setFieldErrors({});
+
+    const updatePaymentType = () => {
+      setPaymentType(initialValue?.payment_type ?? 'FULL');
+    };
+
+    const updateDiscountInput = () => {
+      setDiscountInput(initialValue?.discount_percent != null ? String(initialValue.discount_percent) : '');
+    };
+
+    const updateActive = () => {
+      setIsActive(Boolean(initialValue?.is_active ?? true));
+    };
+
+    updatePaymentType();
+    updateDiscountInput();
+    updateActive();
   }, [open, initialValue]);
+
+
+  useEffect(() => {
+    return () => {
+      handleOpenChange();
+    };
+  }, [handleOpenChange]);
 
   const discountLabel = useMemo(
     () => t('paymentPlansPage.dialog.fields.discountPercent', { defaultValue: 'Discount percent' }),
@@ -80,9 +109,9 @@ export const PaymentPlanModal: React.FC<Props> = ({
     let discountValue: number | null = null;
     if (discountInput.trim()) {
       const numeric = Number(discountInput);
-      if (Number.isNaN(numeric) || numeric < 0 || numeric > 100) {
+      if (Number.isNaN(numeric) || numeric < 0 || numeric > 70) {
         setFieldErrors({
-          discount_percent: t('validation.invalidNumber', { defaultValue: 'Value must be between 0 and 100.' }),
+          discount_percent: t('validation.valueMustBeBetween', { min: 0, max: 70 }),
         });
         return;
       }

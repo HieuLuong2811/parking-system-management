@@ -22,7 +22,14 @@ export const formatMeta = (value: unknown) => {
 export function formatDateTime(value?: string | null) {
   if (!value) return '-';
 
-  const date = new Date(value);
+  const normalized =
+    typeof value === 'string' &&
+    // Treat naive timestamps (no timezone offset) as UTC coming from backend TIMESTAMP WITHOUT TIME ZONE.
+    !/[zZ]|[+-]\d{2}:\d{2}$/.test(value)
+      ? `${value.replace(' ', 'T')}Z`
+      : value;
+
+  const date = new Date(normalized);
   if (Number.isNaN(date.getTime())) return '-';
 
   return date.toLocaleString('vi-VN', {

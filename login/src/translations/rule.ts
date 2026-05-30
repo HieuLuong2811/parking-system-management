@@ -10,10 +10,10 @@ export const RuleTranslations: Record<Language, TranslationMap> = {
   en: {
     'login.rule.required-field': 'is required.',
   },
-  ja: {
-    'login.rule.required-field': 'は必須です。',
-  },
   th: {
     'login.rule.required-field': 'จำเป็นต้องกรอก',
   },
+  lo: {
+    'login.rule.required-field': 'ກະລຸນາປ້ອນຂໍ້ມູນ',
+  }
 };

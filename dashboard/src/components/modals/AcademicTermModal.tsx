@@ -1,4 +1,4 @@
-import { Alert, Button, Dialog, DialogActions, DialogContent, DialogTitle, Stack, Typography } from '@mui/material';
+import { Button, Dialog, DialogActions, DialogContent, DialogTitle, Stack, Typography } from '@mui/material';
 import type { AcademicTermRecord } from '../../api/types';
 import React, { useState } from 'react';
 import { useTranslation } from 'react-i18next';
@@ -54,7 +54,7 @@ export const AcademicTermModal: React.FC<AcademicTermModalProps> = ({
         return;
       }
       if (startDate > endDate) {
-        setFormError(t('validation.invalidDateRange', { defaultValue: 'Start date must come before end date.' }));
+        setFormError(t('common.validation.invalidDateRange', { defaultValue: 'Start date must come before end date.' }));
         return;
       }
     }
@@ -88,14 +88,6 @@ export const AcademicTermModal: React.FC<AcademicTermModalProps> = ({
             onChange={(event) => setTermName(event.target.value)}
             error={fieldErrors.term_name}
           />
-          {initialValue?.is_in_use && (
-            <Alert severity="warning" sx={{ py: 0.75 }}>
-              {t('termsPage.warnings.rename', {
-                defaultValue:
-                  "If you change the term name, the system will notify (and email) all users who are currently using this term.",
-              })}
-            </Alert>
-          )}
           <FormInput
             name="start_date"
             label={t('termsPage.fields.startDate', { defaultValue: 'Start date' })}

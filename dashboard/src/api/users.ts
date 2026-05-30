@@ -14,6 +14,7 @@ export type UserCreatePayload = {
 export type UserUpdatePayload = {
   full_name?: string;
   email?: string;
+  phone_number?: string;
   password?: string;
   language_use?: string;
 };
@@ -38,7 +39,7 @@ const fetchUsers = (filters: UserListFilters = {}) => {
   if (filters.page) params.append('page', String(filters.page));
   if (filters.limit) params.append('limit', String(filters.limit));
   const query = params.toString();
-  return httpGet<PaginatedResponse<UserWithRoles>>(`/users${query ? `?${query}` : ''}`);
+  return httpGet<PaginatedResponse<UserWithRoles>>(`/users/${query ? `?${query}` : ''}`);
 };
 
 export const useFetchUsers = (filters: UserListFilters = {}) => {

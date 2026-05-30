@@ -7,6 +7,8 @@ export type ParkingSessionsMeQuery = {
   limit: number;
   from_time?: string;
   to_time?: string;
+  vehicle_mode?: 'LICENSED' | 'UNLICENSED';
+  license_plate?: string;
 };
 
 const fetchParkingSessions = async (params: ParkingSessionsMeQuery): Promise<PaginatedResponse<ParkingSession>> => {
@@ -24,4 +26,3 @@ export const useParkingSessions = (params: ParkingSessionsMeQuery) => {
     placeholderData: (prev) => prev,
   });
 };
-

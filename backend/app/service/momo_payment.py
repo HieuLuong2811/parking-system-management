@@ -15,12 +15,13 @@ from app.core.config import settings
 from app.core.momo_verify_signature import verify_signature
 from app.enums.parking import (
     InvoiceStatus,
+    InvoiceType,
     PaymentMethod,
     PaymentTransactionStatus,
     PaymentTransactionType,
     SubscriptionStatus,
 )
-from app.models.invoices import InvoiceUpdate
+from app.models.invoices import Invoice, InvoiceUpdate
 from app.models.momo_payment import MomoInfor
 from app.models.payment_transactions import PaymentTransaction
 from app.service.user_wallets import userWalletService
@@ -285,8 +286,8 @@ class MomoPaymentService:
                 NotificationCreate(
                     actor_id=None,
                     receiver_id=receiver_id,
-                    title="Payment successful",
-                    content=f"Your invoice {order_id} has been paid successfully.",
+                    title="payment_successful",
+                    content=f"Hoá đơn của bạn với mã là {order_id} đã được thanh toán thành công.",
                     is_read=False,
                 ),
                 session,
@@ -322,6 +323,33 @@ class MomoPaymentService:
             if tx is None:
                 raise HTTPException(status_code=404, detail="Top-up transaction not found")
 
+            invoice_row = await db.execute(
+                select(Invoice)
+                .where(Invoice.payment_order_id == order_id)
+                .with_for_update()
+            )
+            invoice = invoice_row.scalar_one_or_none()
+            if invoice is None:
+                invoice = Invoice(
+                    user_code=tx.user_code,
+                    subscription_id=None,
+                    invoice_type=InvoiceType.TOP_UP,
+                    payment_method=PaymentMethod.MOMO,
+                    status=InvoiceStatus.PENDING,
+                    amount=tx.amount,
+                    payment_order_id=order_id,
+                    paid_at=None,
+                )
+                db.add(invoice)
+                await db.flush()
+
+            if tx.invoice_id is None:
+                tx.invoice_id = invoice.id
+                db.add(tx)
+
+            if invoice.status != InvoiceStatus.PENDING:
+                return {"message": "already processed", "order_id": order_id}
+
             if tx.status == PaymentTransactionStatus.SUCCESS:
                 return {"message": "already processed", "order_id": order_id}
 
@@ -330,6 +358,7 @@ class MomoPaymentService:
                 tx.response_message = str(message or f"MoMo payment failed ({result_code_int})")
                 tx.provider_transaction_id = trans_id or tx.provider_transaction_id
                 tx.updated_at = datetime.utcnow()
+                invoice.status = InvoiceStatus.FAILED
                 db.add(tx)
                 return {"message": "failed", "order_id": order_id}
 
@@ -349,6 +378,9 @@ class MomoPaymentService:
             tx.response_message = str(message or "MoMo top-up completed")
             tx.provider_transaction_id = trans_id or tx.provider_transaction_id
             tx.updated_at = datetime.utcnow()
+
+            invoice.status = InvoiceStatus.PAID
+            invoice.paid_at = datetime.utcnow()
 
             db.add(wallet)
             db.add(tx)
@@ -402,89 +434,80 @@ class MomoPaymentService:
             raise HTTPException(status_code=400, detail="Invalid resultCode")
 
         # Get invoice with row lock
+        async with db.begin():
+            invoice = await invoiceService.crud.get_for_update(db, invoice_id)
+            if not invoice:
+                raise HTTPException(status_code=404, detail="Invoice not found")
 
-        try:
-            async with db.begin():
+            # Ignore delayed IPN callbacks from older payment attempts.
+            # We only accept the IPN that matches the latest order id stored on the invoice.
+            if invoice.payment_order_id and order_id != invoice.payment_order_id:
+                logger.info(
+                    "[MoMo IPN] Ignored outdated order - order_id=%s expected=%s invoice_id=%s",
+                    order_id,
+                    invoice.payment_order_id,
+                    invoice_id,
+                )
+                return {"message": "ignored outdated order", "order_id": order_id}
 
-                invoice = await invoiceService.crud.get_for_update(db, invoice_id)
-                if not invoice:
-                    raise HTTPException(status_code=404, detail="Invoice not found")
+            # Idempotency check
+            if invoice.status == InvoiceStatus.PAID:
+                logger.info("[MoMo IPN] Already paid - order_id=%s", order_id)
+                return {"message": "already paid", "order_id": order_id}
 
-                # Ignore delayed IPN callbacks from older payment attempts.
-                # We only accept the IPN that matches the latest order id stored on the invoice.
-                if invoice.payment_order_id and order_id != invoice.payment_order_id:
-                    logger.info(
-                        "[MoMo IPN] Ignored outdated order - order_id=%s expected=%s invoice_id=%s",
-                        order_id,
-                        invoice.payment_order_id,
-                        invoice_id,
-                    )
-                    return {"message": "ignored outdated order", "order_id": order_id}
-
-                # Idempotency check
-                if invoice.status == InvoiceStatus.PAID:
-                    logger.info("[MoMo IPN] Already paid - order_id=%s", order_id)
-                    return {"message": "already paid", "order_id": order_id}
-
-                if result_code != 0:
-                    invoice.status = InvoiceStatus.FAILED
-                    db.add(invoice)
-                    
-                    logger.info("[MoMo IPN] FAILED - invoice_id=%s, code=%s", invoice_id, result_code)
-                    raise HTTPException(status_code=400, detail=message or f"Payment failed ({result_code})")
-
-                if not invoice.subscription_id:
-                    raise HTTPException(status_code=400, detail="Missing subscription_id")
-
-                subscription = await subscriptionService.crud.get_for_update(db, invoice.subscription_id)
-
-                # Create payment transaction
-                if trans_id and not await MomoPaymentService._transaction_exists(
-                    invoice_id=invoice.id, transaction_code=trans_id, db=db
-                ):
-                    db.add(
-                        PaymentTransaction(
-                            user_code=invoice.user_code,
-                            wallet_id=None,
-                            invoice_id=invoice.id,
-                            subscription_id=invoice.subscription_id,
-                            transaction_type="INVOICE_DIRECT_PAYMENT",
-                            payment_method="MOMO",
-                            amount=invoice.amount,
-                            status="SUCCESS",
-                            provider="MOMO",
-                            provider_transaction_id=str(trans_id),
-                            provider_request_id=str(order_id),
-                            description="MoMo invoice payment",
-                            attempt_number=1,
-                            transaction_code=str(trans_id),
-                            response_message=str(message or "MoMo payment completed"),
-                        )
-                    )
-
-                # Mark current invoice as PAID
-                invoice.status = InvoiceStatus.PAID
+            if result_code != 0:
+                invoice.status = InvoiceStatus.FAILED
                 db.add(invoice)
-                # Ensure subsequent queries (status determination) see updated invoice status
-                await db.flush()
+                logger.info("[MoMo IPN] FAILED - invoice_id=%s, code=%s", invoice_id, result_code)
+                return {"message": "failed", "order_id": order_id, "invoice_id": str(invoice.id)}
+
+            # Create payment transaction (idempotent by transId)
+            if trans_id and not await MomoPaymentService._transaction_exists(
+                invoice_id=invoice.id,
+                transaction_code=trans_id,
+                db=db,
+            ):
+                db.add(
+                    PaymentTransaction(
+                        user_code=invoice.user_code,
+                        wallet_id=None,
+                        invoice_id=invoice.id,
+                        subscription_id=invoice.subscription_id,
+                        transaction_type=PaymentTransactionType.INVOICE_DIRECT_PAYMENT,
+                        payment_method=PaymentMethod.MOMO,
+                        amount=invoice.amount,
+                        status=PaymentTransactionStatus.SUCCESS,
+                        provider_request_id=str(order_id),
+                        attempt_number=1,
+                        transaction_code=str(trans_id),
+                    )
+                )
+
+            invoice.status = InvoiceStatus.PAID
+            invoice.paid_at = datetime.utcnow()
+            db.add(invoice)
+            await db.flush()
+
+            subscription = None
+            new_status = None
+            if invoice.subscription_id:
+                subscription = await subscriptionService.crud.get_for_update(db, invoice.subscription_id)
+                if not subscription:
+                    raise HTTPException(status_code=404, detail="Subscription not found")
 
                 old_status = subscription.status
-                
                 if old_status == SubscriptionStatus.CANCELED:
                     new_status = SubscriptionStatus.CANCELED
                 else:
-                    new_status = await MomoPaymentService._determine_subscription_status(
-                        db, subscription.id
-                    )
+                    new_status = await MomoPaymentService._determine_subscription_status(db, subscription.id)
 
                 subscription.status = new_status
                 subscription.paid_amount = (subscription.paid_amount or 0) + invoice.amount
-
                 db.add(subscription)
 
-            # Post-commit tasks
+        # Post-commit tasks
+        if subscription is not None:
             user = await userService.crud.get(db, subscription.user_code)
-
             if background_tasks is not None:
                 background_tasks.add_task(send_payment_confirmation_email, user, invoice, subscription)
                 background_tasks.add_task(
@@ -495,20 +518,23 @@ class MomoPaymentService:
             else:
                 send_payment_confirmation_email(user, invoice, subscription)
                 await MomoPaymentService._create_payment_notification(
-                    receiver_id=subscription.user_code, order_id=order_id
+                    receiver_id=subscription.user_code,
+                    order_id=invoice_id,
                 )
 
-            logger.info("[MoMo IPN] SUCCESS - order_id=%s, new_status=%s", order_id, new_status.value)
-
+            logger.info(
+                "[MoMo IPN] SUCCESS - order_id=%s, subscription_id=%s, new_status=%s",
+                order_id,
+                subscription.id,
+                (new_status.value if new_status else None),
+            )
             return {
                 "message": "payment recorded",
                 "order_id": order_id,
                 "invoice_id": str(invoice.id),
                 "subscription_id": str(subscription.id),
-                "subscription_status": new_status.value,
+                "subscription_status": (new_status.value if new_status else subscription.status.value),
             }
 
-        except Exception as e:
-            await db.rollback()
-            logger.exception("[MoMo IPN] Error processing order_id=%s", order_id)
-            raise HTTPException(status_code=500, detail="Internal error processing payment")
+        logger.info("[MoMo IPN] SUCCESS - order_id=%s invoice_id=%s (no subscription)", order_id, invoice.id)
+        return {"message": "payment recorded", "order_id": order_id, "invoice_id": str(invoice.id)}

@@ -27,7 +27,7 @@ TERM_UPDATED_SUBJECTS = {
 
 SUBSCRIPTION_PLAN_UPDATED_SUBJECTS = {
     "en": "{project_name} - Subscription plan updated",
-    "vi": "{project_name} - Thông báo cập nhật gói đăng ký",
+    "vi": "{project_name} - Thông báo cập nhật vé gửi xe đã đăng ký",
     "ja": "{project_name} - 登録プラン更新のお知らせ",
     "th": "{project_name} - แจ้งเตือนอัปเดตแพ็กเกจสมัครสมาชิก",
 }
@@ -44,6 +44,11 @@ PASSWORD_RESET_CODE_SUBJECTS = {
     "vi": "{project_name} - Mã xác minh đặt lại mật khẩu cho {email}",
     "ja": "{project_name} - ăƒ¦ăƒ¼ă‚¶ăƒ¼ {email} のパスワード再設定コード",
     "th": "{project_name} - รหัสยืนยันตั้งรหัสผ่านใหม่สำหรับ {email}",
+}
+
+PARKING_ACCESS_CARD_DISABLED_SUBJECTS = {
+    "en": "{project_name} - Your parking access card has been disabled",
+    "vi": "{project_name} - Thẻ gửi xe của bạn đã bị khoá",
 }
 
 
@@ -254,6 +259,37 @@ def generate_subscription_plan_updated_email(
             "user_name": user_name,
             "old_plan_type": old_plan_type,
             "new_plan_type": new_plan_type,
+        },
+    )
+
+    return EmailData(html_content=html_content, subject=subject)
+
+
+def generate_parking_access_card_disabled_email(
+    *,
+    email_to: str,
+    user_name: str,
+    user_code: str,
+    barcode_token: str,
+    lang: str | None = None,
+) -> EmailData:
+    project_name = settings.APP_NAME
+    selected_lang = normalize_lang(lang)
+
+    subject_template = PARKING_ACCESS_CARD_DISABLED_SUBJECTS.get(
+        selected_lang, PARKING_ACCESS_CARD_DISABLED_SUBJECTS["vi"]
+    )
+    subject = subject_template.format(project_name=project_name)
+
+    html_content = render_email_template(
+        template_name="parking_access_card_disabled.html",
+        lang=selected_lang,
+        context={
+            "project_name": project_name,
+            "email": email_to,
+            "user_name": user_name,
+            "user_code": user_code,
+            "barcode_token": barcode_token,
         },
     )
 

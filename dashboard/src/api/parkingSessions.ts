@@ -7,7 +7,6 @@ export type ParkingSessionsQuery = {
   page: number;
   limit: number;
   user_code?: string;
-  vehicle_type?: string;
   status?: 'ACTIVE' | 'DONE';
   from_time?: string;
   to_time?: string;
@@ -16,7 +15,6 @@ export type ParkingSessionsQuery = {
 const fetchParkingSessionsPaginated = async (params: ParkingSessionsQuery) => {
   const search = new URLSearchParams();
   if (params.user_code) search.append('user_code', params.user_code);
-  if (params.vehicle_type) search.append('vehicle_type', params.vehicle_type);
   if (params.status) search.append('status', params.status);
   if (params.from_time) search.append('from_time', params.from_time);
   if (params.to_time) search.append('to_time', params.to_time);

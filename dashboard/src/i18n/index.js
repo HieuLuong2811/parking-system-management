@@ -3,13 +3,11 @@ import { initReactI18next } from "react-i18next";
 
 import en from "./locales/en";
 import vi from "./locales/vi";
-import th from "./locales/th";
 
 i18n.use(initReactI18next).init({
   resources: {
     en,
     vi,
-    th,
   },
   lng: localStorage.getItem('language') || 'vi',
   fallbackLng: "vi",
