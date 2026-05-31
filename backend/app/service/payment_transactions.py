@@ -156,15 +156,10 @@ class paymentTransactionService:
                     payment_method=transaction.payment_method,
                     amount=transaction.amount,
                     status=transaction.status,
-                    balance_before=getattr(transaction, "balance_before", None),
-                    balance_after=getattr(transaction, "balance_after", None),
                     created_at=transaction.created_at,
                     user_code=transaction.user_code,
                     user_full_name=(user.full_name if user else None),
                     invoice_amount=(invoice.amount if invoice else None),
-                    invoice_payment_method=(invoice.payment_method if invoice else None),
-                    invoice_status=(str(invoice.status) if invoice else None),
-                    invoice_created_at=(invoice.created_at if invoice else None),
                 )
             )
 
@@ -195,7 +190,6 @@ class paymentTransactionService:
 
         statement = (
             select(PaymentTransaction, Invoice, Users)
-            .outerjoin(Invoice, Invoice.id == PaymentTransaction.invoice_id)
             .outerjoin(Users, Users.user_code == Invoice.user_code)
             .where(PaymentTransaction.user_code == user_code)
             .order_by(PaymentTransaction.created_at.desc())
@@ -270,7 +264,7 @@ class paymentTransactionService:
             statement = statement.where(PaymentTransaction.transaction_code == transaction_uuid)
         rows, total, total_pages = await paginate_rows(db, statement, page=page, limit=limit)
         items: list[PaymentTransactionDetailRead] = []
-        for transaction, invoice, user in rows:
+        for transaction, user in rows:
             items.append(
                 PaymentTransactionDetailRead(
                     payment_transaction_id=transaction.payment_transaction_id,
@@ -286,10 +280,6 @@ class paymentTransactionService:
                     created_at=transaction.created_at,
                     user_code=transaction.user_code,
                     user_full_name=(user.full_name if user else None),
-                    invoice_amount=(invoice.amount if invoice else None),
-                    invoice_payment_method=(invoice.payment_method if invoice else None),
-                    invoice_status=(str(invoice.status) if invoice else None),
-                    invoice_created_at=(invoice.created_at if invoice else None),
                 )
             )
 

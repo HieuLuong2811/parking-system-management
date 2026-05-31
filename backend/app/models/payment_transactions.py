@@ -112,8 +112,3 @@ class PaymentTransactionDetailRead(SQLModel):
 
     user_code: str
     user_full_name: str | None
-
-    invoice_amount: int | None
-    invoice_payment_method: PaymentMethod | None
-    invoice_status: str | None
-    invoice_created_at: datetime | None

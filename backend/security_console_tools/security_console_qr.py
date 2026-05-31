@@ -1,3 +1,4 @@
+import os
 import sys
 import time
 from datetime import datetime
@@ -5,7 +6,12 @@ from datetime import datetime
 import requests
 from PyQt6 import QtCore, QtGui, QtWidgets
 
+_BACKEND_DIR = os.path.abspath(os.path.join(os.path.dirname(__file__), ".."))
+if _BACKEND_DIR not in sys.path:
+    sys.path.insert(0, _BACKEND_DIR)
+
 from app.core.config import settings
+from security_console_tools.banner_client import notify_banner_refresh
 
 
 LOOKUP_DEBOUNCE_SECONDS = 0.5
@@ -710,6 +716,9 @@ class SecurityConsole(QtWidgets.QWidget):
             self._set_status("THÀNH CÔNG", "success", f"Đã xác nhận: {message}")
 
         self._clear_pending()
+
+        # Best-effort refresh banner KPIs after a successful check-in/out.
+        notify_banner_refresh()
 
     # =========================
     # Data helpers

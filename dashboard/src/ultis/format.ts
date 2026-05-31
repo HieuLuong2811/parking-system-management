@@ -1,8 +1,16 @@
 import type { SidebarItemConfig } from "../components/layout/menu";
 
-export const formatCurrency = (value?: number | null) => {
-  if (value === null || value === undefined) return '-';
-  return value.toLocaleString('vi-VN', { maximumFractionDigits: 2 });
+export const formatCurrency = (value?: number | string | null) => {
+  if (value === null || value === undefined || value === "") return "-";
+
+  const numericValue =
+    typeof value === "number" ? value : Number(value);
+
+  if (Number.isNaN(numericValue)) return "-";
+
+  return `${numericValue.toLocaleString("vi-VN", {
+    maximumFractionDigits: 2,
+  })} đ`;
 };
 
 export const formatMeta = (value: unknown) => {

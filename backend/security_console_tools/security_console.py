@@ -7,9 +7,15 @@ import re
 from datetime import datetime
 from PyQt6 import QtCore, QtGui, QtWidgets, uic
 
+_BACKEND_DIR = os.path.abspath(os.path.join(os.path.dirname(__file__), ".."))
+if _BACKEND_DIR not in sys.path:
+    sys.path.insert(0, _BACKEND_DIR)
+
 from app.service.detect import PLATE_REGEX_CIVIL_8, PLATE_REGEX_CIVIL_9, PLATE_REGEX_MILITARY_6, PLATE_REGEX_NUMERIC_9, STABLE_HISTORY_SIZE, DetectService, get_plate_model
 from app.core.config import settings
 from collections import Counter, deque
+
+from security_console_tools.banner_client import notify_banner_refresh
 
 DETECT_EVERY_N_FRAMES = 5
 PLATE_CONFIRM_MIN_COUNT = 2
@@ -260,14 +266,153 @@ class CameraWorker(QtCore.QThread):
         self._running = False
         self.wait()
 
+class AccessApiWorker(QtCore.QThread):
+    preview_success = QtCore.pyqtSignal(dict)
+    confirm_success = QtCore.pyqtSignal(dict)
+    failed = QtCore.pyqtSignal(str, object)
+
+    def __init__(self, mode: str, payload: dict, plate_crop=None, parent=None):
+        super().__init__(parent)
+        self.mode = mode
+        self.payload = payload.copy() if payload else {}
+        self.plate_crop = plate_crop.copy() if plate_crop is not None and hasattr(plate_crop, "copy") else plate_crop
+
+    def _upload_plate_crop(self) -> str | None:
+        debug = (os.getenv("CLOUDINARY_DEBUG") or "").strip().lower() in {"1", "true", "yes", "on"}
+        cloud_name = (os.getenv("CLOUDINARY_CLOUD_NAME") or "").strip()
+        upload_preset = (os.getenv("CLOUDINARY_UPLOAD_PRESET") or "").strip()
+
+        if not cloud_name or not upload_preset:
+            if debug:
+                print("[cloudinary] skipped: missing CLOUDINARY_CLOUD_NAME or CLOUDINARY_UPLOAD_PRESET")
+            return None
+
+        if self.plate_crop is None or self.plate_crop.size == 0:
+            if debug:
+                print("[cloudinary] skipped: no current plate crop")
+            return None
+
+        try:
+            ok, buf = cv2.imencode(".jpg", self.plate_crop)
+            if not ok:
+                if debug:
+                    print("[cloudinary] failed: cv2.imencode returned false")
+                return None
+
+            files = {
+                "file": ("plate.jpg", buf.tobytes(), "image/jpeg"),
+            }
+            data = {"upload_preset": upload_preset}
+            url = f"https://api.cloudinary.com/v1_1/{cloud_name}/image/upload"
+
+            res = requests.post(url, data=data, files=files, timeout=3)
+
+            if not res.ok:
+                if debug:
+                    print(f"[cloudinary] upload failed: status={res.status_code} body={res.text[:500]!r}")
+                return None
+
+            data = res.json() or {}
+            return str(data.get("secure_url") or data.get("url") or "").strip() or None
+
+        except Exception as e:
+            if debug:
+                print("[cloudinary] exception during upload:", e)
+            return None
+
+    def run(self):
+        try:
+            if self.mode == "preview":
+                url = f"{settings.BACKEND_HOST}/api/v1/parking_sessions/access/preview"
+
+                res = requests.post(
+                    url,
+                    json=self.payload,
+                    timeout=6,
+                )
+
+                if res.ok:
+                    self.preview_success.emit(res.json() or {})
+                    return
+
+            elif self.mode == "confirm":
+                if not self.payload.get("plate_image_url"):
+                    uploaded_url = self._upload_plate_crop()
+                    if uploaded_url:
+                        self.payload["plate_image_url"] = uploaded_url
+
+                url = f"{settings.BACKEND_HOST}/api/v1/parking_sessions/access/confirm"
+
+                res = requests.post(
+                    url,
+                    json=self.payload,
+                    timeout=6,
+                )
+
+                if res.ok:
+                    data = res.json() or {}
+                    data["_used_plate_image_url"] = self.payload.get("plate_image_url")
+                    self.confirm_success.emit(data)
+                    return
+
+            else:
+                self.failed.emit("Loại xử lý không hợp lệ.", None)
+                return
+
+            try:
+                detail = res.json().get("detail")
+            except Exception:
+                detail = res.text
+
+            self.failed.emit(str(detail or "Xử lý thất bại"), detail)
+
+        except Exception as e:
+            self.failed.emit(str(e), None)
+
+class ImageLoadWorker(QtCore.QThread):
+    loaded = QtCore.pyqtSignal(str, QtGui.QImage)
+    failed = QtCore.pyqtSignal(str, str)
+
+    def __init__(self, image_url: str, target_name: str, parent=None):
+        super().__init__(parent)
+        self.image_url = str(image_url or "").strip().rstrip("|")
+        self.target_name = target_name
+
+    def run(self):
+        if not self.image_url:
+            self.failed.emit(self.target_name, "Không có ảnh")
+            return
+
+        try:
+            res = requests.get(self.image_url, timeout=6)
+
+            if not res.ok:
+                self.failed.emit(self.target_name, "Không tải được ảnh")
+                return
+
+            image = QtGui.QImage()
+            image.loadFromData(res.content)
+
+            if image.isNull():
+                self.failed.emit(self.target_name, "Ảnh không hợp lệ")
+                return
+
+            self.loaded.emit(self.target_name, image)
+
+        except Exception:
+            self.failed.emit(self.target_name, "Lỗi tải ảnh")
+
 class SecurityConsoleUI(QtWidgets.QMainWindow):
     def __init__(self):
         super().__init__()
 
         base_dir = os.path.dirname(__file__)
+        backend_dir = os.path.abspath(os.path.join(base_dir, ".."))
         candidate_paths = [
             os.path.join(base_dir, "security_console.ui"),
             os.path.join(base_dir, "GUI_security", "security_console.ui"),
+            os.path.join(backend_dir, "security_console.ui"),
+            os.path.join(backend_dir, "GUI_security", "security_console.ui"),
         ]
 
         ui_path = next((path for path in candidate_paths if os.path.exists(path)), None)
@@ -291,9 +436,86 @@ class SecurityConsoleUI(QtWidgets.QMainWindow):
 
         self.current_plate_image_url: str | None = None
 
+        self.current_plate_crop = None
+
+        self.api_worker = None
+        self.image_workers = []
+        self._cursor_overridden = False
+
         self._setup_initial_ui()
         self._connect_events()
 
+    def _set_processing(self, text: str) -> None:
+        self._submitting = True
+        self.lbl_status.setText(text)
+        self._set_gate_status("ĐANG XỬ LÝ...", "processing")
+
+        if not self._cursor_overridden:
+            QtWidgets.QApplication.setOverrideCursor(QtCore.Qt.CursorShape.WaitCursor)
+            self._cursor_overridden = True
+
+    def _clear_processing(self) -> None:
+        self._submitting = False
+
+        if self._cursor_overridden:
+            try:
+                QtWidgets.QApplication.restoreOverrideCursor()
+            except Exception:
+                pass
+            self._cursor_overridden = False
+
+        self.txt_barcode.setFocus()
+
+    def _set_label_loading(self, label: QtWidgets.QLabel, text: str = "Đang tải ảnh...") -> None:
+        label.setPixmap(QtGui.QPixmap())
+        label.setText(text)
+
+    def _clear_plate_label(self, label: QtWidgets.QLabel, text: str = "Không có ảnh") -> None:
+        label.setPixmap(QtGui.QPixmap())
+        label.setText(text)
+
+    def _show_current_plate_crop_local(self, plate_crop, target_label=None) -> None:
+        if plate_crop is None or plate_crop.size == 0:
+            return
+
+        try:
+            rgb = cv2.cvtColor(plate_crop, cv2.COLOR_BGR2RGB)
+            h, w, ch = rgb.shape
+
+            qimg = QtGui.QImage(
+                rgb.data,
+                w,
+                h,
+                ch * w,
+                QtGui.QImage.Format.Format_RGB888,
+            ).copy()
+
+            pixmap = QtGui.QPixmap.fromImage(qimg)
+
+            # Chưa preview thì chưa biết chắc CHECK_IN hay CHECK_OUT.
+            # Tạm hiển thị vào ảnh xe ra/current để bảo vệ thấy ngay.
+            if target_label is None:
+                if hasattr(self, "lbl_plate_out_image"):
+                    target_label = self.lbl_plate_out_image
+                elif hasattr(self, "lbl_plate_in_image"):
+                    target_label = self.lbl_plate_in_image
+                    
+            if target_label is None:
+                return
+
+            if target_label.width() > 0 and target_label.height() > 0:
+                pixmap = pixmap.scaled(
+                    target_label.size(),
+                    QtCore.Qt.AspectRatioMode.KeepAspectRatio,
+                    QtCore.Qt.TransformationMode.SmoothTransformation,
+                )
+
+            target_label.setText("")
+            target_label.setPixmap(pixmap)
+
+        except Exception as e:
+            print("show local plate crop failed:", e)
+            
     def _setup_initial_ui(self) -> None:
         self._remove_label_borders()
         self._install_gate_status_banner()
@@ -707,11 +929,13 @@ class SecurityConsoleUI(QtWidgets.QMainWindow):
         self.lbl_status.setText("Đã nhận biển số. Đang kiểm tra thông tin...")
         self._set_gate_status("ĐANG KIỂM TRA", "processing")
 
-        self.current_plate_image_url = self._try_upload_latest_plate_crop()
+        self.current_plate_image_url = None
 
-        if not self.current_plate_image_url:
-            print("upload latest plate crop failed")
-
+        if hasattr(self, "worker") and self.worker:
+            plate_crop = getattr(self.worker, "_latest_plate_crop", None)
+            if plate_crop is not None and plate_crop.size > 0:
+                self.current_plate_crop = plate_crop.copy()
+                
         if hasattr(self, "lst_detection_history"):
             self.lst_detection_history.insertItem(
                 0,
@@ -722,83 +946,6 @@ class SecurityConsoleUI(QtWidgets.QMainWindow):
         if self.pending_barcode and not self._submitting:
             self._submit_current_barcode_and_plate()
 
-    def _try_upload_latest_plate_crop(self) -> str | None:
-        debug = (os.getenv("CLOUDINARY_DEBUG") or "").strip().lower() in {"1", "true", "yes", "on"}
-        cloud_name = (os.getenv("CLOUDINARY_CLOUD_NAME") or "").strip()
-        upload_preset = (os.getenv("CLOUDINARY_UPLOAD_PRESET") or "").strip()
-
-        if not cloud_name or not upload_preset:
-            if hasattr(self, "lst_detection_history"):
-                self.lst_detection_history.insertItem(
-                    0,
-                    f"{datetime.now().strftime('%H:%M:%S')} - CLOUDINARY - skipped (missing env)",
-                )
-            if debug:
-                print("[cloudinary] skipped: missing CLOUDINARY_CLOUD_NAME or CLOUDINARY_UPLOAD_PRESET")
-            return None
-
-        if not hasattr(self, "worker") or not self.worker:
-            if debug:
-                print("[cloudinary] skipped: worker not ready")
-            return None
-
-        plate_crop = getattr(self.worker, "_latest_plate_crop", None)
-        if plate_crop is None:
-            if hasattr(self, "lst_detection_history"):
-                self.lst_detection_history.insertItem(
-                    0,
-                    f"{datetime.now().strftime('%H:%M:%S')} - CLOUDINARY - skipped (no crop)",
-                )
-            if debug:
-                print("[cloudinary] skipped: no latest plate crop")
-            return None
-
-        try:
-            ok, buf = cv2.imencode(".jpg", plate_crop)
-            if not ok:
-                if debug:
-                    print("[cloudinary] failed: cv2.imencode returned false")
-                return None
-
-            files = {
-                "file": ("plate.jpg", buf.tobytes(), "image/jpeg"),
-            }
-            data = {"upload_preset": upload_preset}
-
-            url = f"https://api.cloudinary.com/v1_1/{cloud_name}/image/upload"
-            if debug:
-                print(f"[cloudinary] POST {url} preset={upload_preset!r} bytes={len(files['file'][1])}")
-                if hasattr(self, "lst_detection_history"):
-                    self.lst_detection_history.insertItem(
-                        0,
-                        f"{datetime.now().strftime('%H:%M:%S')} - CLOUDINARY - uploading...",
-                    )
-            res = requests.post(url, data=data, files=files, timeout=3)
-            if not res.ok:
-                if debug:
-                    print(f"[cloudinary] upload failed: status={res.status_code} body={res.text[:500]!r}")
-                    if hasattr(self, "lst_detection_history"):
-                        self.lst_detection_history.insertItem(
-                            0,
-                            f"{datetime.now().strftime('%H:%M:%S')} - CLOUDINARY - failed ({res.status_code})",
-                        )
-                return None
-
-            payload = res.json() or {}
-            uploaded_url = str(payload.get("secure_url") or payload.get("url") or "").strip() or None
-            if debug:
-                print(f"[cloudinary] upload ok: url={uploaded_url!r}")
-                if hasattr(self, "lst_detection_history"):
-                    self.lst_detection_history.insertItem(
-                        0,
-                        f"{datetime.now().strftime('%H:%M:%S')} - CLOUDINARY - ok",
-                    )
-            return uploaded_url
-        except Exception:
-            if debug:
-                print("[cloudinary] exception during upload")
-            return None
-        
     def set_frame(self, frame: QtGui.QImage) -> None:
         if frame is None:
             self.lbl_camera_view.clear()
@@ -850,6 +997,7 @@ class SecurityConsoleUI(QtWidgets.QMainWindow):
         self.pending_auto_confirm = False
 
         self.current_plate = None
+        self.current_plate_crop = None
         self.lbl_last_payload.setText("Biển số gần nhất:")
 
         if hasattr(self, "txt_license_plate"):
@@ -912,6 +1060,8 @@ class SecurityConsoleUI(QtWidgets.QMainWindow):
 
     def _confirm_pending_gate_action(self) -> None:
         if self._submitting:
+            self.lbl_status.setText("Hệ thống đang xử lý, vui lòng chờ...")
+            self._set_gate_status("ĐANG XỬ LÝ...", "processing")
             return
 
         if not self.pending_gate_action_allowed or not self.pending_access_payload:
@@ -920,192 +1070,205 @@ class SecurityConsoleUI(QtWidgets.QMainWindow):
             self.txt_barcode.clear()
             self.txt_barcode.setFocus()
             return
-        
+
         self.txt_barcode.clear()
         self._auto_submit_access_confirm(self.pending_access_payload)
+
+    def _on_preview_success(self, data: dict, payload: dict) -> None:
+        self._clear_processing()
+
+        self.pending_preview_data = data
+        self._render_session_result(data)
+
+        message = data.get("message") or "Đã lấy thông tin"
+        self.lbl_status.setText(message)
+
+        can_confirm = bool(data.get("can_confirm"))
+        auto_confirm = bool(data.get("auto_confirm"))
+        action = str(data.get("action") or "").upper()
+
+        if self.current_plate_crop is not None and self.current_plate_crop.size > 0:
+            if action == "CHECK_IN":
+                if hasattr(self, "lbl_plate_in_image"):
+                    self._show_current_plate_crop_local(
+                        self.current_plate_crop,
+                        self.lbl_plate_in_image,
+                    )
+
+                if hasattr(self, "lbl_plate_out_image"):
+                    self.lbl_plate_out_image.setPixmap(QtGui.QPixmap())
+                    self.lbl_plate_out_image.setText("Không có ảnh")
+
+            elif action == "CHECK_OUT":
+                if hasattr(self, "lbl_plate_out_image"):
+                    self._show_current_plate_crop_local(
+                        self.current_plate_crop,
+                        self.lbl_plate_out_image,
+                    )
+
+        if can_confirm and auto_confirm:
+            self.pending_auto_confirm = True
+            self._set_gate_status("TỰ ĐỘNG XÁC NHẬN", "success")
+            self.lbl_status.setText(f"{message} - Hệ thống đang tự động xác nhận...")
+
+            QtCore.QTimer.singleShot(
+                300,
+                lambda payload=payload.copy(): self._auto_submit_access_confirm(payload),
+            )
+            return
+
+        if can_confirm:
+            self.pending_access_payload = payload.copy()
+            self.pending_gate_action_allowed = True
+
+            if action == "CHECK_IN":
+                self._set_gate_status("CHO PHÉP XE VÀO - NHẤN SPACE", "warning")
+                self.lbl_status.setText(
+                    f"{message} - Nhấn SPACE để bảo vệ xác nhận cho xe vào."
+                )
+
+            elif action == "CHECK_OUT":
+                total_amount = self._get_total_amount_from_data(data)
+                payment_source = str(data.get("payment_source") or "").strip().upper()
+
+                if payment_source == "CASH":
+                    self._set_gate_status("THU TIỀN MẶT - NHẤN SPACE", "warning")
+                    self.lbl_status.setText(
+                        f"{message} - Nhấn SPACE sau khi đã thu tiền."
+                    )
+                elif total_amount > 0:
+                    self._set_gate_status("THU PHÍ - NHẤN SPACE", "warning")
+                    self.lbl_status.setText(
+                        f"{message} - Thu phí xong nhấn SPACE để cho xe ra."
+                    )
+                else:
+                    self._set_gate_status("CHO PHÉP XE RA - NHẤN SPACE", "warning")
+                    self.lbl_status.setText(
+                        f"{message} - Nhấn SPACE để bảo vệ xác nhận cho xe ra."
+                    )
+            else:
+                self._set_gate_status("CHỜ XÁC NHẬN - NHẤN SPACE", "warning")
+
+            return
+
+        self.pending_gate_action_allowed = False
+        self.pending_access_payload = None
+        self._set_gate_status("KHÔNG ĐỦ ĐIỀU KIỆN", "error")
         
     def _preview_access_info(self, payload: dict) -> None:
-        self._submitting = True
+        if self._submitting:
+            return
 
         self.pending_access_payload = None
         self.pending_preview_data = None
         self.pending_gate_action_allowed = False
         self.pending_auto_confirm = False
 
-        self.lbl_status.setText("Đang kiểm tra thông tin thẻ và biển số...")
-        self._set_gate_status("ĐANG KIỂM TRA", "processing")
+        self._set_processing("Đang kiểm tra thông tin thẻ và biển số...")
 
-        try:
-            res = requests.post(
-                f"{settings.BACKEND_HOST}/api/v1/parking_sessions/access/preview",
-                json=payload,
-                timeout=6,
-            )
+        worker = AccessApiWorker("preview", payload, parent=self)
+        self.api_worker = worker
 
-            if res.ok:
-                data = res.json()
-                self.pending_preview_data = data
-
-                self._render_session_result(data)
-
-                message = data.get("message") or "Đã lấy thông tin"
-                self.lbl_status.setText(message)
-
-                can_confirm = bool(data.get("can_confirm"))
-                auto_confirm = bool(data.get("auto_confirm"))
-                action = str(data.get("action") or "").upper()
-
-                if can_confirm and auto_confirm:
-                    self.pending_auto_confirm = True
-                    # Auto confirm can happen for check-in, valid subscription (free exit),
-                    # or wallet deduction. Keep the UI message generic and trust backend message.
-                    self._set_gate_status("TỰ ĐỘNG XÁC NHẬN", "success")
-                    self.lbl_status.setText(message)
-
-                    QtCore.QTimer.singleShot(
-                        300,
-                        lambda payload=payload.copy(): self._auto_submit_access_confirm(payload),
-                    )
-                    return
-
-                if can_confirm:
-                    self.pending_access_payload = payload.copy()
-                    self.pending_gate_action_allowed = True
-
-                    if action == "CHECK_IN":
-                        self._set_gate_status("CHO PHÉP XE VÀO - NHẤN SPACE", "warning")
-                        self.lbl_status.setText(
-                            f"{message} - Nhấn SPACE để bảo vệ xác nhận cho xe vào."
-                        )
-                    elif action == "CHECK_OUT":
-                        total_amount = self._get_total_amount_from_data(data)
-                        payment_source = str(data.get("payment_source") or "").strip().upper()
-
-                        if payment_source == "CASH":
-                            self._set_gate_status("THU TIỀN MẶT - NHẤN SPACE", "warning")
-                            self.lbl_status.setText(
-                                f"{message} - Nhấn SPACE sau khi đã thu tiền."
-                            )
-                        elif total_amount > 0:
-                            self._set_gate_status("THU PHÍ - NHẤN SPACE", "warning")
-                            self.lbl_status.setText(
-                                f"{message} - Thu phí xong nhấn SPACE để cho xe ra."
-                            )
-                        else:
-                            self._set_gate_status("CHO PHÉP XE RA - NHẤN SPACE", "warning")
-                            self.lbl_status.setText(
-                                f"{message} - Nhấn SPACE để bảo vệ xác nhận cho xe ra."
-                            )
-                    else:
-                        self._set_gate_status("CHỜ XÁC NHẬN - NHẤN SPACE", "warning")
-
-                    return
-
-                self.pending_gate_action_allowed = False
-                self.pending_access_payload = None
-                self._set_gate_status("KHÔNG ĐỦ ĐIỀU KIỆN", "error")
-                return
-
-            try:
-                detail = res.json().get("detail")
-            except Exception:
-                detail = res.text
-
-            if isinstance(detail, dict):
-                message = str(detail.get("message") or "Kiểm tra thất bại")
-                self.lbl_status.setText(message)
-                # render images (e.g. mismatch plate case)
-                self._render_session_result(detail)
-            else:
-                self.lbl_status.setText(detail or "Kiểm tra thất bại")
-            self._set_gate_status("TỪ CHỐI", "error")
-
-            if hasattr(self, "lst_detection_history"):
-                self.lst_detection_history.insertItem(
-                    0,
-                    f"{datetime.now().strftime('%H:%M:%S')} - ERROR - {detail or res.status_code}",
-                )
-
-        except Exception as e:
-            self.lbl_status.setText(str(e))
-            self._set_gate_status("LỖI KẾT NỐI", "error")
-
-        finally:
-            self._submitting = False
-            self.txt_barcode.setFocus()
+        worker.preview_success.connect(
+            lambda data, payload=payload.copy(): self._on_preview_success(data, payload)
+        )
+        worker.failed.connect(self._on_access_failed)
+        worker.finished.connect(worker.deleteLater)
+        worker.finished.connect(lambda: setattr(self, "api_worker", None))
+        worker.start()
         
     def _auto_submit_access_confirm(self, payload: dict) -> None:
-        self._submitting = True
-        self.lbl_status.setText("Đang xác nhận cho xe ra/vào...")
-        self._set_gate_status("ĐANG XÁC NHẬN", "processing")
+        if self._submitting:
+            return
 
-        try:
-            res = requests.post(
-                f"{settings.BACKEND_HOST}/api/v1/parking_sessions/access/confirm",
-                json=payload,
-                timeout=6,
+        self._set_processing("Đang xác nhận cho xe ra/vào...")
+
+        plate_crop = None
+        if self.current_plate_crop is not None and self.current_plate_crop.size > 0:
+            plate_crop = self.current_plate_crop.copy()
+
+        worker = AccessApiWorker(
+            "confirm",
+            payload,
+            plate_crop=plate_crop,
+            parent=self,
+        )
+        self.api_worker = worker
+
+        worker.confirm_success.connect(self._on_confirm_success)
+        worker.failed.connect(self._on_access_failed)
+        worker.finished.connect(worker.deleteLater)
+        worker.finished.connect(lambda: setattr(self, "api_worker", None))
+        worker.start()
+
+    def _on_confirm_success(self, data: dict) -> None:
+        self._clear_processing()
+
+        used_plate_image_url = data.pop("_used_plate_image_url", None)
+        if used_plate_image_url:
+            self.current_plate_image_url = used_plate_image_url
+
+        self._render_session_result(data)
+
+        message = data.get("message") or "OK"
+        self.lbl_status.setText(message)
+
+        msg_lower = message.lower()
+
+        if "cho phép xe vào" in msg_lower:
+            self._set_gate_status("CHO PHÉP XE VÀO", "success")
+        elif "cho phép xe ra" in msg_lower:
+            self._set_gate_status("CHO PHÉP XE RA", "success")
+        else:
+            self._set_gate_status("THÀNH CÔNG", "success")
+
+        if hasattr(self, "lst_detection_history"):
+            self.lst_detection_history.insertItem(
+                0,
+                f"{datetime.now().strftime('%H:%M:%S')} - CONFIRM - {data.get('barcode_token') or self.pending_barcode}",
             )
 
-            if res.ok:
-                data = res.json()
-                self._render_session_result(data)
+        self.pending_gate_action_allowed = False
+        self.pending_auto_confirm = False
+        self.pending_access_payload = None
+        self.pending_preview_data = None
+        self.pending_barcode = None
 
-                message = data.get("message") or "OK"
-                self.lbl_status.setText(message)
+        self.current_plate = None
+        self.current_plate_crop = None
 
-                msg_lower = message.lower()
+        self.lbl_last_payload.setText("Biển số gần nhất:")
 
-                if "cho phép xe vào" in msg_lower:
-                    self._set_gate_status("CHO PHÉP XE VÀO", "success")
-                elif "cho phép xe ra" in msg_lower:
-                    self._set_gate_status("CHO PHÉP XE RA", "success")
-                else:
-                    self._set_gate_status("THÀNH CÔNG", "success")
+        if hasattr(self, "txt_license_plate"):
+            self.txt_license_plate.clear()
 
-                if hasattr(self, "lst_detection_history"):
-                    self.lst_detection_history.insertItem(
-                        0,
-                        f"{datetime.now().strftime('%H:%M:%S')} - CONFIRM - {payload.get('barcode_token')}",
-                    )
+        if hasattr(self, "worker") and self.worker:
+            self.worker.set_detection_enabled(False)
 
-                self.pending_gate_action_allowed = False
-                self.pending_auto_confirm = False
+        # Best-effort refresh banner KPIs after a successful check-in/out.
+        notify_banner_refresh()
 
-                self.lbl_last_payload.setText("Biển số gần nhất:")
-                if hasattr(self, "txt_license_plate"):
-                    self.txt_license_plate.clear()
+    def _on_access_failed(self, message: str, detail) -> None:
+        self._clear_processing()
 
-                if hasattr(self, "worker") and self.worker:
-                    self.worker.set_detection_enabled(False)
+        if isinstance(detail, dict):
+            display_message = str(detail.get("message") or message or "Xử lý thất bại")
+            self.lbl_status.setText(display_message)
+            self._render_session_result(detail)
+        else:
+            self.lbl_status.setText(message or "Xử lý thất bại")
 
-                return
+        self._set_gate_status("TỪ CHỐI", "error")
 
-            try:
-                detail = res.json().get("detail")
-            except Exception:
-                detail = res.text
+        self.pending_gate_action_allowed = False
+        self.pending_auto_confirm = False
+        self.pending_access_payload = None
 
-            if isinstance(detail, dict):
-                message = str(detail.get("message") or "Xử lý thất bại")
-                self.lbl_status.setText(message)
-                self._render_session_result(detail)
-            else:
-                self.lbl_status.setText(detail or "Xử lý thất bại")
-            self._set_gate_status("THẤT BẠI", "error")
-
-            if hasattr(self, "lst_detection_history"):
-                self.lst_detection_history.insertItem(
-                    0,
-                    f"{datetime.now().strftime('%H:%M:%S')} - ERROR - {detail or res.status_code}",
-                )
-
-        except Exception as e:
-            self.lbl_status.setText(str(e))
-            self._set_gate_status("LỖI KẾT NỐI", "error")
-
-        finally:
-            self._submitting = False
-            self.txt_barcode.setFocus()
+        if hasattr(self, "lst_detection_history"):
+            self.lst_detection_history.insertItem(
+                0,
+                f"{datetime.now().strftime('%H:%M:%S')} - ERROR - {message}",
+            )
             
     def _render_session_result(self, data: dict) -> None:
         check_in_time = data.get("check_in_time")
@@ -1113,8 +1276,8 @@ class SecurityConsoleUI(QtWidgets.QMainWindow):
         session_status = str(data.get("status") or "-")
 
         # Enriched fields (optional)
-        user_code = (data.get("user_code") or "").strip() or "-"
-        user_full_name = (data.get("user_full_name") or "").strip() or "-"
+        user_code = (data.get("user_code") or "").strip() or "Khách"
+        user_full_name = (data.get("user_full_name") or "").strip() or "Khách"
         sub_plan_code = (data.get("subscription_plan_code") or "").strip() or ""
         sub_status = (data.get("subscription_status") or "").strip() or ""
         vehicle_mode = (data.get("vehicle_mode") or "").strip() or ""
@@ -1193,7 +1356,7 @@ class SecurityConsoleUI(QtWidgets.QMainWindow):
             if sub_plan_code or sub_status:
                 sub_text = f"{vi_plan_name(sub_plan_code)} ({vi_subscription_status(sub_status)})"
             else:
-                sub_text = "-"
+                sub_text = "Chưa đăng ký vé gửi xe"
             self.lbl_subscription_value.setText(f"vé gửi xe hiện tại: {sub_text}")
 
         if hasattr(self, "lbl_vehicle_type_value"):
@@ -1226,8 +1389,55 @@ class SecurityConsoleUI(QtWidgets.QMainWindow):
         if hasattr(self, "lbl_plate_out_image"):
             self._load_image_url_to_label(check_out_plate_image_url, self.lbl_plate_out_image)
 
+    def _get_label_by_name(self, target_name: str):
+        label = self.findChild(QtWidgets.QLabel, target_name)
+        return label
+
+    def _on_image_loaded(self, target_name: str, image: QtGui.QImage) -> None:
+        label = self._get_label_by_name(target_name)
+        if label is None:
+            return
+
+        pixmap = QtGui.QPixmap.fromImage(image)
+
+        if label.width() > 0 and label.height() > 0:
+            pixmap = pixmap.scaled(
+                label.size(),
+                QtCore.Qt.AspectRatioMode.KeepAspectRatio,
+                QtCore.Qt.TransformationMode.SmoothTransformation,
+            )
+
+        label.setText("")
+        label.setPixmap(pixmap)
+
+
+    def _on_image_load_failed(self, target_name: str, message: str) -> None:
+        label = self._get_label_by_name(target_name)
+        if label is None:
+            return
+
+        # Không xóa ảnh xe ra local nếu đang chưa có URL check-out.
+        if label == getattr(self, "lbl_plate_out_image", None) and self.current_plate_crop is not None:
+            return
+
+        label.setPixmap(QtGui.QPixmap())
+        label.setText(message or "Lỗi tải ảnh")
+
+
+    def _cleanup_image_worker(self, worker) -> None:
+        try:
+            if worker in self.image_workers:
+                self.image_workers.remove(worker)
+            worker.deleteLater()
+        except Exception:
+            pass
+
     def _load_image_url_to_label(self, image_url: str | None, label: QtWidgets.QLabel) -> None:
         if not image_url:
+            # Nếu label out đang có ảnh crop local thì không xóa vội.
+            if label == getattr(self, "lbl_plate_out_image", None) and self.current_plate_crop is not None:
+                return
+
             label.setPixmap(QtGui.QPixmap())
             label.setText("Không có ảnh")
             return
@@ -1238,36 +1448,19 @@ class SecurityConsoleUI(QtWidgets.QMainWindow):
             label.setText("Không có ảnh")
             return
 
-        try:
-            res = requests.get(image_url, timeout=6)
+        target_name = label.objectName()
+        if not target_name:
+            target_name = f"label_{id(label)}"
+            label.setObjectName(target_name)
+        self._set_label_loading(label, "Đang tải ảnh...")
 
-            if not res.ok:
-                label.setText("Không tải được ảnh")
-                label.setPixmap(QtGui.QPixmap())
-                return
+        worker = ImageLoadWorker(image_url, target_name, self)
+        worker.loaded.connect(self._on_image_loaded)
+        worker.failed.connect(self._on_image_load_failed)
+        worker.finished.connect(lambda worker=worker: self._cleanup_image_worker(worker))
 
-            image = QtGui.QImage()
-            image.loadFromData(res.content)
-
-            if image.isNull():
-                label.setText("Ảnh không hợp lệ")
-                label.setPixmap(QtGui.QPixmap())
-                return
-
-            pixmap = QtGui.QPixmap.fromImage(image)
-            if label.width() > 0 and label.height() > 0:
-                pixmap = pixmap.scaled(
-                    label.size(),
-                    QtCore.Qt.AspectRatioMode.KeepAspectRatio,
-                    QtCore.Qt.TransformationMode.SmoothTransformation,
-                )
-
-            label.setText("")
-            label.setPixmap(pixmap)
-
-        except Exception:
-            label.setText("Lỗi tải ảnh")
-            label.setPixmap(QtGui.QPixmap())
+        self.image_workers.append(worker)
+        worker.start()
 
     def set_status(self, text: str) -> None:
         message = text or "Đang chờ camera..."
@@ -1352,6 +1545,15 @@ class SecurityConsole(SecurityConsoleUI):
 
     def closeEvent(self, event: QtGui.QCloseEvent) -> None:
         self.stop_worker()
+
+        if getattr(self, "api_worker", None):
+            self.api_worker.quit()
+            self.api_worker.wait(1000)
+
+        for worker in list(getattr(self, "image_workers", [])):
+            worker.quit()
+            worker.wait(1000)
+
         super().closeEvent(event)
 
 def main() -> None:

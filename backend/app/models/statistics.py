@@ -24,6 +24,12 @@ class DashboardSummary(SQLModel):
     today_sessions: int = 0
 
 
+class ConsoleSummary(SQLModel):
+    vehicles_in_parking: int
+    today_checkins: int
+    today_checkouts: int
+
+
 class ChartPoint(SQLModel):
     label: str
     value: int | float

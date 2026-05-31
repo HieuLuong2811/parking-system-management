@@ -156,20 +156,21 @@ export type UserWithRoles = {
 };
 
 export type PaymentTransactionRecord = {
-  id: string;
+  payment_transaction_id: string;
   invoice_id: string;
   attempt_number: number;
   transaction_code: string;
   response_message: string;
   created_at: string;
+  amount: number;
+  status: string;
+  payment_method: string;
+  transaction_type: string;
 };
 
 export type PaymentTransactionDetailRecord = PaymentTransactionRecord & {
   user_code: string;
   user_full_name: string;
-  invoice_amount: number;
-  invoice_payment_method: string;
-  invoice_created_at: string;
 };
 
 export type BillingEventLogRecord = {

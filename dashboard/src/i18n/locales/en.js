@@ -94,7 +94,7 @@ const en = {
         LICENSED: "Licensed vehicle",
         UNLICENSED: "Unlicensed vehicle",
       },
-      licensePlateLabel: 'Plate: {{license}}',
+      licensePlateLabel: "Plate: {{license}}",
       roleTypes: {
         admin: "Administrator",
         user: "User",
@@ -361,7 +361,8 @@ const en = {
         createError: "Create card failed.",
         disable: "Disable",
         confirmDisable: "Disable this card and notify the user by email?",
-        disableSuccess: "Card disabled. Email notification sent (if configured).",
+        disableSuccess:
+          "Card disabled. Email notification sent (if configured).",
         disableError: "Disable card failed.",
       },
       form: {
@@ -514,26 +515,6 @@ const en = {
         role: "Role",
       },
     },
-    vehiclesPage: {
-      title: "Vehicles",
-      description: "Manage registered vehicles in the system.",
-      searchPlaceholder: "Search by id, code, plate",
-      empty: "No vehicles available.",
-      columns: {
-        id: "Vehicle ID",
-        userCode: "User code",
-        type: "Type",
-        licensePlate: "License plate",
-        qrCode: "Barcode",
-        status: "Status",
-        createdAt: "Created at",
-        updatedAt: "Updated at",
-      },
-      status: {
-        active: "Active",
-        deleted: "Deleted",
-      },
-    },
     rolesPage: {
       title: "Roles",
       description: "Review available roles and their identifiers.",
@@ -573,7 +554,8 @@ const en = {
       },
       delete: {
         title: "Delete academic term",
-        message: "Are you sure you want to delete the academic term \"{{name}}\"? This action cannot be undone.",
+        message:
+          'Are you sure you want to delete the academic term "{{name}}"? This action cannot be undone.',
         cancel: "Cancel",
         confirm: "Delete",
         success: "Academic term deleted.",
@@ -760,6 +742,7 @@ const en = {
         status: "Status",
         response: "Response message",
         createdAt: "Created at",
+        payment_method: "Payment method",
       },
       tooltips: {
         invoice_id: "Invoice ID",
@@ -789,6 +772,20 @@ const en = {
         },
         from: { label: "From" },
         to: { label: "To" },
+      },
+      transactionTypes: {
+        TOP_UP: "Top up",
+        SUBSCRIPTION_FULL_PAYMENT: "Pay for parking",
+        MONTHLY_CHARGE: "Deduct monthly fee",
+        INVOICE_DIRECT_PAYMENT: "Pay invoice",
+        REFUND: "Refund",
+        ADMIN_ADJUSTMENT: "Adjust system",
+      },
+      paymentMethods: {
+        CASH: "Cash",
+        MOMO: "Momo wallet",
+        WALLET: "E-wallet",
+        SYSTEM: "System",
       },
     },
     invoicesPage: {

@@ -470,26 +470,6 @@ const vi = {
         role: "Vai trò",
       },
     },
-    vehiclesPage: {
-      title: "Phương tiện",
-      description: "Quản lý phương tiện đã đăng ký trong hệ thống.",
-      searchPlaceholder: "Tìm theo id, mã, biển số",
-      empty: "Không có phương tiện.",
-      columns: {
-        id: "Mã phương tiện",
-        userCode: "Mã người dùng",
-        type: "Loại phương tiện",
-        licensePlate: "Biển số",
-        qrCode: "Mã barcode",
-        status: "Trạng thái",
-        createdAt: "Thời điểm tạo",
-        updatedAt: "Thời điểm cập nhật",
-      },
-      status: {
-        active: "Đang hoạt động",
-        deleted: "Đã xoá",
-      },
-    },
     rolesPage: {
       title: "Vai trò",
       description: "Danh sách vai trò và mã định danh để phân quyền trong hệ thống.",
@@ -762,6 +742,7 @@ const vi = {
         status: "Trạng thái",
         response: "Phản hồi từ cổng thanh toán",
         createdAt: "Thời gian tạo",
+        payment_method: "Phương thức thanh toán",
       },
       tooltips: {
         invoice_id: "Mã hoá đơn",
@@ -792,6 +773,20 @@ const vi = {
         from: { label: "Từ" },
         to: { label: "Đến" },
       },
+      transactionTypes: {
+        TOP_UP: 'Nạp tiền',
+        SUBSCRIPTION_FULL_PAYMENT: 'Thanh toán vé gửi xe',
+        MONTHLY_CHARGE: 'Trừ phí theo tháng',
+        INVOICE_DIRECT_PAYMENT: 'Thanh toán hóa đơn',
+        REFUND: 'Hoàn tiền',
+        ADMIN_ADJUSTMENT: 'Điều chỉnh hệ thống',
+      },
+      paymentMethods: {
+        CASH: "Tiền mặt",
+        MOMO: "Ví momo",
+        WALLET: "Ví điện tử",
+        SYSTEM: "hệ thống",
+      }
     },
     invoicesPage: {
       description: "Danh sách hóa đơn trong hệ thống, hỗ trợ tìm nhanh theo mã và thông tin liên quan.",

@@ -15,6 +15,7 @@ from app.models.parking_access_cards import ParkingAccessCard
 from app.models.parking_sessions import ParkingSession
 from app.models.statistics import (
     ChartPoint,
+    ConsoleSummary,
     DashboardCharts,
     DashboardRecent,
     DashboardSummary,
@@ -150,6 +151,39 @@ class statisticService:
             registration_rate=registration_rate,
             active_subscriptions=int(active_subscriptions or 0),
             today_sessions=int(today_checkins or 0),
+        )
+
+    @staticmethod
+    async def get_console_summary(db: AsyncSession) -> ConsoleSummary:
+        today = date.today()
+        start_of_today = datetime.combine(today, datetime.min.time())
+        end_of_today = datetime.combine(today, datetime.max.time())
+
+        vehicles_in_parking = await db.scalar(
+            select(func.count())
+            .select_from(ParkingSession)
+            .where(ParkingSession.status == ParkingSessionStatus.ACTIVE)
+        )
+
+        today_checkins = await db.scalar(
+            select(func.count())
+            .select_from(ParkingSession)
+            .where(ParkingSession.check_in_time >= start_of_today)
+            .where(ParkingSession.check_in_time <= end_of_today)
+        )
+
+        today_checkouts = await db.scalar(
+            select(func.count())
+            .select_from(ParkingSession)
+            .where(ParkingSession.check_out_time.is_not(None))
+            .where(ParkingSession.check_out_time >= start_of_today)
+            .where(ParkingSession.check_out_time <= end_of_today)
+        )
+
+        return ConsoleSummary(
+            vehicles_in_parking=int(vehicles_in_parking or 0),
+            today_checkins=int(today_checkins or 0),
+            today_checkouts=int(today_checkouts or 0),
         )
 
     @staticmethod

@@ -14,9 +14,10 @@ export const vehicleTypeOptions = {
 };
 
 export const paymentMethodOptions = {
-  CREDIT_CARD: "CREDIT_CARD",
+  CASH: "CASH",
   MOMO: "MOMO",
-  STRIPE: "STRIPE",
+  WALLET: "WALLET",
+  SYSTEM: "SYSTEM",
 };
 
 export const invoiceStatusOptions = {
