@@ -54,7 +54,7 @@ const LoginPage: React.FC = () => {
       try {
         const response = await axios.get(AUTH_ME_URL, { withCredentials: true });
         const roles = (response.data.roles || []).map((role: string) => role.toLowerCase());
-        if (roles.includes(Role.ADMIN)) {
+        if (roles.includes(Role.ADMIN) || roles.includes(Role.SECURITY)) {
           window.location.href = VITE_DASHBOARD_URL;
         } else {
           window.location.href = VITE_CLIENT_WEB_URL;
@@ -146,7 +146,7 @@ const LoginPage: React.FC = () => {
             return;
           }
           const role = (data.roles || []).map((r) => r.toLowerCase());
-          if (role.includes(Role.ADMIN)) {
+          if (role.includes(Role.ADMIN) || role.includes(Role.SECURITY)) {
             window.location.href = appendCodeParam(VITE_DASHBOARD_URL, data.code);
           } else {
             window.location.href = appendCodeParam(VITE_CLIENT_WEB_URL, data.code);

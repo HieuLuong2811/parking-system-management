@@ -5,19 +5,42 @@ import time
 import requests
 import re
 from datetime import datetime
-from PyQt6 import QtCore, QtGui, QtWidgets, uic
+from collections import Counter, deque
 
-_BACKEND_DIR = os.path.abspath(os.path.join(os.path.dirname(__file__), ".."))
+_CURRENT_DIR = os.path.dirname(os.path.abspath(__file__))
+_BACKEND_DIR = os.path.abspath(os.path.join(_CURRENT_DIR, ".."))
+
 if _BACKEND_DIR not in sys.path:
     sys.path.insert(0, _BACKEND_DIR)
 
-from app.service.detect import PLATE_REGEX_CIVIL_8, PLATE_REGEX_CIVIL_9, PLATE_REGEX_MILITARY_6, PLATE_REGEX_NUMERIC_9, STABLE_HISTORY_SIZE, DetectService, get_plate_model
+from PyQt6 import QtCore, QtGui, QtWidgets, uic
+
+from security_console_tools.common import ensure_backend_on_path, refresh_banner_best_effort
+
+ensure_backend_on_path()
+
+from security_console_tools.access_common import (
+    build_access_payload,
+    format_money,
+    format_time,
+    get_total_amount_from_data,
+    vi_plan_name,
+    vi_session_status,
+    vi_subscription_status,
+)
+
+from app.service.detect import (
+    PLATE_REGEX_CIVIL_8,
+    PLATE_REGEX_CIVIL_9,
+    PLATE_REGEX_MILITARY_6,
+    PLATE_REGEX_NUMERIC_9,
+    STABLE_HISTORY_SIZE,
+    DetectService,
+    get_plate_model,
+)
 from app.core.config import settings
-from collections import Counter, deque
 
-from security_console_tools.banner_client import notify_banner_refresh
-
-DETECT_EVERY_N_FRAMES = 5
+DETECT_EVERY_N_FRAMES = 3
 PLATE_CONFIRM_MIN_COUNT = 2
 PLATE_DETECT_TIMEOUT_SECONDS = 4.0
 
@@ -590,7 +613,7 @@ class SecurityConsoleUI(QtWidgets.QMainWindow):
                     self.lbl_status.setText(f"{message} - Nhấn SPACE để xác nhận.")
                 return
             if action == "CHECK_OUT":
-                total_amount = self._get_total_amount_from_data(self.pending_preview_data)
+                total_amount = get_total_amount_from_data(self.pending_preview_data)
                 payment_source = str(self.pending_preview_data.get("payment_source") or "").strip().upper()
                 if payment_source == "CASH":
                     self._set_gate_status("THU TIỀN MẶT - NHẤN SPACE", "warning")
@@ -840,35 +863,6 @@ class SecurityConsoleUI(QtWidgets.QMainWindow):
             }
         """)
 
-    def _format_time(self, value: object) -> str:
-        if not value:
-            return "-"
-
-        if isinstance(value, str):
-            try:
-                dt = datetime.fromisoformat(value.replace("Z", "+00:00"))
-                if dt.tzinfo is not None:
-                    dt = dt.astimezone().replace(tzinfo=None)
-                return dt.strftime("%Y-%m-%d %H:%M:%S")
-            except ValueError:
-                return value
-
-        if isinstance(value, datetime):
-            return value.strftime("%Y-%m-%d %H:%M:%S")
-
-        return str(value)
-
-    def _format_money(self, amount: object) -> str:
-        if amount is None or amount == "":
-            return "-"
-
-        try:
-            value = int(float(amount))
-        except (TypeError, ValueError):
-            return str(amount)
-
-        return f"{value:,} VND".replace(",", ".")
-
     def _format_duration(self, check_in: object, check_out: object) -> str:
         if not check_in:
             return "-"
@@ -1033,30 +1027,14 @@ class SecurityConsoleUI(QtWidgets.QMainWindow):
         if self._submitting:
             return
 
-        payload = {
-            "barcode_token": self.pending_barcode,
-            "vehicle_mode": "LICENSED",
-            "license_plate": self.current_plate,
-            "plate_image_url": self.current_plate_image_url,
-        }
+        payload = build_access_payload(
+            self.pending_barcode,
+            vehicle_mode="LICENSED",
+            license_plate=self.current_plate,
+            plate_image_url=self.current_plate_image_url,
+        )
 
         self._preview_access_info(payload)
-
-    def _get_total_amount_from_data(self, data: dict) -> int:
-        fee_breakdown = data.get("fee_breakdown") or {}
-
-        total_amount = None
-
-        if isinstance(fee_breakdown, dict):
-            total_amount = fee_breakdown.get("total_amount")
-
-        if total_amount is None:
-            total_amount = data.get("total_amount")
-
-        try:
-            return int(float(total_amount or 0))
-        except (TypeError, ValueError):
-            return 0
 
     def _confirm_pending_gate_action(self) -> None:
         if self._submitting:
@@ -1128,7 +1106,7 @@ class SecurityConsoleUI(QtWidgets.QMainWindow):
                 )
 
             elif action == "CHECK_OUT":
-                total_amount = self._get_total_amount_from_data(data)
+                total_amount = get_total_amount_from_data(data)
                 payment_source = str(data.get("payment_source") or "").strip().upper()
 
                 if payment_source == "CASH":
@@ -1246,7 +1224,7 @@ class SecurityConsoleUI(QtWidgets.QMainWindow):
             self.worker.set_detection_enabled(False)
 
         # Best-effort refresh banner KPIs after a successful check-in/out.
-        notify_banner_refresh()
+        refresh_banner_best_effort()
 
     def _on_access_failed(self, message: str, detail) -> None:
         self._clear_processing()
@@ -1283,36 +1261,6 @@ class SecurityConsoleUI(QtWidgets.QMainWindow):
         vehicle_mode = (data.get("vehicle_mode") or "").strip() or ""
         license_plate = (data.get("license_plate") or "").strip() or ""
 
-        def vi_session_status(code: str) -> str:
-            mapping = {
-                "ACTIVE": "Đang gửi",
-                "DONE": "Đã hoàn tất",
-            }
-            return mapping.get(code, code or "-")
-
-        def vi_subscription_status(code: str) -> str:
-            if code and "." in code:
-                code = code.split(".")[-1]
-            mapping = {
-                "ACTIVE": "Đang hoạt động",
-                "PAYMENT_DUE": "Chờ thanh toán",
-                "OVERDUE": "Quá hạn",
-                "SUSPENDED": "Tạm khóa",
-                "CANCELED": "Đã hủy",
-                "INACTIVE": "Không hoạt động",
-            }
-            return mapping.get(code, code or "-")
-
-        def vi_plan_name(code: str) -> str:
-            if code and "." in code:
-                code = code.split(".")[-1]
-            mapping = {
-                "BASIC": "Vé gửi xe cơ bản",
-                "STARTUP": "Vé gửi xe linh hoạt",
-                "ENTERPRISE": "Vé gửi xe toàn diện",
-            }
-            return mapping.get(code, code or code or "-")
-
         def vi_vehicle_mode(mode: str) -> str:
             mapping = {
                 "LICENSED": "Xe có biển số",
@@ -1320,27 +1268,19 @@ class SecurityConsoleUI(QtWidgets.QMainWindow):
             }
             return mapping.get(mode, mode or "-")
 
-        fee_breakdown = data.get("fee_breakdown") or {}
-        total_amount = (
-            fee_breakdown.get("total_amount")
-            if isinstance(fee_breakdown, dict)
-            else None
-        )
-
-        if total_amount is None:
-            total_amount = data.get("total_amount")
+        total_amount = get_total_amount_from_data(data)
 
         self.lbl_checkin_time_value.setText(
-            f"Thời điểm vào: {self._format_time(check_in_time)}"
+            f"Thời điểm vào: {format_time(check_in_time)}"
         )
         self.lbl_checkout_time_value.setText(
-            f"Thời điểm ra: {self._format_time(check_out_time)}"
+            f"Thời điểm ra: {format_time(check_out_time)}"
         )
         self.lbl_total_time_value.setText(
             f"Thời gian gửi: {self._format_duration(check_in_time, check_out_time)}"
         )
         self.lbl_payment_value.setText(
-            self._format_money(total_amount)
+            format_money(total_amount)
         )
         self.lbl_session_status_value.setText(
             f"Trạng thái: {vi_session_status(session_status)}"

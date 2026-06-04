@@ -143,6 +143,7 @@ const vi = {
     },
     home: {
       title: "Trang chủ quản trị",
+      liveData: "Dữ liệu thống kê",
       subtitle: "Tổng quan nhanh các chỉ số và lối tắt quản trị quan trọng.",
       description:
         "Chào mừng {{name}}, đây là khu vực tổng quan giúp bạn tiếp cận nhanh các bảng dữ liệu quan trọng.",
@@ -151,11 +152,73 @@ const vi = {
       cardEndpoint: "Endpoint: /{{endpoint}}",
       quickAccessTitle: "Điểm nhanh",
       quickAccessDescription: "Sử dụng các nút bên dưới để chuyển nhanh đến từng bảng dữ liệu quan trọng.",
+      cards: {
+        vehiclesInParking: {
+          title: "Xe đang trong bãi",
+          subtitle: "Phiên gửi xe chưa check-out",
+        },
+        todayCheckins: {
+          title: "Lượt check-in hôm nay",
+          subtitle: "Theo thời gian check-in",
+        },
+        todayCheckouts: {
+          title: "Lượt check-out hôm nay",
+          subtitle: "Theo thời gian check-out",
+        },
+        todayRevenue: {
+          title: "Doanh thu hôm nay",
+          subtitle: "Hóa đơn đã thanh toán trong ngày",
+        },
+        monthlyRevenue: {
+          title: "Doanh thu tháng này",
+          subtitle: "Hóa đơn đã thanh toán",
+        },
+        pendingInvoices: {
+          title: "Hóa đơn chờ thanh toán",
+          subtitle: "Invoice PENDING",
+        },
+        activeSubscriptionUsers: {
+          title: "Vé gửi xe còn hiệu lực",
+          subtitle: "Người dùng có vé gửi xe còn hiệu lực",
+        },
+        expiringSubscriptions: {
+          title: "Vé gửi xe sắp hết hạn",
+          subtitle: "Hết hạn trong 7 ngày tới",
+        },
+      },
       charts: {
+        adoptionTitle: "Tỷ lệ người dùng đăng ký vé gửi xe",
+        adoptionDescription: "So sánh người dùng đã đăng ký và chưa đăng ký vé gửi xe",
+        noAdoptionData: "Chưa có dữ liệu đăng ký vé gửi xe.",
+        monthlySubscriptionsTitle: "Đăng ký vé gửi xe theo tháng",
+        monthlySubscriptionsDescription: "Số lượng vé gửi xe được tạo mới trong 12 tháng gần nhất",
+        subscriptionSeries: "Vé gửi xe đăng ký mới",
+        monthlyRevenueTitle: "Doanh thu theo tháng",
+        monthlyRevenueDescription: "Doanh thu từ các hóa đơn đã thanh toán trong 12 tháng gần nhất",
+        noRevenueData: "Chưa có dữ liệu doanh thu.",
+        monthlySessionsTitle: "Lượt gửi xe theo tháng",
+        monthlySessionsDescription: "Số phiên gửi xe được tạo theo thời gian check-in",
+        sessionSeries: "Lượt gửi xe",
+        noSessionData: "Chưa có dữ liệu phiên gửi xe.",
         invoiceStatusTitle: "Trạng thái hóa đơn",
         subscriptionStatusTitle: "Trạng thái vé gửi xe đã đăng ký",
         invoiceCount: "Số hóa đơn",
         subscriptionCount: "Số vé gửi xe",
+      },
+      recent: {
+        invoicesTitle: "Hóa đơn gần đây",
+        invoicesSubtitle: "5 hóa đơn mới nhất trong hệ thống",
+        sessionsTitle: "Phiên gửi xe gần đây",
+        sessionsSubtitle: "5 phiên gửi xe mới nhất theo thời gian check-in",
+        noInvoices: "Chưa có hóa đơn gần đây.",
+        noSessions: "Chưa có phiên gửi xe gần đây.",
+        noPlate: "Không biển số",
+        guestLabel: "Khách",
+      },
+      errors: {
+        summaryLoadFailed: "Không thể tải dữ liệu tổng quan.",
+        chartsLoadFailed: "Không thể tải dữ liệu biểu đồ.",
+        recentLoadFailed: "Không thể tải dữ liệu gần đây.",
       },
       status: {
         invoice: {

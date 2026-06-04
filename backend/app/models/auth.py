@@ -47,7 +47,7 @@ class ChangePasswordRequest(BaseModel):
 class AuthUser(BaseModel):
     user_code: str
     full_name: str
-    email: EmailStr
+    email: EmailStr | None = None
     phone_number: str | None
     roles: List[str] = []
 

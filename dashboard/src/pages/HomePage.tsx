@@ -24,18 +24,18 @@ export const HomePage: React.FC = () => {
       >
         <Box>
           <PageHeader
-            title={t('home.title', { defaultValue: 'Trang chủ quản trị' })}
+            title={t('home.title', { defaultValue: 'Home' })}
           />
           <Typography color="text.secondary">
             {t('home.description', {
               name: displayName,
-              defaultValue: `Chào mừng ${displayName}, đây là khu vực tổng quan giúp bạn theo dõi tình hình vận hành.`,
+              defaultValue: `Welcome ${displayName}, this overview section helps you track operations.`,
             })}
           </Typography>
         </Box>
 
         <Chip
-          label={t('home.liveData', { defaultValue: 'Dữ liệu thống kê' })}
+          label={t('home.liveData', { defaultValue: 'Live data' })}
           color="success"
           variant="outlined"
         />

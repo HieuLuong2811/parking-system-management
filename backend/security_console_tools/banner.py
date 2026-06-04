@@ -56,6 +56,12 @@ class BannerWindow(QtWidgets.QWidget):
 
         self._build_ui()
         self.request_refresh.connect(self.refresh)
+
+        self._clock_timer = QtCore.QTimer(self)
+        self._clock_timer.setInterval(1000)
+        self._clock_timer.timeout.connect(self._tick_clock)
+        self._clock_timer.start()
+        self._tick_clock()
         self.lbl_status.setText("Đang chờ check-in/check-out để cập nhật...")
 
     def _card(
@@ -101,17 +107,17 @@ class BannerWindow(QtWidgets.QWidget):
 
         card1, self.lbl_in_parking = self._card(
             "Xe đang trong bãi",
-            "Phiên gửi xe chưa check-out",
+            "Số lượng xe trong bãi chưa check-out",
             "#22c55e",
         )
         card2, self.lbl_checkins = self._card(
-            "Lượt check-in hôm nay",
-            "Theo thời gian check-in",
+            "Lượt xe vào hôm nay",
+            "Theo thời gian thực hiện check-in",
             "#3b82f6",
         )
         card3, self.lbl_checkouts = self._card(
-            "Lượt check-out hôm nay",
-            "Theo thời gian check-out",
+            "Lượt xe ra hôm nay",
+            "Theo thời gian thực hiện check-in",
             "#f97316",
         )
         grid.addWidget(card1, 0, 0)
@@ -124,8 +130,12 @@ class BannerWindow(QtWidgets.QWidget):
         self.lbl_status = QtWidgets.QLabel("Đang tải...")
         self.lbl_status.setStyleSheet("color:#64748b;font-size:12px;")
 
+        self.lbl_clock = QtWidgets.QLabel("")
+        self.lbl_clock.setStyleSheet("color:#94a3b8;font-size:12px;")
+
         root.addLayout(grid)
         root.addWidget(self.lbl_status)
+        root.addWidget(self.lbl_clock)
 
     def refresh(self) -> None:
         if self._worker is not None:
@@ -148,6 +158,10 @@ class BannerWindow(QtWidgets.QWidget):
 
     def _on_failed(self, message: str) -> None:
         self.lbl_status.setText(f"Lỗi tải summary: {message}")
+
+    def _tick_clock(self) -> None:
+        now = QtCore.QDateTime.currentDateTime()
+        self.lbl_clock.setText(now.toString("HH:mm:ss  dd/MM/yyyy"))
 
 
 class _BannerHttpHandler(BaseHTTPRequestHandler):

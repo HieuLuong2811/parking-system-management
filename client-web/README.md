@@ -1,46 +1,166 @@
-# Getting Started with Create React App
+# Client Web
 
-This project was bootstrapped with [Create React App](https://github.com/facebook/create-react-app).
+Ứng dụng web của hệ thống Parking System, xây dựng bằng React, TypeScript và React Scripts.
 
-## Available Scripts
+## Yêu cầu
 
-In the project directory, you can run:
+- Node.js
+- npm
+- Backend của hệ thống đang chạy
 
-### `npm start`
+## Cài đặt
 
-Runs the app in the development mode.\
-Open [http://localhost:3000](http://localhost:3000) to view it in the browser.
+Từ thư mục `./client-web/`, cài dependencies:
 
-The page will reload if you make edits.\
-You will also see any lint errors in the console.
+```console
+$ npm install
+```
 
-### `npm test`
+## Cấu hình môi trường
 
-Launches the test runner in the interactive watch mode.\
-See the section about [running tests](https://facebook.github.io/create-react-app/docs/running-tests) for more information.
+Ứng dụng đang dùng các biến môi trường sau trong file `.env`:
 
-### `npm run build`
+```env
+PORT=2800
+REACT_APP_API_URL=http://localhost:8000/api/v1
+REACT_APP_LOGIN_URL=http://localhost:5173/
+REACT_APP_CLIENT_WEB_APP_ID=client_web
+```
 
-Builds the app for production to the `build` folder.\
-It correctly bundles React in production mode and optimizes the build for the best performance.
+Ý nghĩa:
 
-The build is minified and the filenames include the hashes.\
-Your app is ready to be deployed!
+- `PORT`: cổng chạy local của client web.
+- `REACT_APP_API_URL`: URL gốc của backend API.
+- `REACT_APP_LOGIN_URL`: URL chuyển hướng tới trang login.
+- `REACT_APP_CLIENT_WEB_APP_ID`: mã định danh ứng dụng web trong hệ thống.
 
-See the section about [deployment](https://facebook.github.io/create-react-app/docs/deployment) for more information.
+Nếu backend hoặc login service chạy ở địa chỉ khác, cập nhật lại các giá trị này trước khi chạy.
 
-### `npm run eject`
+## Chạy ứng dụng
 
-**Note: this is a one-way operation. Once you `eject`, you can’t go back!**
+Từ thư mục `./client-web/`, chạy:
 
-If you aren’t satisfied with the build tool and configuration choices, you can `eject` at any time. This command will remove the single build dependency from your project.
+```console
+$ npm start
+```
 
-Instead, it will copy all the configuration files and the transitive dependencies (webpack, Babel, ESLint, etc) right into your project so you have full control over them. All of the commands except `eject` will still work, but they will point to the copied scripts so you can tweak them. At this point you’re on your own.
+Ứng dụng sẽ chạy ở local, mặc định theo `PORT=2800`.
 
-You don’t have to ever use `eject`. The curated feature set is suitable for small and middle deployments, and you shouldn’t feel obligated to use this feature. However we understand that this tool wouldn’t be useful if you couldn’t customize it when you are ready for it.
+Các lệnh khác:
 
-## Learn More
+```console
+$ npm run build
+$ npm test
+$ npm run check
+```
 
-You can learn more in the [Create React App documentation](https://facebook.github.io/create-react-app/docs/getting-started).
+- `npm run build`: build bản production.
+- `npm test`: chạy test theo cấu hình React Scripts.
+- `npm run check`: kiểm tra TypeScript và ESLint.
 
-To learn React, check out the [React documentation](https://reactjs.org/).
+## Cấu trúc thư mục
+
+### `src/api`
+
+Chứa các hàm gọi API theo từng domain nghiệp vụ, ví dụ:
+
+- `auth.ts`: đăng nhập, đăng xuất, lấy thông tin người dùng.
+- `users.ts`: thao tác với người dùng.
+- `wallets.ts`: ví tiền.
+- `subscription_plans.ts`: gói đăng ký.
+- `payment_transactions.ts`: giao dịch thanh toán.
+- `parking_sessions.ts`: phiên gửi xe.
+- `notifications.ts`: thông báo.
+- `checkout.ts`, `momo.ts`, `invoices.ts`, `payment_plan_pricing.ts`, `parkingAccessCards.ts`, `academic_terms.ts`, `user_subscriptions.ts`.
+
+### `src/components`
+
+Chứa các component tái sử dụng trong toàn bộ ứng dụng:
+
+- `common/`: input, checklist mật khẩu, thông báo yêu cầu đăng nhập.
+- `layout/`: layout chính, navbar, footer, loading overlay.
+- `profile/`: các khối UI trong trang hồ sơ.
+- `plan/`: UI cho luồng mua gói / checkout.
+- `parkingCard/`: các component liên quan đến thẻ gửi xe.
+- `subscription/`, `shared/`, `userWallet/`.
+
+### `src/pages`
+
+Chứa các trang chính của ứng dụng:
+
+- `HomePage.tsx`
+- `CheckoutPage.tsx`
+- `InvoicesPage.tsx`
+- `PlanPage.tsx`
+- `SessionPage.tsx`
+- `TransactionsPage.tsx`
+- `UserSubscriptionsPage.tsx`
+- `profilePage.tsx`
+
+### `src/contexts`
+
+Chứa context và hook liên quan đến trạng thái toàn cục, hiện tại chủ yếu là auth:
+
+- `AppAuthContext.tsx`
+- `useAppAuth.ts`
+
+### `src/hooks`
+
+Các custom hook dùng chung, như:
+
+- `useModal`
+- `useDropdown`
+- `useDebouncedValue`
+- `useConfirmDialog`
+- `usePreventClickOutside`
+
+### `src/i18n`
+
+Chứa cấu hình đa ngôn ngữ và các file dịch:
+
+- `index.ts`: khởi tạo i18n.
+- `locales/en.ts`
+- `locales/vi.ts`
+- `locales/th.ts`
+- `locales/lo.ts`
+
+### `src/constant`
+
+Chứa các hằng số và cấu hình dùng chung:
+
+- `config.ts`: URL backend, URL login, các enum/trạng thái nghiệp vụ.
+
+### `src/utils` và `src/ultis`
+
+Chứa các hàm tiện ích:
+
+- format dữ liệu
+- validate
+- mapping trạng thái
+- xử lý ngôn ngữ
+- quy tắc mật khẩu
+
+Lưu ý: project hiện đang dùng cả `utils` và `ultis`. Nếu tiếp tục phát triển, nên thống nhất về một tên thư mục để tránh nhầm lẫn.
+
+### Root files
+
+- `src/App.tsx`: component gốc của ứng dụng.
+- `src/index.tsx`: entry point render ứng dụng.
+- `src/theme.ts`: cấu hình theme MUI.
+- `src/index.css`: style global.
+- `src/App.css`: style cho App.
+- `public/`: static assets.
+
+## Luồng chạy tổng quát
+
+1. `src/index.tsx` khởi tạo ứng dụng.
+2. `src/App.tsx` gắn router, theme và context.
+3. `src/components/layout/ClientLayout.tsx` dựng khung giao diện chính.
+4. `src/pages/` hiển thị từng màn hình nghiệp vụ.
+5. `src/api/` gọi backend thông qua `REACT_APP_API_URL`.
+
+## Ghi chú triển khai
+
+- Trước khi chạy web, hãy đảm bảo backend đang hoạt động.
+- Nếu thay đổi API hoặc route login, cập nhật lại `.env`.
+- Nếu cần kiểm tra toàn bộ kiểu và lint, dùng `npm run check`.

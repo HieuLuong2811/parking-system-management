@@ -1,18 +1,32 @@
 import os
 import sys
 import time
-from datetime import datetime
 
-import requests
-from PyQt6 import QtCore, QtGui, QtWidgets
+_CURRENT_DIR = os.path.dirname(os.path.abspath(__file__))
+_BACKEND_DIR = os.path.abspath(os.path.join(_CURRENT_DIR, ".."))
 
-_BACKEND_DIR = os.path.abspath(os.path.join(os.path.dirname(__file__), ".."))
 if _BACKEND_DIR not in sys.path:
     sys.path.insert(0, _BACKEND_DIR)
 
-from app.core.config import settings
-from security_console_tools.banner_client import notify_banner_refresh
+from PyQt6 import QtCore, QtGui, QtWidgets
 
+from security_console_tools.common import ensure_backend_on_path, refresh_banner_best_effort
+
+ensure_backend_on_path()
+
+from security_console_tools.access_common import (
+    AccessApiWorker,
+    build_access_payload,
+    format_money,
+    format_time,
+    get_total_amount_from_data,
+    normalize_token,
+    vi_plan_name,
+    vi_session_status,
+    vi_subscription_status,
+)
+
+from app.core.config import settings
 
 LOOKUP_DEBOUNCE_SECONDS = 0.5
 SCAN_BUFFER_RESET_SECONDS = 1.0
@@ -24,67 +38,6 @@ SECURITY_UNLICENSED_VEHICLE_TYPE = getattr(
 ).strip().upper()
 
 
-def normalize_token(value: str | None) -> str:
-    return (value or "").strip().upper()
-
-
-class LookupWorker(QtCore.QThread):
-    finished = QtCore.pyqtSignal(dict)
-
-    def __init__(
-        self,
-        backend_host: str,
-        *,
-        mode: str = "preview",
-        payload: dict | None = None,
-        parent=None,
-    ):
-        super().__init__(parent)
-        self.backend_host = backend_host.rstrip("/")
-        self.mode = mode
-        self.payload = payload or {}
-
-    def run(self):
-        token = normalize_token(self.payload.get("barcode_token"))
-
-        if not token:
-            self.finished.emit({"error": "Barcode không hợp lệ"})
-            return
-
-        endpoint = "preview" if self.mode == "preview" else "confirm"
-
-        try:
-            res = requests.post(
-                f"{self.backend_host}/api/v1/parking_sessions/access/{endpoint}",
-                json=self.payload,
-                timeout=6,
-            )
-
-            if res.status_code == 200:
-                data = res.json()
-                data["barcode_token"] = token
-                data["_payload"] = self.payload
-                data["_mode"] = self.mode
-                self.finished.emit(data)
-                return
-
-            if res.status_code == 404:
-                self.finished.emit({"error": "Thẻ gửi xe không tồn tại"})
-                return
-
-            try:
-                detail = res.json().get("detail")
-            except Exception:
-                detail = res.text
-
-            self.finished.emit({"error": detail or "Xử lý thất bại"})
-
-        except requests.Timeout:
-            self.finished.emit({"error": "Kết nối quá thời gian chờ"})
-        except Exception as e:
-            self.finished.emit({"error": str(e)})
-
-
 class SecurityConsole(QtWidgets.QWidget):
     def __init__(self):
         super().__init__()
@@ -92,9 +45,8 @@ class SecurityConsole(QtWidgets.QWidget):
 
         self.last_scan_time = 0.0
         self.current_token: str | None = None
-        self.worker: LookupWorker | None = None
+        self.worker: AccessApiWorker | None = None
 
-        # Buffer để bắt barcode toàn cửa sổ, không phụ thuộc hoàn toàn vào QLineEdit ẩn.
         self.scan_buffer = ""
         self.scan_last_key_time = 0.0
 
@@ -346,7 +298,7 @@ class SecurityConsole(QtWidgets.QWidget):
         self.val_amount.style().polish(self.val_amount)
 
     def _bind(self):
-        # Vẫn giữ cách cũ: nếu scanner bắn vào input ẩn và kết thúc bằng Enter.
+        # scanner bắn vào input ẩn và kết thúc bằng Enter.
         self.input.returnPressed.connect(self.on_scan)
 
         self.shortcut_confirm_gate = QtGui.QShortcut(
@@ -512,18 +464,48 @@ class SecurityConsole(QtWidgets.QWidget):
 
         payload = self._build_access_payload(token)
 
-        self.worker = LookupWorker(
-            settings.BACKEND_HOST,
-            mode="preview",
-            payload=payload,
+        self.worker = AccessApiWorker(
+            "preview",
+            payload,
+            parent=self,
         )
-        self.worker.finished.connect(self.on_preview_result)
+        self.worker.success.connect(self._on_access_success)
+        self.worker.failed.connect(self._on_access_failed)
+        self.worker.finished.connect(self.worker.deleteLater)
+        self.worker.finished.connect(lambda: setattr(self, "worker", None))
         self.worker.start()
 
-    def on_preview_result(self, data: dict):
+    def _on_access_success(self, mode: str, data: dict) -> None:
         self.is_submitting = False
         self._set_idle()
 
+        if mode == "preview":
+            self.on_preview_result(data)
+            return
+
+        if mode == "confirm":
+            self.on_confirm_result(data)
+            return
+
+        self._set_status("THẤT BẠI", "error", "Loại xử lý không hợp lệ.")
+
+
+    def _on_access_failed(self, message: str, detail) -> None:
+        self.is_submitting = False
+        self._set_idle()
+
+        if isinstance(detail, dict):
+            self._render_result(detail)
+
+        self._clear_pending()
+        self._set_status(
+            "THẤT BẠI",
+            "error",
+            message or "Xử lý thất bại",
+        )
+
+
+    def on_preview_result(self, data: dict):
         if data.get("error"):
             self._clear_pending()
             self._reset_values(keep_barcode=True)
@@ -539,7 +521,7 @@ class SecurityConsole(QtWidgets.QWidget):
         can_confirm = bool(data.get("can_confirm"))
         auto_confirm = bool(data.get("auto_confirm"))
         action = str(data.get("action") or "").upper()
-        total_amount = self._get_total_amount_from_data(data)
+        total_amount = get_total_amount_from_data(data)
 
         if can_confirm and auto_confirm:
             self.pending_auto_confirm = True
@@ -601,13 +583,13 @@ class SecurityConsole(QtWidgets.QWidget):
                     self._set_status(
                         "THU TIỀN MẶT",
                         "warning",
-                        f"{message} - Tổng tiền {self._format_money(total_amount)}. Thu tiền xong nhấn SPACE để cho xe ra.",
+                        f"{message} - Tổng tiền {format_money(total_amount)}. Thu tiền xong nhấn SPACE để cho xe ra.",
                     )
                 elif total_amount > 0:
                     self._set_status(
                         "THU PHÍ",
                         "warning",
-                        f"{message} - Tổng tiền {self._format_money(total_amount)}. Nhấn SPACE để xác nhận.",
+                        f"{message} - Tổng tiền {format_money(total_amount)}. Nhấn SPACE để xác nhận.",
                     )
                 else:
                     self._set_status(
@@ -675,18 +657,18 @@ class SecurityConsole(QtWidgets.QWidget):
 
         self.input.setEnabled(False)
 
-        self.worker = LookupWorker(
-            settings.BACKEND_HOST,
-            mode="confirm",
-            payload=payload,
+        self.worker = AccessApiWorker(
+            "confirm",
+            payload,
+            parent=self,
         )
-        self.worker.finished.connect(self.on_confirm_result)
+        self.worker.success.connect(self._on_access_success)
+        self.worker.failed.connect(self._on_access_failed)
+        self.worker.finished.connect(self.worker.deleteLater)
+        self.worker.finished.connect(lambda: setattr(self, "worker", None))
         self.worker.start()
 
     def on_confirm_result(self, data: dict):
-        self.is_submitting = False
-        self._set_idle()
-
         if data.get("error"):
             self._set_status("THẤT BẠI", "error", data["error"])
             return
@@ -718,20 +700,20 @@ class SecurityConsole(QtWidgets.QWidget):
         self._clear_pending()
 
         # Best-effort refresh banner KPIs after a successful check-in/out.
-        notify_banner_refresh()
+        refresh_banner_best_effort()
 
     # =========================
     # Data helpers
     # =========================
 
     def _build_access_payload(self, token: str) -> dict:
-        return {
-            "barcode_token": normalize_token(token),
-            "vehicle_mode": "UNLICENSED",
-            "vehicle_type": SECURITY_UNLICENSED_VEHICLE_TYPE,
-            "license_plate": None,
-            "payment_source": None,
-        }
+        return build_access_payload(
+            token,
+            vehicle_mode="UNLICENSED",
+            vehicle_type=SECURITY_UNLICENSED_VEHICLE_TYPE,
+            license_plate=None,
+            payment_source=None,
+        )
 
     def _clear_pending(self):
         self.pending_access_payload = None
@@ -751,105 +733,22 @@ class SecurityConsole(QtWidgets.QWidget):
         subscription_text = "-"
 
         if sub_plan_code or sub_status:
-            subscription_text = f"{self._vi_plan_name(sub_plan_code)} ({self._vi_subscription_status(sub_status)})"
+            subscription_text = f"{vi_plan_name(sub_plan_code)} ({vi_subscription_status(sub_status)})"
 
         check_in_time = data.get("check_in_time")
         check_out_time = data.get("check_out_time")
         status_text = data.get("status") or "-"
 
-        total_amount = self._get_total_amount_from_data(data)
+        total_amount = get_total_amount_from_data(data)
 
         self.val_vehicle.setText(f"{vehicle_type} / {license_plate}")
         self.val_user_name.setText(user_name)
         self.val_user_code.setText(user_code)
         self.val_subscription.setText(subscription_text)
-        self.val_checkin.setText(self._format_time(check_in_time))
-        self.val_checkout.setText(self._format_time(check_out_time))
-        self.val_amount.setText(self._format_money(total_amount))
-        self.val_session_status.setText(self._vi_session_status(str(status_text)))
-
-    def _get_total_amount_from_data(self, data: dict) -> int:
-        fee_breakdown = data.get("fee_breakdown") or {}
-
-        total_amount = None
-
-        if isinstance(fee_breakdown, dict):
-            total_amount = fee_breakdown.get("total_amount")
-
-        if total_amount is None:
-            total_amount = data.get("total_amount")
-
-        try:
-            return int(float(total_amount or 0))
-        except (TypeError, ValueError):
-            return 0
-
-    def _format_time(self, value: object) -> str:
-        if not value:
-            return "-"
-
-        if isinstance(value, str):
-            try:
-                dt = datetime.fromisoformat(value.replace("Z", "+00:00"))
-                if dt.tzinfo is not None:
-                    dt = dt.astimezone().replace(tzinfo=None)
-                return dt.strftime("%Y-%m-%d %H:%M:%S")
-            except ValueError:
-                return value
-
-        if isinstance(value, datetime):
-            return value.strftime("%Y-%m-%d %H:%M:%S")
-
-        return str(value)
-
-    def _format_money(self, amount: object) -> str:
-        if amount is None or amount == "":
-            return "-"
-
-        try:
-            value = int(float(amount))
-        except (TypeError, ValueError):
-            return str(amount)
-
-        return f"{value:,} VND".replace(",", ".")
-
-    def _vi_session_status(self, code: str) -> str:
-        if code and "." in code:
-            code = code.split(".")[-1]
-
-        mapping = {
-            "ACTIVE": "Đang gửi",
-            "DONE": "Đã hoàn tất",
-        }
-
-        return mapping.get(code, code or "-")
-
-    def _vi_subscription_status(self, code: str) -> str:
-        if code and "." in code:
-            code = code.split(".")[-1]
-
-        mapping = {
-            "ACTIVE": "Đang hoạt động",
-            "PAYMENT_DUE": "Chờ thanh toán",
-            "OVERDUE": "Quá hạn",
-            "SUSPENDED": "Tạm khóa",
-            "CANCELED": "Đã hủy",
-            "INACTIVE": "Không hoạt động",
-        }
-
-        return mapping.get(code, code or "-")
-
-    def _vi_plan_name(self, code: str) -> str:
-        if code and "." in code:
-            code = code.split(".")[-1]
-
-        mapping = {
-            "BASIC": "Vé gửi xe cơ bản",
-            "STARTUP": "Vé gửi xe linh hoạt",
-            "ENTERPRISE": "Vé gửi xe toàn diện",
-        }
-
-        return mapping.get(code, code or code or "-")
+        self.val_checkin.setText(format_time(check_in_time))
+        self.val_checkout.setText(format_time(check_out_time))
+        self.val_amount.setText(format_money(total_amount))
+        self.val_session_status.setText(vi_session_status(str(status_text)))
 
     def _reset_values(self, *, keep_barcode: bool = False):
         if not keep_barcode:

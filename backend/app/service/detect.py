@@ -1,6 +1,7 @@
 import os
 import re
 import time
+from fastapi import Response
 from pathlib import Path
 from collections import Counter, deque
 
@@ -597,6 +598,7 @@ class DetectService:
 
     @staticmethod
     def detect_from_image_bytes(image_bytes: bytes):
+        started_at = time.perf_counter()
         plate_model = get_plate_model()
 
         image = np.frombuffer(image_bytes, np.uint8)
@@ -709,13 +711,102 @@ class DetectService:
 
         save_debug_image("frame_annotated", annotated)
 
+        processing_time_ms = round((time.perf_counter() - started_at) * 1000, 2)
+
         return {
             "plate": best_plate,
             "plates": plates,
             "raw_detected_count": len(plates),
             "valid_detected_count": len(valid_plates),
             "message": "success" if best_plate else "detected_plate_but_char_failed",
+            "processing_time_ms": processing_time_ms,
         }
+
+    @staticmethod
+    def detect_plate_only_from_image_bytes(image_bytes: bytes):
+        started_at = time.perf_counter()
+        plate_model = get_plate_model()
+
+        image = np.frombuffer(image_bytes, np.uint8)
+        frame = cv2.imdecode(image, cv2.IMREAD_COLOR)
+
+        if frame is None:
+            raise ValueError("Không đọc được ảnh đầu vào")
+
+        original_h, original_w = frame.shape[:2]
+
+        if original_w < 500 or original_w > 1000:
+            scale = 700 / max(original_w, 1)
+            frame = cv2.resize(
+                frame,
+                None,
+                fx=scale,
+                fy=scale,
+                interpolation=cv2.INTER_CUBIC,
+            )
+
+        results = plate_model(
+            frame,
+            conf=PLATE_YOLO_CONF,
+            verbose=False,
+        )
+
+        annotated = frame.copy()
+        plates = []
+
+        if len(results) > 0:
+            boxes = results[0].boxes
+
+            if boxes is not None and len(boxes) > 0:
+                for box in boxes:
+                    x1, y1, x2, y2 = map(int, box.xyxy[0].tolist())
+                    x1 = max(0, x1)
+                    y1 = max(0, y1)
+                    x2 = min(frame.shape[1], x2)
+                    y2 = min(frame.shape[0], y2)
+
+                    if x2 <= x1 or y2 <= y1:
+                        continue
+
+                    conf = float(box.conf[0]) if box.conf is not None else 0.0
+
+                    cv2.rectangle(
+                        annotated,
+                        (x1, y1),
+                        (x2, y2),
+                        (0, 255, 0),
+                        2,
+                    )
+
+                    cv2.putText(
+                        annotated,
+                        f"plate {conf:.2f}",
+                        (x1, max(20, y1 - 10)),
+                        cv2.FONT_HERSHEY_SIMPLEX,
+                        0.8,
+                        (0, 255, 0),
+                        2,
+                    )
+
+            ok, buffer = cv2.imencode(".jpg", annotated)
+
+            if not ok:
+                raise RuntimeError("Không mã hóa được ảnh kết quả")
+
+            processing_time_s = round(time.perf_counter() - started_at, 3)
+            processing_time_ms = round(processing_time_s * 1000, 2)
+
+            return Response(
+                content=buffer.tobytes(),
+                media_type="image/jpeg",
+                headers={
+                    "X-Processing-Time-S": str(processing_time_s),
+                    "X-Processing-Time-Ms": str(processing_time_ms),
+                    "X-Detected-Count": str(len(plates)),
+                    "X-Original-Size": f"{original_w}x{original_h}",
+                    "X-Resized-Size": f"{frame.shape[1]}x{frame.shape[0]}",
+                },
+            )
 
     @staticmethod
     def generate_stream(camera_index: int = 0):

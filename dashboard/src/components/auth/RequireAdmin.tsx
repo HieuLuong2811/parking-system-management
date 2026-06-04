@@ -27,10 +27,20 @@ export const RequireAdmin: React.FC<{ children?: React.ReactNode }> = ({ childre
   const roles = (user?.roles || []).map((r) => String(r || '').trim().toUpperCase());
   const isAdmin = roles.includes('ADMIN');
   const isSecurity = roles.includes('SECURITY');
+  const isUser = roles.includes('USER');
+
+  if (!isAdmin && isUser && !isSecurity) {
+    const allowed = location.pathname === '/notifications' || location.pathname === '/profile';
+    if (!allowed) {
+      return <Navigate to="/notifications" replace />;
+    }
+  }
 
   if (!isAdmin && isSecurity) {
-    // Security users can only access the parking sessions screen.
-    const allowed = location.pathname === '/parking_sessions';
+    // Security users can access parking sessions and access cards screens.
+    const allowed =
+      location.pathname === '/parking_sessions' ||
+      location.pathname === '/parking_access_cards';
     if (!allowed) {
       return <Navigate to="/parking_sessions" replace />;
     }

@@ -14,6 +14,15 @@ class DetectController:
         return result
 
     @staticmethod
+    async def detect_plate_only(file: UploadFile):
+        if not file.content_type or not file.content_type.startswith("image/"):
+            raise HTTPException(status_code=400, detail="File phải là ảnh")
+
+        image_bytes = await file.read()
+        result = DetectService.detect_plate_only_from_image_bytes(image_bytes)
+        return result
+
+    @staticmethod
     def stream():
         return StreamingResponse(
             DetectService.generate_stream(),

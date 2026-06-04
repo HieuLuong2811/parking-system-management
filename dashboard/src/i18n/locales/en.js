@@ -147,6 +147,7 @@ const en = {
     },
     home: {
       title: "Home",
+      liveData: "Live data",
       subtitle: "A quick overview of key system metrics and shortcuts.",
       description:
         "Welcome {{name}}, this overview section helps you reach the most important datasets fast.",
@@ -158,6 +159,40 @@ const en = {
         statusLabel: "Status",
         searchLabel: "Search keyword",
         searchPlaceholder: "Student, vehicle, or invoice ID",
+      },
+      cards: {
+        vehiclesInParking: {
+          title: "Vehicles in parking",
+          subtitle: "Open parking sessions",
+        },
+        todayCheckins: {
+          title: "Today check-ins",
+          subtitle: "By check-in time",
+        },
+        todayCheckouts: {
+          title: "Today check-outs",
+          subtitle: "By check-out time",
+        },
+        todayRevenue: {
+          title: "Today revenue",
+          subtitle: "Paid invoices today",
+        },
+        monthlyRevenue: {
+          title: "This month revenue",
+          subtitle: "Paid invoices",
+        },
+        pendingInvoices: {
+          title: "Pending invoices",
+          subtitle: "Invoice PENDING",
+        },
+        activeSubscriptionUsers: {
+          title: "Active subscriptions",
+          subtitle: "Users with active subscriptions",
+        },
+        expiringSubscriptions: {
+          title: "Expiring subscriptions",
+          subtitle: "Expiring in 7 days",
+        },
       },
       cards: {
         activeUsers: {
@@ -182,6 +217,19 @@ const en = {
         },
       },
       charts: {
+        adoptionTitle: "User subscription rate",
+        adoptionDescription: "Compare registered and unregistered users",
+        noAdoptionData: "No subscription data.",
+        monthlySubscriptionsTitle: "Monthly subscriptions",
+        monthlySubscriptionsDescription: "New subscriptions in the last 12 months",
+        subscriptionSeries: "New subscriptions",
+        monthlyRevenueTitle: "Monthly revenue",
+        monthlyRevenueDescription: "Revenue from paid invoices in the last 12 months",
+        noRevenueData: "No revenue data.",
+        monthlySessionsTitle: "Monthly parking sessions",
+        monthlySessionsDescription: "Sessions created by check-in time",
+        sessionSeries: "Sessions",
+        noSessionData: "No parking session data.",
         sessionTitle: "Sessions distribution",
         sessionDescription: "Last 6 weeks",
         revenueTitle: "Revenue overview",
@@ -196,6 +244,21 @@ const en = {
           yearly: "Yearly target",
         },
         revenueFooter: "Conversion rate improved over the last quarter.",
+      },
+      recent: {
+        invoicesTitle: "Recent invoices",
+        invoicesSubtitle: "5 latest invoices in the system",
+        sessionsTitle: "Recent parking sessions",
+        sessionsSubtitle: "5 latest parking sessions by check-in time",
+        noInvoices: "No recent invoices.",
+        noSessions: "No recent parking sessions.",
+        noPlate: "No plate",
+        guestLabel: "Guest",
+      },
+      errors: {
+        summaryLoadFailed: "Unable to load summary data.",
+        chartsLoadFailed: "Unable to load charts.",
+        recentLoadFailed: "Unable to load recent data.",
       },
       status: {
         invoice: {

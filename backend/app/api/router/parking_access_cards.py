@@ -46,7 +46,7 @@ async def lookup_parking_access_card(
 @router.get("", response_model=PaginatedResponse[ParkingAccessCardAdminRead])
 async def list_parking_access_cards_paginated(
     db: AsyncSession = Depends(get_db),
-    current_user: AuthUser = Depends(required_roles("ADMIN")),
+    current_user: AuthUser = Depends(required_roles("ADMIN", "SECURITY")),
     page: int = Query(1, ge=1, description="Page number (1-based)"),
     limit: int = Query(20, ge=1, le=100, description="Number of items per page"),
     barcode_token: str | None = Query(None, description="Search by barcode token"),

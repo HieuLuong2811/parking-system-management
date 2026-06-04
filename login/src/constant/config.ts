@@ -27,4 +27,5 @@ export const AUTH_ME_URL = joinUrl(VITE_API_URL, "auth/me");
 export const Role = {
   ADMIN: "admin",
   USER: "user",
+  SECURITY: "security",
 } as const;

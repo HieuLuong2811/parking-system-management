@@ -42,6 +42,20 @@ The detection service depends on `ultralytics`, `opencv-python`, `numpy`, and `p
 
 Modify or add SQLModel models for data and SQL tables in `./backend/app/models.py`, API endpoints in `./backend/app/api/`, CRUD (Create, Read, Update, Delete) utils in `./backend/app/crud.py`.
 
+## Security Console Tools
+
+The `security_console_tools` folder contains standalone GUI/tools scripts. To run them, first change into that directory from `./backend/`, then execute the desired Python file.
+
+```console
+$ cd security_console_tools
+$ python security_console.py
+$ python security_console_qr.py
+$ python banner.py
+$ python banner_client.py
+```
+
+If you are using a virtual environment, make sure it is activated before running the commands above.
+
 ## Migrations
 
 As during local development your app directory is mounted as a volume inside the container, you can also run the migrations with `alembic` commands inside the container and the migration code will be in your app directory (instead of being only inside the container). So you can add it to your git repository.

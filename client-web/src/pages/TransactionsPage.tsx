@@ -328,7 +328,7 @@ export default function TransactionsPage() {
                 </TableCell>
               </TableRow>
             ) : (
-              transactions.map((tx) => {
+              transactions.map((tx, index) => {
                 const isTopUp =
                   String(tx.transaction_type || "").toUpperCase() === "TOP_UP";
                 const isOutgoing = !isTopUp;
@@ -339,7 +339,7 @@ export default function TransactionsPage() {
                 const chipColor = getStatusChipColor(statusText.toUpperCase());
                 return (
                   <TableRow
-                    key={tx.payment_transaction_id}
+                    key={`${tx.payment_transaction_id} - ${index}`}
                     hover
                     sx={{
                       transition: "0.2s",

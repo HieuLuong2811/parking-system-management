@@ -1,5 +1,6 @@
 import React, { useMemo } from 'react';
 import { Alert, Box, Card, CardContent, CircularProgress, Stack, Typography } from '@mui/material';
+import { useTranslation } from 'react-i18next';
 import {
   ConfirmationNumber,
   DirectionsBike,
@@ -100,60 +101,61 @@ const MetricCard = ({
 
 export const DashboardSummaryCards: React.FC = () => {
   const { data, isLoading, isError } = useDashboardSummary();
+  const { t } = useTranslation();
 
   const cards = useMemo(() => {
     if (!data) return [];
     return [
       {
         key: 'vehiclesInParking',
-        title: 'Xe đang trong bãi',
+        title: t('home.cards.vehiclesInParking.title', { defaultValue: 'Vehicles in parking' }),
         value: data.vehicles_in_parking.toLocaleString('vi-VN'),
-        subtitle: 'Phiên gửi xe chưa check-out',
+        subtitle: t('home.cards.vehiclesInParking.subtitle', { defaultValue: 'Open parking sessions' }),
       },
       {
         key: 'todayCheckins',
-        title: 'Lượt check-in hôm nay',
+        title: t('home.cards.todayCheckins.title', { defaultValue: 'Today check-ins' }),
         value: data.today_checkins.toLocaleString('vi-VN'),
-        subtitle: 'Theo thời gian check-in',
+        subtitle: t('home.cards.todayCheckins.subtitle', { defaultValue: 'By check-in time' }),
       },
       {
         key: 'todayCheckouts',
-        title: 'Lượt check-out hôm nay',
+        title: t('home.cards.todayCheckouts.title', { defaultValue: 'Today check-outs' }),
         value: data.today_checkouts.toLocaleString('vi-VN'),
-        subtitle: 'Theo thời gian check-out',
+        subtitle: t('home.cards.todayCheckouts.subtitle', { defaultValue: 'By check-out time' }),
       },
       {
         key: 'todayRevenue',
-        title: 'Doanh thu hôm nay',
+        title: t('home.cards.todayRevenue.title', { defaultValue: 'Today revenue' }),
         value: formatShortNumber(data.today_revenue),
-        subtitle: 'Hóa đơn đã thanh toán trong ngày',
+        subtitle: t('home.cards.todayRevenue.subtitle', { defaultValue: 'Paid invoices today' }),
       },
       {
         key: 'monthlyRevenue',
-        title: 'Doanh thu tháng này',
+        title: t('home.cards.monthlyRevenue.title', { defaultValue: 'This month revenue' }),
         value: formatShortNumber(data.monthly_revenue),
-        subtitle: 'Hóa đơn đã thanh toán',
+        subtitle: t('home.cards.monthlyRevenue.subtitle', { defaultValue: 'Paid invoices' }),
       },
       {
         key: 'pendingInvoices',
-        title: 'Hóa đơn chờ thanh toán',
+        title: t('home.cards.pendingInvoices.title', { defaultValue: 'Pending invoices' }),
         value: data.pending_invoices.toLocaleString('vi-VN'),
-        subtitle: 'Invoice PENDING',
+        subtitle: t('home.cards.pendingInvoices.subtitle', { defaultValue: 'Invoice PENDING' }),
       },
       {
         key: 'activeSubscriptionUsers',
-        title: 'Vé gửi xe còn hiệu lực',
+        title: t('home.cards.activeSubscriptionUsers.title', { defaultValue: 'Active subscriptions' }),
         value: data.active_subscription_users.toLocaleString('vi-VN'),
-        subtitle: 'Người dùng có vé gửi xe còn hiệu lực',
+        subtitle: t('home.cards.activeSubscriptionUsers.subtitle', { defaultValue: 'Users with active subscriptions' }),
       },
       {
         key: 'expiringSubscriptions',
-        title: 'Vé gửi xe sắp hết hạn',
+        title: t('home.cards.expiringSubscriptions.title', { defaultValue: 'Expiring subscriptions' }),
         value: data.expiring_subscriptions.toLocaleString('vi-VN'),
-        subtitle: 'Hết hạn trong 7 ngày tới',
+        subtitle: t('home.cards.expiringSubscriptions.subtitle', { defaultValue: 'Expiring in 7 days' }),
       },
     ];
-  }, [data]);
+  }, [data, t]);
 
   if (isLoading) {
     return (
@@ -164,7 +166,7 @@ export const DashboardSummaryCards: React.FC = () => {
   }
 
   if (isError) {
-    return <Alert severity="error">Không thể tải dữ liệu tổng quan.</Alert>;
+    return <Alert severity="error">{t('home.errors.summaryLoadFailed', { defaultValue: 'Unable to load summary data.' })}</Alert>;
   }
 
   return (
@@ -195,4 +197,3 @@ export const DashboardSummaryCards: React.FC = () => {
     </Box>
   );
 };
-

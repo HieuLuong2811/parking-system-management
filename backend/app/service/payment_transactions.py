@@ -264,7 +264,7 @@ class paymentTransactionService:
             statement = statement.where(PaymentTransaction.transaction_code == transaction_uuid)
         rows, total, total_pages = await paginate_rows(db, statement, page=page, limit=limit)
         items: list[PaymentTransactionDetailRead] = []
-        for transaction, user in rows:
+        for transaction, invoice, user in rows:
             items.append(
                 PaymentTransactionDetailRead(
                     payment_transaction_id=transaction.payment_transaction_id,

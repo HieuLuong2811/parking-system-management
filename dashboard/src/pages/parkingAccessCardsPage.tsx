@@ -15,6 +15,7 @@ import {
 import FilterListIcon from '@mui/icons-material/FilterList';
 import type { GridColDef } from '@mui/x-data-grid';
 import { useTranslation } from 'react-i18next';
+import { useAuth } from '../contexts/useAuth';
 
 import { PageHeader } from '../components/common/PageHeader';
 import { SoftDataGrid } from '../components/common/SoftDataGrid';
@@ -35,6 +36,9 @@ type FiltersState = {
 
 export const ParkingAccessCardsPage: React.FC = () => {
   const { t } = useTranslation();
+  const { user } = useAuth();
+  const roles = (user?.roles || []).map((r) => String(r || '').trim().toUpperCase());
+  const isSecurityOnly = roles.includes('SECURITY') && !roles.includes('ADMIN');
   const disableMutation = useDisableParkingAccessCard();
   const [createOpen, setCreateOpen] = useState(false);
   const [toast, setToast] = useState<{ open: boolean; severity: 'success' | 'error'; message: string }>({
@@ -143,38 +147,42 @@ export const ParkingAccessCardsPage: React.FC = () => {
           );
         },
       },
-      {
-        field: 'actions',
-        headerName: t('common.table.actions', { defaultValue: 'Actions' }),
-        minWidth: 160,
-        sortable: false,
-        headerAlign: 'center',
-        filterable: false,
-        align: 'center',
-        renderCell: (params) => {
-          const row = params.row;
-          const normalizedStatus = String(row.status ?? '').toUpperCase();
-          const isDisabled = normalizedStatus === 'DISABLED';
-          const hasUser = Boolean(String(row.user_code ?? '').trim());
-          const canDisable = hasUser && !isDisabled;
-          return (
-            <Button
-              size="small"
-              variant="outlined"
-              color="warning"
-              disabled={!canDisable || disableMutation.isPending}
-              onClick={() => {
-                if (!row.id) return;
-                setConfirm({ open: true, cardId: String(row.id) });
-              }}
-            >
-              {t('parkingAccessCardsPage.actions.disable', { defaultValue: 'Disable' })}
-            </Button>
-          );
-        },
-      },
+      ...(isSecurityOnly
+        ? []
+        : [
+            {
+              field: 'actions',
+              headerName: t('common.table.actions', { defaultValue: 'Actions' }),
+              minWidth: 160,
+              sortable: false,
+              headerAlign: 'center',
+              filterable: false,
+              align: 'center',
+              renderCell: (params) => {
+                const row = params.row;
+                const normalizedStatus = String(row.status ?? '').toUpperCase();
+                const isDisabled = normalizedStatus === 'DISABLED';
+                const hasUser = Boolean(String(row.user_code ?? '').trim());
+                const canDisable = hasUser && !isDisabled;
+                return (
+                  <Button
+                    size="small"
+                    variant="outlined"
+                    color="warning"
+                    disabled={!canDisable || disableMutation.isPending}
+                    onClick={() => {
+                      if (!row.id) return;
+                      setConfirm({ open: true, cardId: String(row.id) });
+                    }}
+                  >
+                    {t('parkingAccessCardsPage.actions.disable', { defaultValue: 'Disable' })}
+                  </Button>
+                );
+              },
+            } as GridColDef<ParkingAccessCardAdminRow>,
+          ]),
     ];
-  }, [disableMutation, t]);
+  }, [disableMutation, isSecurityOnly, t]);
 
   const handleClearFilters = () => {
     setFilters({ barcodeToken: '', holderType: 'STUDENT', status: '', userQuery: '' });
@@ -280,7 +288,7 @@ export const ParkingAccessCardsPage: React.FC = () => {
           </Button>
         </Stack>
         <Button variant="contained" onClick={() => setCreateOpen(true)}>
-          {t('parkingAccessCardsPage.actions.create', { defaultValue: 'Create card' })}
+          {isSecurityOnly ? null : t('parkingAccessCardsPage.actions.create', { defaultValue: 'Create card' })}
         </Button>
       </Stack>
 

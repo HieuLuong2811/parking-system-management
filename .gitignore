@@ -45,3 +45,4 @@ Thumbs.db
 /backend/app/models/runs/
 /raw_images/
 /datasets/
+/plate_colab/

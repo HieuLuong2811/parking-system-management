@@ -109,9 +109,10 @@ export const Sidebar: React.FC<SidebarProps> = ({ mobileOpen, onClose, collapsed
   
   const roles = (user?.roles || []).map((r) => String(r || '').trim().toUpperCase());
   const isSecurityOnly = roles.includes('SECURITY') && !roles.includes('ADMIN');
+  const isUserOnly = roles.includes('USER') && !roles.includes('ADMIN') && !roles.includes('SECURITY');
 
   const visibleOverviewItems = isSecurityOnly
-    ? overviewItems.filter((item) => item.id === 'parking_sessions')
+    ? overviewItems.filter((item) => item.id === 'parking_sessions' || item.id === 'parking_access_cards')
     : overviewItems;
 
   const visibleBillingGroup = isSecurityOnly
@@ -123,6 +124,9 @@ export const Sidebar: React.FC<SidebarProps> = ({ mobileOpen, onClose, collapsed
     : userManagementGroup;
 
   const visibleSystemItems = isSecurityOnly ? [] : systemItems;
+  const visibleFooterItems = isUserOnly
+    ? footerItems.filter((item) => item.id === 'notifications' || item.id === 'profile')
+    : footerItems;
 
   const drawerContent = (
     <Box sx={{ width: drawerWidth, minHeight: '100%', display: 'flex', flexDirection: 'column', borderRight: '1px solid', borderColor: '#e2e8f0' }}>
@@ -159,7 +163,7 @@ export const Sidebar: React.FC<SidebarProps> = ({ mobileOpen, onClose, collapsed
 
       <List sx={{ mt: 'auto', px: collapsed ? 0 : 1 }}>
         <Divider sx={{ mb: 1 }} />
-        {renderSection(footerItems)}
+        {renderSection(visibleFooterItems)}
         <Divider sx={{ my: 1 }} />
         <SidebarItem
           text={t(logoutItem.translationKey)}
